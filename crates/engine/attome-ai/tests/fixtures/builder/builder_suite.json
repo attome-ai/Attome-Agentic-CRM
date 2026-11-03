@@ -1,0 +1,1116 @@
+{
+  "note": "AD10-T1: the builder suite. Each task's draft (a model.draft answer) is graded by attome_ai::builder::suite: the expected entities present by name or alias (a reused or extended library entity counts), each listed field drafted with its type, and none of the forbidden review findings. tests/builder_suite.rs checks the tasks and grades recorded drafts.",
+  "tasks": [
+    {
+      "id": "clinic",
+      "language": "en",
+      "description": "A clinic books patient appointments with doctors and records each visit's diagnosis and prescriptions.",
+      "expected_entities": [
+        {
+          "name": "appointment",
+          "aliases": [
+            "booking"
+          ],
+          "fields": {
+            "starts_at": "date_time"
+          }
+        },
+        {
+          "name": "visit",
+          "aliases": [
+            "consultation",
+            "encounter"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "prescription",
+          "aliases": [],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "property",
+      "language": "ar",
+      "description": "شركة عقارات تدير العقارات والوحدات وعقود الإيجار وطلبات الصيانة.",
+      "expected_entities": [
+        {
+          "name": "property",
+          "aliases": [
+            "building"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "unit",
+          "aliases": [
+            "apartment"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "lease",
+          "aliases": [
+            "lease_contract",
+            "rental_contract"
+          ],
+          "fields": {
+            "start_date": "date"
+          }
+        },
+        {
+          "name": "maintenance_request",
+          "aliases": [
+            "work_order",
+            "service_request"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "training",
+      "language": "en",
+      "description": "A training center runs courses in sessions, enrolls trainees and issues certificates.",
+      "expected_entities": [
+        {
+          "name": "course",
+          "aliases": [
+            "program"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "session",
+          "aliases": [
+            "course_session",
+            "class"
+          ],
+          "fields": {
+            "starts_at": "date_time"
+          }
+        },
+        {
+          "name": "enrollment",
+          "aliases": [
+            "registration"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "certificate",
+          "aliases": [],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "fleet",
+      "language": "ar",
+      "description": "إدارة أسطول سيارات: المركبات والسائقون ورحلات التوصيل وسجلات الوقود.",
+      "expected_entities": [
+        {
+          "name": "vehicle",
+          "aliases": [
+            "car"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "driver",
+          "aliases": [],
+          "fields": {}
+        },
+        {
+          "name": "trip",
+          "aliases": [
+            "delivery_trip",
+            "delivery"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "fuel_log",
+          "aliases": [
+            "fuel_record",
+            "refuel"
+          ],
+          "fields": {
+            "liters": "number"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "events",
+      "language": "en",
+      "description": "An events company plans events, sells tickets to attendees and manages sponsors.",
+      "expected_entities": [
+        {
+          "name": "event",
+          "aliases": [],
+          "fields": {
+            "event_date": "date"
+          }
+        },
+        {
+          "name": "ticket",
+          "aliases": [],
+          "fields": {
+            "price": "currency"
+          }
+        },
+        {
+          "name": "sponsor",
+          "aliases": [
+            "sponsorship"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "school",
+      "language": "ar",
+      "description": "مدرسة تسجل الطلاب في الفصول وتتابع الحضور والدرجات.",
+      "expected_entities": [
+        {
+          "name": "class",
+          "aliases": [
+            "classroom",
+            "section"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "enrollment",
+          "aliases": [
+            "registration"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "attendance",
+          "aliases": [
+            "attendance_record"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "grade",
+          "aliases": [
+            "mark",
+            "result"
+          ],
+          "fields": {
+            "score": "number"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "restaurant",
+      "language": "en",
+      "description": "A restaurant takes table reservations and orders, keeps a menu of items and tracks suppliers.",
+      "expected_entities": [
+        {
+          "name": "reservation",
+          "aliases": [
+            "booking"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "order",
+          "aliases": [
+            "customer_order"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "menu_item",
+          "aliases": [
+            "dish",
+            "item"
+          ],
+          "fields": {
+            "price": "currency"
+          }
+        },
+        {
+          "name": "supplier",
+          "aliases": [
+            "vendor"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "charity",
+      "language": "ar",
+      "description": "جمعية خيرية تسجل المتبرعين والتبرعات والمستفيدين والمشاريع.",
+      "expected_entities": [
+        {
+          "name": "donation",
+          "aliases": [],
+          "fields": {
+            "amount": "currency"
+          }
+        },
+        {
+          "name": "beneficiary",
+          "aliases": [],
+          "fields": {}
+        },
+        {
+          "name": "project",
+          "aliases": [
+            "program"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "legal",
+      "language": "en",
+      "description": "A law firm opens matters for clients, logs billable hours and stores court hearings.",
+      "expected_entities": [
+        {
+          "name": "matter",
+          "aliases": [
+            "case",
+            "legal_case"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "time_entry",
+          "aliases": [
+            "billable_hour",
+            "timesheet"
+          ],
+          "fields": {
+            "hours": "number"
+          }
+        },
+        {
+          "name": "hearing",
+          "aliases": [
+            "court_hearing"
+          ],
+          "fields": {
+            "hearing_date": "date"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "gym",
+      "language": "ar",
+      "description": "نادٍ رياضي يدير العضويات والاشتراكات والحصص التدريبية والمدربين.",
+      "expected_entities": [
+        {
+          "name": "membership",
+          "aliases": [
+            "subscription"
+          ],
+          "fields": {
+            "ends_on": "date"
+          }
+        },
+        {
+          "name": "class_session",
+          "aliases": [
+            "session",
+            "training_session"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "trainer",
+          "aliases": [
+            "coach"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "logistics",
+      "language": "en",
+      "description": "A logistics company receives shipments into warehouses and dispatches them on routes.",
+      "expected_entities": [
+        {
+          "name": "shipment",
+          "aliases": [],
+          "fields": {
+            "weight": "number"
+          }
+        },
+        {
+          "name": "warehouse",
+          "aliases": [],
+          "fields": {}
+        },
+        {
+          "name": "route",
+          "aliases": [
+            "delivery_route"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "hotel",
+      "language": "ar",
+      "description": "فندق يدير الغرف والحجوزات وطلبات خدمة الغرف.",
+      "expected_entities": [
+        {
+          "name": "room",
+          "aliases": [],
+          "fields": {}
+        },
+        {
+          "name": "reservation",
+          "aliases": [
+            "booking"
+          ],
+          "fields": {
+            "check_in": "date"
+          }
+        },
+        {
+          "name": "room_service_order",
+          "aliases": [
+            "service_request",
+            "room_service"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "insurance",
+      "language": "en",
+      "description": "An insurer sells policies, takes claims against them and records payments.",
+      "expected_entities": [
+        {
+          "name": "policy",
+          "aliases": [
+            "insurance_policy"
+          ],
+          "fields": {
+            "premium": "currency"
+          }
+        },
+        {
+          "name": "claim",
+          "aliases": [],
+          "fields": {
+            "claimed_on": "date"
+          }
+        },
+        {
+          "name": "payment",
+          "aliases": [],
+          "fields": {
+            "amount": "currency"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "construction",
+      "language": "ar",
+      "description": "شركة مقاولات تتابع المشاريع والمراحل والمقاولين من الباطن والمواد.",
+      "expected_entities": [
+        {
+          "name": "project",
+          "aliases": [],
+          "fields": {}
+        },
+        {
+          "name": "phase",
+          "aliases": [
+            "stage",
+            "milestone"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "subcontractor",
+          "aliases": [
+            "contractor"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "material",
+          "aliases": [],
+          "fields": {
+            "quantity": "number"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "helpdesk",
+      "language": "en",
+      "description": "An IT helpdesk logs tickets, assigns them to support teams and keeps a knowledge base of articles.",
+      "expected_entities": [
+        {
+          "name": "ticket",
+          "aliases": [
+            "case",
+            "incident"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "article",
+          "aliases": [
+            "knowledge_article"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "support_team",
+          "aliases": [
+            "team",
+            "agent_group"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "realestate_sales",
+      "language": "ar",
+      "description": "مكتب مبيعات عقارية يتابع العقارات المعروضة والعروض والصفقات.",
+      "expected_entities": [
+        {
+          "name": "listing",
+          "aliases": [
+            "property",
+            "property_listing"
+          ],
+          "fields": {
+            "price": "currency"
+          }
+        },
+        {
+          "name": "offer",
+          "aliases": [],
+          "fields": {
+            "amount": "currency"
+          }
+        },
+        {
+          "name": "deal",
+          "aliases": [
+            "sale"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "library",
+      "language": "en",
+      "description": "A library lends books to members and tracks due dates and fines.",
+      "expected_entities": [
+        {
+          "name": "book",
+          "aliases": [
+            "title"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "loan",
+          "aliases": [
+            "borrowing",
+            "checkout"
+          ],
+          "fields": {
+            "due_date": "date"
+          }
+        },
+        {
+          "name": "fine",
+          "aliases": [
+            "penalty"
+          ],
+          "fields": {
+            "amount": "currency"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "farm",
+      "language": "ar",
+      "description": "مزرعة تسجل الحقول والمحاصيل وعمليات الحصاد والمبيعات.",
+      "expected_entities": [
+        {
+          "name": "field",
+          "aliases": [
+            "plot"
+          ],
+          "fields": {
+            "area": "number"
+          }
+        },
+        {
+          "name": "crop",
+          "aliases": [],
+          "fields": {}
+        },
+        {
+          "name": "harvest",
+          "aliases": [],
+          "fields": {
+            "harvest_date": "date"
+          }
+        },
+        {
+          "name": "sale",
+          "aliases": [
+            "order"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "recruiting",
+      "language": "en",
+      "description": "A recruiting team posts job openings, receives applications and schedules interviews.",
+      "expected_entities": [
+        {
+          "name": "job_opening",
+          "aliases": [
+            "job",
+            "position",
+            "vacancy"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "application",
+          "aliases": [
+            "candidate_application"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "interview",
+          "aliases": [],
+          "fields": {
+            "scheduled_at": "date_time"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "municipality",
+      "language": "ar",
+      "description": "بلدية تستقبل طلبات التصاريح وتجري التفتيش وتصدر المخالفات.",
+      "expected_entities": [
+        {
+          "name": "permit_application",
+          "aliases": [
+            "permit",
+            "permit_request"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "inspection",
+          "aliases": [],
+          "fields": {
+            "inspected_on": "date"
+          }
+        },
+        {
+          "name": "violation",
+          "aliases": [
+            "fine"
+          ],
+          "fields": {
+            "amount": "currency"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "subscriptions",
+      "language": "en",
+      "description": "A software company sells subscription plans, invoices monthly and tracks usage.",
+      "expected_entities": [
+        {
+          "name": "plan",
+          "aliases": [
+            "subscription_plan"
+          ],
+          "fields": {
+            "price": "currency"
+          }
+        },
+        {
+          "name": "subscription",
+          "aliases": [],
+          "fields": {
+            "renews_on": "date"
+          }
+        },
+        {
+          "name": "invoice",
+          "aliases": [],
+          "fields": {
+            "total": "currency"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "clinic_lab",
+      "language": "ar",
+      "description": "مختبر طبي يستقبل طلبات التحاليل والعينات ويصدر النتائج.",
+      "expected_entities": [
+        {
+          "name": "test_order",
+          "aliases": [
+            "lab_order",
+            "lab_request"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "sample",
+          "aliases": [
+            "specimen"
+          ],
+          "fields": {
+            "collected_at": "date_time"
+          }
+        },
+        {
+          "name": "result",
+          "aliases": [
+            "test_result",
+            "lab_result"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "marketing",
+      "language": "en",
+      "description": "A marketing team runs campaigns across channels and measures responses.",
+      "expected_entities": [
+        {
+          "name": "campaign",
+          "aliases": [],
+          "fields": {
+            "budget": "currency"
+          }
+        },
+        {
+          "name": "channel",
+          "aliases": [],
+          "fields": {}
+        },
+        {
+          "name": "response",
+          "aliases": [
+            "campaign_response"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "mosque",
+      "language": "ar",
+      "description": "إدارة مسجد تنظم الحلقات والطلاب والمعلمين وحفظ القرآن.",
+      "expected_entities": [
+        {
+          "name": "circle",
+          "aliases": [
+            "study_circle",
+            "halaqa"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "student",
+          "aliases": [],
+          "fields": {}
+        },
+        {
+          "name": "teacher",
+          "aliases": [
+            "instructor"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "memorization",
+          "aliases": [
+            "memorization_record",
+            "progress"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "procurement",
+      "language": "en",
+      "description": "Procurement raises purchase requests, sends purchase orders to vendors and receives goods.",
+      "expected_entities": [
+        {
+          "name": "purchase_request",
+          "aliases": [
+            "requisition"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "purchase_order",
+          "aliases": [],
+          "fields": {
+            "total": "currency"
+          }
+        },
+        {
+          "name": "vendor",
+          "aliases": [
+            "supplier"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "goods_receipt",
+          "aliases": [
+            "receipt",
+            "delivery"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "hajj",
+      "language": "ar",
+      "description": "شركة حج وعمرة تسجل الحجاج والرحلات والسكن والتأشيرات.",
+      "expected_entities": [
+        {
+          "name": "pilgrim",
+          "aliases": [],
+          "fields": {}
+        },
+        {
+          "name": "trip",
+          "aliases": [
+            "package",
+            "journey"
+          ],
+          "fields": {
+            "departs_on": "date"
+          }
+        },
+        {
+          "name": "accommodation",
+          "aliases": [
+            "housing",
+            "hotel_booking"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "visa",
+          "aliases": [
+            "visa_application"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "assets",
+      "language": "en",
+      "description": "Facilities track assets, schedule preventive maintenance and log breakdowns.",
+      "expected_entities": [
+        {
+          "name": "asset",
+          "aliases": [
+            "equipment"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "maintenance_plan",
+          "aliases": [
+            "maintenance_schedule"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "breakdown",
+          "aliases": [
+            "work_order",
+            "incident"
+          ],
+          "fields": {
+            "reported_at": "date_time"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "tenders",
+      "language": "ar",
+      "description": "شركة تتابع المناقصات الحكومية والعروض المقدمة والترسية.",
+      "expected_entities": [
+        {
+          "name": "tender",
+          "aliases": [],
+          "fields": {
+            "closes_on": "date"
+          }
+        },
+        {
+          "name": "bid",
+          "aliases": [
+            "proposal",
+            "offer"
+          ],
+          "fields": {
+            "amount": "currency"
+          }
+        },
+        {
+          "name": "award",
+          "aliases": [],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "vet",
+      "language": "en",
+      "description": "A veterinary practice registers pets for owners, books visits and records vaccinations.",
+      "expected_entities": [
+        {
+          "name": "pet",
+          "aliases": [
+            "animal"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "visit",
+          "aliases": [
+            "appointment"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "vaccination",
+          "aliases": [],
+          "fields": {
+            "given_on": "date"
+          }
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    },
+    {
+      "id": "cars_rental",
+      "language": "ar",
+      "description": "شركة تأجير سيارات تدير السيارات وعقود التأجير والأضرار.",
+      "expected_entities": [
+        {
+          "name": "car",
+          "aliases": [
+            "vehicle"
+          ],
+          "fields": {}
+        },
+        {
+          "name": "rental",
+          "aliases": [
+            "rental_agreement",
+            "rental_contract"
+          ],
+          "fields": {
+            "returns_on": "date"
+          }
+        },
+        {
+          "name": "damage",
+          "aliases": [
+            "damage_report"
+          ],
+          "fields": {}
+        }
+      ],
+      "must_not_find": [
+        "duplicate_attribute",
+        "naming",
+        "unknown_target"
+      ]
+    }
+  ]
+}

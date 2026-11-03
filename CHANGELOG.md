@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The builder suite (AD10-T1): 30 build tasks in Arabic and English with graders on the drafted model
+  (entities present, types correct, a clean review), graded from recorded drafts per task and model.
 - `model.import_config` (AD11-T1): a source CRM's model as an Attome draft, with what cannot be moved
   and the equivalent of each automation. `model.draft` keeps to the field route's type names.
 - `model.form.draft` (AD2-T1): a building agent lays out an entity's form from a description, by its own

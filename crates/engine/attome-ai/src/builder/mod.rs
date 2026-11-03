@@ -15,3 +15,5 @@ pub mod import_config;
 pub mod infer;
 /// A1-T13 (part): findings on a drafted model.
 pub mod review;
+/// AD10-T1: the builder suite's graders on a drafted model.
+pub mod suite;
