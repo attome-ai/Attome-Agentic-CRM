@@ -748,26 +748,29 @@ async fn dispatch_platform_job(
             }
         }
         EngineJob::BulkEntityOperation(payload) => {
-            attome_records::bulk::process(
+            // Y10-T4: its writes' after-commit hooks go in batches.
+            attome_core::record_hooks::in_bulk(attome_records::bulk::process(
                 &attome_state,
                 payload.bulk_op_id,
                 &payload.entity_logicalname,
                 &payload.operation,
                 payload.records,
                 payload.user_id,
-            )
+            ))
             .await?;
+            drain_after_bulk(&attome_state).await;
         }
         EngineJob::ApplyStagedImport(payload) => {
-            attome_records::bulk::process_staged_import(
+            attome_core::record_hooks::in_bulk(attome_records::bulk::process_staged_import(
                 &attome_state,
                 payload.import_id,
                 &payload.entity_logicalname,
                 &payload.operation,
                 payload.records,
                 payload.user_id,
-            )
+            ))
             .await?;
+            drain_after_bulk(&attome_state).await;
         }
         // M12 (data management) — record export, data profiling, and
         // in-place bulk field transform. Same `&attome_state`-taking shape as
@@ -3462,6 +3465,7 @@ const DEDUP_KEY_SOCIAL_PUBLISH: &str = "social-publish";
 const DEDUP_KEY_HEAVY_OP_UNDO_RETENTION: &str = "heavy-op-undo-retention";
 const DEDUP_KEY_AGENT_SPONSOR_RECONCILE: &str = "agent-sponsor-reconcile";
 const DEDUP_KEY_DIGITAL_WORKER_TICK: &str = "digital-worker-tick";
+const DEDUP_KEY_RECORD_HOOK_OUTBOX: &str = "record-hook-outbox";
 const DEDUP_KEY_TIME_FORMULA_RECOMPUTE: &str = "time-formula-recompute";
 
 /// Z1-T8: reminds administrators of secrets older than
@@ -4158,6 +4162,21 @@ pub fn register_job_types() {
             },
         ) {
             tracing::error!(%error, "extension job type was not registered");
+        }
+        // Y10-T4: the outbox of a bulk operation's after-commit hooks.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            attome_core::record_hooks::OUTBOX_DRAIN_JOB,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let delivered = attome_core::record_hooks::drain_outbox(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if delivered > 0 {
+                    tracing::info!(delivered, "record hook outbox drained");
+                }
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "record hook outbox job type was not registered");
         }
         // Y10-T2: the record hooks that run once a write has committed.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
@@ -7026,6 +7045,11 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == DIGITAL_WORKER_TICK.name => {
             DEDUP_KEY_DIGITAL_WORKER_TICK
         }
+        EngineJob::Registered(job)
+            if job.name == attome_core::record_hooks::OUTBOX_DRAIN_JOB.name =>
+        {
+            DEDUP_KEY_RECORD_HOOK_OUTBOX
+        }
         EngineJob::Registered(job) if job.name == TIME_FORMULA_RECOMPUTE.name => {
             DEDUP_KEY_TIME_FORMULA_RECOMPUTE
         }
@@ -7832,6 +7856,35 @@ pub fn spawn_heavy_op_undo_retention_scheduler(db: DbPool, interval: std::time::
         job,
         DEDUP_KEY_HEAVY_OP_UNDO_RETENTION,
         "mass undo retention",
+    );
+}
+
+/// Y10-T4: delivers a finished bulk operation's batched hooks now; a failure
+/// is left to the minute drain.
+async fn drain_after_bulk(state: &EngineState) {
+    if let Err(error) = attome_core::record_hooks::drain_outbox(state).await {
+        tracing::warn!(%error, "record hook outbox not drained after a bulk operation");
+    }
+}
+
+/// Y10-T4: every minute, the record hook outbox drained.
+pub fn spawn_record_hook_outbox_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES
+        .job(attome_core::record_hooks::OUTBOX_DRAIN_JOB.name, &())
+    {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "record hook outbox drain: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_RECORD_HOOK_OUTBOX,
+        "record hook outbox drain",
     );
 }
 

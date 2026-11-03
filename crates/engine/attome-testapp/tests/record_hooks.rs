@@ -322,3 +322,86 @@ fn after_commit_hooks_run_as_a_job_once_the_write_commits() {
         assert_eq!(none, 0);
     });
 }
+
+/// Y10-T4: counts the batches an after-commit hook is handed and their sizes.
+struct BatchCounter(Arc<std::sync::Mutex<Vec<usize>>>);
+
+impl RecordHook for BatchCounter {
+    fn name(&self) -> &str {
+        "test.batch_counter"
+    }
+    fn entity(&self) -> &str {
+        "account"
+    }
+    fn stage(&self) -> HookStage {
+        HookStage::AfterCommit
+    }
+    fn run<'a>(&'a self, _state: &'a EngineState, _event: HookEvent<'a>) -> HookFuture<'a> {
+        Box::pin(async move { Ok(HookOutcome::Continue) })
+    }
+    fn run_batch<'a>(
+        &'a self,
+        _state: &'a EngineState,
+        events: &'a [HookEvent<'a>],
+    ) -> attome_core::record_hooks::BatchFuture<'a> {
+        Box::pin(async move {
+            self.0.lock().unwrap().push(events.len());
+            Ok(())
+        })
+    }
+}
+
+// feature: Y10
+#[test]
+fn bulk_writes_reach_after_commit_hooks_in_one_batch() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        sqlx::query("DELETE FROM record_hook_outbox")
+            .execute(app.db())
+            .await
+            .unwrap();
+        let batches = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let mut state = app.state.clone();
+        state.record_hooks = Arc::new(vec![
+            Arc::new(BatchCounter(batches.clone())) as Arc<dyn RecordHook>
+        ]);
+        let ctx = state
+            .base
+            .security
+            .resolve(app.admin.id)
+            .await
+            .expect("ctx");
+        let tag = uuid::Uuid::now_v7().simple().to_string();
+        attome_core::record_hooks::in_bulk(async {
+            for n in 0..3 {
+                attome_records::entity_crud::create_record_for(
+                    &state,
+                    &ctx,
+                    app.admin.id,
+                    "account",
+                    json!({ "name": format!("Bulk {tag} {n}") }),
+                )
+                .await
+                .expect("a bulk create");
+            }
+        })
+        .await;
+        let waiting: i64 = sqlx::query_scalar("SELECT count(*) FROM record_hook_outbox")
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+        assert_eq!(waiting, 3, "each write left its payload in the outbox");
+        let delivered = attome_core::record_hooks::drain_outbox(&state)
+            .await
+            .unwrap();
+        assert_eq!(delivered, 3);
+        assert_eq!(*batches.lock().unwrap(), vec![3], "one call for the three");
+        let left: i64 = sqlx::query_scalar("SELECT count(*) FROM record_hook_outbox")
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+        assert_eq!(left, 0);
+    });
+}

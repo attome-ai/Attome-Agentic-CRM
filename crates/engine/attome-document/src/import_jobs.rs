@@ -239,7 +239,12 @@ async fn run_phase(state: &EngineState, phase: Phase, job: &PhaseJob) -> Result<
                 tracing::info!(job_id = %id, %at, "import apply waits for the quiet hours to end");
                 return Ok(());
             }
-            attome_records::import_apply::apply(state, id).await?;
+            // Y10-T4: its writes' after-commit hooks go in batches.
+            attome_core::record_hooks::in_bulk(attome_records::import_apply::apply(state, id))
+                .await?;
+            if let Err(error) = attome_core::record_hooks::drain_outbox(state).await {
+                tracing::warn!(%error, "record hook outbox not drained after an import");
+            }
         }
         Phase::Undo => {
             attome_records::import_undo::undo(state, id).await?;

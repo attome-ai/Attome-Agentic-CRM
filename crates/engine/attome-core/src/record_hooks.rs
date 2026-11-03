@@ -15,6 +15,17 @@
 //!   ([`AFTER_COMMIT_JOB`]) with the stored row; it cannot undo the write, so
 //!   a rejection there is only logged. This is the stage for the network.
 //!
+//! Y10-T4: inside a bulk operation or an import ([`in_bulk`]), a write's
+//! after-commit payload goes to `record_hook_outbox` (migration 0394) in the
+//! write's own transaction instead of one job per write, so it exists
+//! exactly when the write commits. [`drain_outbox`] then hands each
+//! after-commit hook up to [`BATCH_SIZE`] records of one entity per call
+//! ([`RecordHook::run_batch`]): it claims a batch, runs the hooks outside
+//! any transaction, and deletes the batch once they ran, so a crash in
+//! between delivers the batch again (at least once; a claim older than ten
+//! minutes is taken again). The bulk and import workers drain when they
+//! finish, and [`OUTBOX_DRAIN_JOB`] drains every minute as the backstop.
+//!
 //! A rejection answers 422 with the hook's message, in the caller's
 //! language when the hook wrote it in more than one ([`HookRejection`]). An in-transaction hook
 //! must not reach the network (the extension runtime refuses its HTTP calls
@@ -129,6 +140,12 @@ pub fn current_depth() -> u32 {
 
 pub type HookFuture<'a> = Pin<Box<dyn Future<Output = Result<HookOutcome, AppError>> + Send + 'a>>;
 
+/// What a batch call answers: nothing to change (it runs after the commit).
+pub type BatchFuture<'a> = Pin<Box<dyn Future<Output = Result<(), AppError>> + Send + 'a>>;
+
+/// Y10-T4: records one after-commit hook call takes in a bulk operation.
+pub const BATCH_SIZE: i64 = 500;
+
 /// One hook on one entity's writes.
 pub trait RecordHook: Send + Sync + 'static {
     /// A stable name, for logs.
@@ -147,6 +164,51 @@ pub trait RecordHook: Send + Sync + 'static {
         0
     }
     fn run<'a>(&'a self, state: &'a EngineState, event: HookEvent<'a>) -> HookFuture<'a>;
+    /// Y10-T4: an after-commit hook's call for a batch of committed writes
+    /// of one entity (up to [`BATCH_SIZE`]). By default, [`Self::run`] for
+    /// each in turn; a hook that can take them at once overrides it. A
+    /// rejection is only logged, as for one write.
+    fn run_batch<'a>(
+        &'a self,
+        state: &'a EngineState,
+        events: &'a [HookEvent<'a>],
+    ) -> BatchFuture<'a> {
+        Box::pin(async move {
+            for event in events {
+                match self.run(state, *event).await {
+                    Ok(HookOutcome::Reject(rejection)) => tracing::warn!(
+                        hook = self.name(),
+                        entity = event.entity,
+                        message = %rejection.message,
+                        "an after-commit hook rejected a committed write; ignored"
+                    ),
+                    Ok(_) => {}
+                    Err(error) => tracing::warn!(
+                        hook = self.name(),
+                        entity = event.entity,
+                        %error,
+                        "an after-commit hook failed on one write of a batch"
+                    ),
+                }
+            }
+            Ok(())
+        })
+    }
+}
+
+tokio::task_local! {
+    /// Set while a bulk operation or an import runs ([`in_bulk`]).
+    static IN_BULK: bool;
+}
+
+/// Y10-T4: runs `f` as a bulk operation: its writes' after-commit hooks are
+/// batched through the outbox.
+pub async fn in_bulk<F: Future>(f: F) -> F::Output {
+    IN_BULK.scope(true, f).await
+}
+
+fn bulk_now() -> bool {
+    IN_BULK.try_with(|b| *b).unwrap_or(false)
 }
 
 /// Runs every hook of `event.entity` at `stage`, in order. Answers the values
@@ -260,6 +322,17 @@ pub async fn enqueue_after_commit(
     if !has_hooks(state, &payload.entity, HookStage::AfterCommit) {
         return Ok(());
     }
+    // Y10-T4: in a bulk operation, to the outbox, batched by the drain.
+    if bulk_now() {
+        sqlx::query("INSERT INTO record_hook_outbox (id, entity, payload) VALUES ($1, $2, $3)")
+            .bind(Uuid::now_v7())
+            .bind(&payload.entity)
+            .bind(serde_json::to_value(&payload).map_err(AppError::internal)?)
+            .execute(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+        return Ok(());
+    }
     let job = attome_jobs::RegisteredJob {
         name: AFTER_COMMIT_JOB.name.to_owned(),
         version: AFTER_COMMIT_JOB.version,
@@ -290,4 +363,93 @@ pub async fn run_after_commit(
     )
     .await
     .map(|_| ())
+}
+
+/// Y10-T4: the job that drains the outbox, every minute.
+pub const OUTBOX_DRAIN_JOB: attome_jobs::JobType =
+    attome_jobs::JobType::new("record_hook_outbox_drain", 1);
+
+/// Batches one drain takes before it yields.
+const DRAIN_BATCHES: usize = 20;
+
+/// Runs every after-commit hook of `entity` on `payloads` (one batch).
+pub async fn run_after_commit_batch(
+    state: &EngineState,
+    entity: &str,
+    payloads: &[AfterCommitPayload],
+) {
+    let mut hooks: Vec<_> = state
+        .record_hooks
+        .iter()
+        .filter(|h| h.stage() == HookStage::AfterCommit && h.watches(entity))
+        .collect();
+    hooks.sort_by_key(|h| h.order());
+    let events: Vec<HookEvent<'_>> = payloads
+        .iter()
+        .map(|p| HookEvent {
+            entity: &p.entity,
+            record_id: Some(p.record_id),
+            is_create: p.is_create,
+            values: &p.values,
+            previous: p.previous.as_ref(),
+            actor: p.actor,
+        })
+        .collect();
+    let depth = current_depth();
+    for hook in hooks {
+        if let Err(error) = HOOK_DEPTH
+            .scope(depth + 1, hook.run_batch(state, &events))
+            .await
+        {
+            tracing::warn!(hook = hook.name(), entity, %error, "an after-commit batch failed");
+        }
+    }
+}
+
+/// Y10-T4: delivers the outbox in batches of up to [`BATCH_SIZE`] records of
+/// one entity. Returns how many records it delivered.
+pub async fn drain_outbox(state: &EngineState) -> Result<usize, AppError> {
+    let db = &state.base.db;
+    let mut delivered = 0;
+    for _ in 0..DRAIN_BATCHES {
+        let claimed: Vec<(Uuid, String, Value)> = sqlx::query_as(
+            "WITH next AS ( \
+                 SELECT entity FROM record_hook_outbox \
+                  WHERE claimed_at IS NULL OR claimed_at < now() - interval '10 minutes' \
+                  ORDER BY created_at LIMIT 1), \
+             pick AS ( \
+                 SELECT o.id FROM record_hook_outbox o, next \
+                  WHERE o.entity = next.entity \
+                    AND (o.claimed_at IS NULL OR o.claimed_at < now() - interval '10 minutes') \
+                  ORDER BY o.created_at LIMIT $1 FOR UPDATE OF o SKIP LOCKED) \
+             UPDATE record_hook_outbox o SET claimed_at = now() FROM pick \
+              WHERE o.id = pick.id RETURNING o.id, o.entity, o.payload",
+        )
+        .bind(BATCH_SIZE)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        let Some(entity) = claimed.first().map(|c| c.1.clone()) else {
+            break;
+        };
+        let ids: Vec<Uuid> = claimed.iter().map(|c| c.0).collect();
+        let payloads: Vec<AfterCommitPayload> = claimed
+            .into_iter()
+            .filter_map(|(id, _, payload)| match serde_json::from_value(payload) {
+                Ok(payload) => Some(payload),
+                Err(error) => {
+                    tracing::error!(%id, %error, "an outbox payload does not read; dropped");
+                    None
+                }
+            })
+            .collect();
+        run_after_commit_batch(state, &entity, &payloads).await;
+        sqlx::query("DELETE FROM record_hook_outbox WHERE id = ANY($1)")
+            .bind(&ids)
+            .execute(db)
+            .await
+            .map_err(AppError::internal)?;
+        delivered += payloads.len();
+    }
+    Ok(delivered)
 }

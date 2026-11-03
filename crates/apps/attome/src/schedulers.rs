@@ -416,6 +416,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // Z12-T7: the yearly Hijri holiday review, checked every hour.
     crate::jobs::spawn_calendar_review_scheduler(db.clone(), std::time::Duration::from_secs(3600));
+    // Y10-T4: bulk operations' batched after-commit hooks, every minute.
+    crate::jobs::spawn_record_hook_outbox_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // O13-T1: digital workers accept and work their offers, every minute.
     crate::jobs::spawn_digital_worker_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // J10-T1: the unified router, a tick every fifteen seconds.

@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Batched after-commit hooks for bulk and import (Y10-T4): each write's after-commit payload goes to
+  `record_hook_outbox` (migration 0394) in its own transaction, and a drain (when the operation
+  finishes, and every minute) hands each hook up to 500 records of one entity per call
+  (`RecordHook::run_batch`, by default one `run` per record), at least once.
 - Managed packages lock what they install (T8-T2): once a managed package's plan applies, its own
   entities are locked (or add-only when listed in the manifest's `extension_points`) and the
   fields it adds to other entities are locked, through `metadata_lock` (migration 0393 records

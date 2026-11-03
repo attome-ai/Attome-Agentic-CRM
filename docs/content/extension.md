@@ -80,7 +80,9 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
 - **Record hooks.** The record write path calls registered hooks at four stages: before
   validation, before save (a hook may change the values or reject the write), after save (in the
   transaction) and after commit (in a job, with the stored row). A hook that writes records runs
-  hooks again, at most eight levels deep.
+  hooks again, at most eight levels deep. In a bulk operation or an import, the after-commit hooks
+  get the writes in batches of up to 500 records of one entity per call (each write's payload is
+  kept with it in its transaction and delivered at least once).
 - **Extensions as hooks.** A manifest lists the writes an extension runs on, for example
   `"hooks": [{"entity": "account", "stage": "before_save", "order": 0}]`; each hook needs a read
   grant on its entity. The module exports `memory`, `alloc(len) -> ptr` and
