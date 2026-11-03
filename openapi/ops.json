@@ -3547,6 +3547,7 @@
           {
             "name": "token",
             "in": "query",
+            "description": "The token from the email.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3722,6 +3723,7 @@
           {
             "name": "token",
             "in": "query",
+            "description": "The token from the email.",
             "required": true,
             "schema": {
               "type": "string"

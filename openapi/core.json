@@ -59231,6 +59231,7 @@
           {
             "name": "status",
             "in": "path",
+            "description": "Only records in this status.",
             "required": true,
             "schema": {
               "type": [
@@ -59242,18 +59243,21 @@
           {
             "name": "page",
             "in": "path",
+            "description": "One-based: page 1 is the first page.",
             "required": true,
             "schema": {
               "type": [
                 "integer",
                 "null"
               ],
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
             "name": "page_size",
             "in": "path",
+            "description": "Records per page.",
             "required": true,
             "schema": {
               "type": [

@@ -5034,10 +5034,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PortalInvoice"
-                  }
+                  "$ref": "#/components/schemas/PaginatedResponse_PortalInvoice"
                 }
               }
             }
@@ -5184,10 +5181,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PortalPaymentMethod"
-                  }
+                  "$ref": "#/components/schemas/PaginatedResponse_PortalPaymentMethod"
                 }
               }
             }
@@ -5327,10 +5321,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PortalSubscription"
-                  }
+                  "$ref": "#/components/schemas/PaginatedResponse_PortalSubscription"
                 }
               }
             }
@@ -7288,14 +7279,11 @@
         ],
         "responses": {
           "200": {
-            "description": "The members",
+            "description": "The members, at most 500",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PartnerMember"
-                  }
+                  "$ref": "#/components/schemas/PaginatedResponse_PartnerMember"
                 }
               }
             }
@@ -11261,6 +11249,75 @@
           }
         }
       },
+      "PaginatedResponse_PartnerMember": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One member of the caller's partner on this portal.",
+              "required": [
+                "id",
+                "name",
+                "status"
+              ],
+              "properties": {
+                "email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The member's partner role; none when they hold none."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`invited`, `active` or `disabled`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_PortalDetail": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -11397,6 +11454,97 @@
           }
         }
       },
+      "PaginatedResponse_PortalInvoice": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "An issued invoice with an amount still open.",
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "currency": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "due_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "grand_total": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "As stored, decimals in text."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "invoice_number": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "issued_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "open_total": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "payment_status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "`open`, `partly_paid` or `overdue`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_PortalPageSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -11430,6 +11578,85 @@
                   ]
                 },
                 "title_en": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_PortalPaymentMethod": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A saved payment method, without its token.",
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "brand": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "expiry_month": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32"
+                },
+                "expiry_year": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_default": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "last4": {
                   "type": [
                     "string",
                     "null"
@@ -11508,6 +11735,119 @@
                     "null"
                   ],
                   "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_PortalSubscription": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One subscription as the customer sees it.",
+              "required": [
+                "id",
+                "lines",
+                "coming_charges"
+              ],
+              "properties": {
+                "billing_frequency": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "cancel_effective": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "When a cancellation takes effect, if one was made."
+                },
+                "coming_charges": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalCharge"
+                  }
+                },
+                "currency": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "end_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "lines": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalLine"
+                  }
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "renewal_mode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "start_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
@@ -12163,63 +12503,6 @@
           }
         }
       },
-      "PortalInvoice": {
-        "type": "object",
-        "description": "An issued invoice with an amount still open.",
-        "required": [
-          "id"
-        ],
-        "properties": {
-          "currency": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "due_date": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "grand_total": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "As stored, decimals in text."
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "invoice_number": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "issued_date": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "open_total": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "payment_status": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "`open`, `partly_paid` or `overdue`."
-          }
-        }
-      },
       "PortalLine": {
         "type": "object",
         "description": "A line in force today.",
@@ -12332,51 +12615,6 @@
           },
           "name": {
             "type": "string"
-          }
-        }
-      },
-      "PortalPaymentMethod": {
-        "type": "object",
-        "description": "A saved payment method, without its token.",
-        "required": [
-          "id"
-        ],
-        "properties": {
-          "brand": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "expiry_month": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32"
-          },
-          "expiry_year": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "is_default": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          },
-          "last4": {
-            "type": [
-              "string",
-              "null"
-            ]
           }
         }
       },
@@ -12532,85 +12770,6 @@
             ],
             "format": "uuid",
             "description": "V2-D1588 (1): the staff user the portal's self-service changes run\nas; absent unchanged, `null` cleared. It needs an active account and\nonly the privileges the self-service routes use."
-          }
-        }
-      },
-      "PortalSubscription": {
-        "type": "object",
-        "description": "One subscription as the customer sees it.",
-        "required": [
-          "id",
-          "lines",
-          "coming_charges"
-        ],
-        "properties": {
-          "billing_frequency": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "cancel_effective": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time",
-            "description": "When a cancellation takes effect, if one was made."
-          },
-          "coming_charges": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PortalCharge"
-            }
-          },
-          "currency": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "end_date": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "lines": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PortalLine"
-            }
-          },
-          "name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "renewal_mode": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "start_date": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "status": {
-            "type": [
-              "string",
-              "null"
-            ]
           }
         }
       },

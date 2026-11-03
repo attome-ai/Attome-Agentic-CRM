@@ -58230,6 +58230,30 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PartnerMember: {
+            items: {
+                email?: string | null;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /** @description The member's partner role; none when they hold none. */
+                role?: string | null;
+                /** @description `invited`, `active` or `disabled`. */
+                status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_PasskeyItem: {
             items: {
                 /** Format: date-time */
@@ -58538,12 +58562,64 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PortalInvoice: {
+            items: {
+                currency?: string | null;
+                due_date?: string | null;
+                /** @description As stored, decimals in text. */
+                grand_total?: string | null;
+                /** Format: uuid */
+                id: string;
+                invoice_number?: string | null;
+                issued_date?: string | null;
+                open_total?: string | null;
+                /** @description `open`, `partly_paid` or `overdue`. */
+                payment_status?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_PortalPageSummary: {
             items: {
                 name: string;
                 page_type: string;
                 title_ar?: string | null;
                 title_en?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PortalPaymentMethod: {
+            items: {
+                brand?: string | null;
+                /** Format: int32 */
+                expiry_month?: number | null;
+                /** Format: int32 */
+                expiry_year?: number | null;
+                /** Format: uuid */
+                id: string;
+                is_default?: boolean | null;
+                last4?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -58571,6 +58647,40 @@ export interface components {
                 row_version: number;
                 /** Format: date-time */
                 updated_at?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PortalSubscription: {
+            items: {
+                billing_frequency?: string | null;
+                /**
+                 * Format: date-time
+                 * @description When a cancellation takes effect, if one was made.
+                 */
+                cancel_effective?: string | null;
+                coming_charges: components["schemas"]["PortalCharge"][];
+                currency?: string | null;
+                /** Format: date-time */
+                end_date?: string | null;
+                /** Format: uuid */
+                id: string;
+                lines: components["schemas"]["PortalLine"][];
+                name?: string | null;
+                renewal_mode?: string | null;
+                /** Format: date-time */
+                start_date?: string | null;
+                status?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -124312,8 +124422,11 @@ export interface operations {
                 base: string;
                 /** @description `me`, or a user id. */
                 owner: string | null;
+                /** @description Only records in this status. */
                 status: string | null;
+                /** @description One-based: page 1 is the first page. */
                 page: number | null;
+                /** @description Records per page. */
                 page_size: number | null;
             };
             cookie?: never;
@@ -137966,6 +138079,7 @@ export interface operations {
                 status: string | null;
                 /** @description One-based. */
                 page: number | null;
+                /** @description Hand-offs per page. */
                 page_size: number | null;
             };
             cookie?: never;
@@ -149326,6 +149440,7 @@ export interface operations {
     confirm_public_status_subscription: {
         parameters: {
             query: {
+                /** @description The token from the email. */
                 token: string;
             };
             header?: never;
@@ -149444,6 +149559,7 @@ export interface operations {
     unsubscribe_public_status: {
         parameters: {
             query: {
+                /** @description The token from the email. */
                 token: string;
             };
             header?: never;
@@ -170471,7 +170587,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PortalInvoice"][];
+                    "application/json": components["schemas"]["PaginatedResponse_PortalInvoice"];
                 };
             };
             /** @description Not signed in to the portal */
@@ -170555,7 +170671,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PortalPaymentMethod"][];
+                    "application/json": components["schemas"]["PaginatedResponse_PortalPaymentMethod"];
                 };
             };
             /** @description Not signed in to the portal */
@@ -170637,7 +170753,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PortalSubscription"][];
+                    "application/json": components["schemas"]["PaginatedResponse_PortalSubscription"];
                 };
             };
             /** @description Not signed in to the portal */
@@ -171809,13 +171925,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The members */
+            /** @description The members, at most 500 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PartnerMember"][];
+                    "application/json": components["schemas"]["PaginatedResponse_PartnerMember"];
                 };
             };
             /** @description Not signed in to the portal */
