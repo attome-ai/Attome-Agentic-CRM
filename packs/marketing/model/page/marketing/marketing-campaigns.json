@@ -1,0 +1,99 @@
+{
+  "app": "marketing",
+  "doc": {
+    "description_en": "Each campaign's members, responses and conversions; select a campaign to open it.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "children": [
+            {
+              "binding": {
+                "entity": "campaign",
+                "where": [
+                  {
+                    "field": "status",
+                    "op": "eq",
+                    "value": "active"
+                  }
+                ]
+              },
+              "id": "active",
+              "props": {
+                "title_ar": "الحملات النشطة",
+                "title_en": "Active campaigns"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "entity": "lead",
+                "where": [
+                  {
+                    "field": "lifecycle_stage",
+                    "op": "eq",
+                    "value": "marketing_qualified"
+                  }
+                ]
+              },
+              "id": "mql",
+              "props": {
+                "title_ar": "العملاء المحتملون المؤهلون تسويقيًا",
+                "title_en": "Marketing qualified leads"
+              },
+              "type": "metric"
+            }
+          ],
+          "id": "kpis",
+          "props": {
+            "layout": "row"
+          },
+          "type": "container"
+        },
+        {
+          "binding": {
+            "query": "@query:/Marketing: Campaign Performance"
+          },
+          "id": "performance",
+          "props": {
+            "title_ar": "الاستجابات حسب الحملة",
+            "title_en": "Responses by campaign"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "entity": "campaign",
+            "where": [
+              {
+                "field": "status",
+                "op": "eq",
+                "value": "active"
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/campaign/{id}"
+            }
+          ],
+          "id": "active_list",
+          "props": {
+            "title_ar": "الحملات النشطة",
+            "title_en": "Active campaigns"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "الحملات",
+    "title_en": "Campaigns"
+  },
+  "kind": "page",
+  "name": "marketing-campaigns",
+  "schema_version": 1
+}

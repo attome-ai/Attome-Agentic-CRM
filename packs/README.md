@@ -88,6 +88,15 @@ the unsubscribe link and consent re-check apply. A test enrolment goes to the jo
 `test_addresses` entry. SMS, WhatsApp, push, in-app and task steps are refused at publish
 (`channel_unavailable`) until their senders exist.
 
+`0020` adds the **marketing dashboards** (E28-T1) and the **Marketing Manager** role they land on
+(business unit, position hierarchy): report queries for campaign performance (members, responses,
+conversions), email engagement by send over 90 days (sent, opened, clicked and their rates), leads by
+first touch source over 180 days (attribution) and campaign return (won revenue from the accounts a
+campaign's leads became, each opportunity counted once, against the budget). Pages `marketing-campaigns`,
+`marketing-funnel`, `marketing-email`, `marketing-attribution` and `marketing-roi` chart them and the
+lifecycle queries; campaign and lead lists open their records. The **Marketing** menu lands Marketing
+Managers on the campaigns page.
+
 ## offline
 
 Offline profiles (B18): `offline_profile` per role (storage and days-offline limits) and

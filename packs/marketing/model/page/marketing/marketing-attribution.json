@@ -1,0 +1,40 @@
+{
+  "app": "marketing",
+  "doc": {
+    "description_en": "Where the last 180 days of leads first came from, and how many qualified.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "query": "@query:/Marketing: Leads by First Touch Source"
+          },
+          "id": "sources",
+          "props": {
+            "title_ar": "العملاء المحتملون حسب مصدر أول تواصل",
+            "title_en": "Leads by first touch source"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "query": "@query:/Marketing: Leads by First Touch Source"
+          },
+          "id": "sources_table",
+          "props": {
+            "title_ar": "العملاء المحتملون والمؤهلون حسب المصدر",
+            "title_en": "Leads and qualified leads by source"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "الإسناد",
+    "title_en": "Attribution"
+  },
+  "kind": "page",
+  "name": "marketing-attribution",
+  "schema_version": 1
+}

@@ -1,0 +1,420 @@
+{
+  "author": "packs",
+  "checksum": "sha256:cad0777ec66dbd162fc43a57c9d0f62e83263364c6f01d6e97f47d4ba3090650",
+  "closed_at": "2026-11-03T00:00:00Z",
+  "description": "Marketing dashboards (E28-T1): campaign performance, email engagement, leads by first touch source and campaign return, and the Marketing Manager role they land on.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a10c-83db-7e3e-ae54-36ef9f1518ac",
+  "layer": "product",
+  "name": "marketing-dashboards",
+  "opened_at": "2026-11-03T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Marketing: Campaign Performance",
+          "required_privilege": "campaign.read",
+          "sql": "SELECT c.name AS campaign, COUNT(m.id) FILTER (WHERE m.status IN ('responded', 'attended', 'converted'))::bigint AS responses, COUNT(m.id)::bigint AS members, COUNT(m.id) FILTER (WHERE m.status = 'converted')::bigint AS converted FROM campaign c LEFT JOIN campaign_member m ON m.campaign_ref = c.id AND (m.is_active IS NULL OR m.is_active = true) WHERE (c.is_active IS NULL OR c.is_active = true) AND c.status IN ('active', 'completed') GROUP BY c.id, c.name ORDER BY responses DESC LIMIT 50",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Marketing: Campaign Performance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Marketing: Email Engagement by Send",
+          "required_privilege": "campaign.read",
+          "sql": "SELECT s.subject, COUNT(*) FILTER (WHERE r.status = 'sent')::bigint AS sent, COUNT(r.opened_at)::bigint AS opened, COUNT(r.clicked_at)::bigint AS clicked, ROUND(100.0 * COUNT(r.opened_at) / NULLIF(COUNT(*) FILTER (WHERE r.status = 'sent'), 0), 1) AS open_rate_percent, ROUND(100.0 * COUNT(r.clicked_at) / NULLIF(COUNT(*) FILTER (WHERE r.status = 'sent'), 0), 1) AS click_rate_percent, to_char(s.created_at, 'YYYY-MM-DD') AS sent_on FROM email_campaign_send s JOIN email_campaign_recipient r ON r.send_id = s.id WHERE s.created_at >= NOW() - INTERVAL '90 days' GROUP BY s.id, s.subject, s.created_at ORDER BY s.created_at DESC LIMIT 30",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Marketing: Email Engagement by Send"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Marketing: Leads by First Touch Source",
+          "required_privilege": "lead.read",
+          "sql": "SELECT COALESCE(NULLIF(t.first_touch_source, ''), '(direct)') AS source, COUNT(*)::bigint AS leads, COUNT(*) FILTER (WHERE t.lifecycle_stage IN ('sales_qualified', 'customer') OR t.lead_status = 'converted')::bigint AS qualified FROM \"lead\" t WHERE (t.is_active IS NULL OR t.is_active = true) AND t.created_at >= NOW() - INTERVAL '180 days' GROUP BY 1 ORDER BY leads DESC LIMIT 25",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Marketing: Leads by First Touch Source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Marketing: Campaign ROI",
+          "required_privilege": "campaign.read",
+          "sql": "SELECT c.name AS campaign, ROUND(100.0 * (COALESCE(w.won, 0) - c.budget) / NULLIF(c.budget, 0), 1) AS roi_percent, c.budget, COALESCE(w.won, 0) AS won_revenue FROM campaign c LEFT JOIN (SELECT x.campaign_ref, SUM(x.amount) AS won FROM (SELECT DISTINCT l.campaign_ref, o.id, o.amount FROM \"lead\" l JOIN opportunity o ON o.account_ref = l.converted_account_ref AND o.stage = 'closed_won' AND (o.is_active IS NULL OR o.is_active = true) WHERE (l.is_active IS NULL OR l.is_active = true) AND l.campaign_ref IS NOT NULL) x GROUP BY x.campaign_ref) w ON w.campaign_ref = c.id WHERE (c.is_active IS NULL OR c.is_active = true) AND c.budget > 0 ORDER BY roi_percent DESC NULLS LAST LIMIT 50",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Marketing: Campaign ROI"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on campaign",
+          "key": "campaign.read",
+          "name": "campaign.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "campaign.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on campaign",
+          "key": "campaign.create",
+          "name": "campaign.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "campaign.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on campaign",
+          "key": "campaign.update",
+          "name": "campaign.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "campaign.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on campaign_member",
+          "key": "campaign_member.read",
+          "name": "campaign_member.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "campaign_member.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on campaign_member",
+          "key": "campaign_member.create",
+          "name": "campaign_member.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "campaign_member.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on campaign_member",
+          "key": "campaign_member.update",
+          "name": "campaign_member.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "campaign_member.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on marketing_list",
+          "key": "marketing_list.read",
+          "name": "marketing_list.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "marketing_list.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on marketing_list",
+          "key": "marketing_list.create",
+          "name": "marketing_list.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "marketing_list.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on marketing_list",
+          "key": "marketing_list.update",
+          "name": "marketing_list.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "marketing_list.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on lead",
+          "key": "lead.read",
+          "name": "lead.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "lead.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on contact",
+          "key": "contact.read",
+          "name": "contact.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "contact.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 2,
+          "description": "Plans and runs campaigns, lists and emails, and reads their results and return.",
+          "is_customized": false,
+          "name": "Marketing Manager",
+          "position_hierarchy_enabled": true
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "campaign.read",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "campaign.create",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "campaign.update",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "campaign_member.read",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "campaign_member.create",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "campaign_member.update",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "privilege": "marketing_list.read",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "privilege": "marketing_list.create",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "privilege": "marketing_list.update",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "privilege": "lead.read",
+        "role": "Marketing Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "privilege": "contact.read",
+        "role": "Marketing Manager"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 20,
+  "title": "Pack: marketing dashboards and role"
+}

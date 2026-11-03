@@ -1,0 +1,65 @@
+{
+  "app": "marketing",
+  "doc": {
+    "description_en": "Leads and contacts by lifecycle stage.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "query": "@query:lead/Leads per lifecycle stage"
+          },
+          "id": "leads",
+          "props": {
+            "title_ar": "العملاء المحتملون حسب مرحلة دورة الحياة",
+            "title_en": "Leads by lifecycle stage"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "query": "@query:contact/Contacts per lifecycle stage"
+          },
+          "id": "contacts",
+          "props": {
+            "title_ar": "جهات الاتصال حسب مرحلة دورة الحياة",
+            "title_en": "Contacts by lifecycle stage"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "entity": "lead",
+            "where": [
+              {
+                "field": "lifecycle_stage",
+                "op": "eq",
+                "value": "sales_qualified"
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/lead/{id}"
+            }
+          ],
+          "id": "sql_list",
+          "props": {
+            "title_ar": "العملاء المحتملون المؤهلون للمبيعات",
+            "title_en": "Sales qualified leads"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "مسار التحويل",
+    "title_en": "Funnel"
+  },
+  "kind": "page",
+  "name": "marketing-funnel",
+  "schema_version": 1
+}

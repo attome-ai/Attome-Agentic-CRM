@@ -1,0 +1,29 @@
+{
+  "app": "marketing",
+  "doc": {
+    "description_en": "The last 90 days of email sends: sent, opened and clicked.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "query": "@query:/Marketing: Email Engagement by Send"
+          },
+          "id": "engagement",
+          "props": {
+            "title_ar": "التفاعل مع البريد حسب الإرسال",
+            "title_en": "Email engagement by send"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "البريد الإلكتروني",
+    "title_en": "Email"
+  },
+  "kind": "page",
+  "name": "marketing-email",
+  "schema_version": 1
+}

@@ -1,0 +1,40 @@
+{
+  "app": "marketing",
+  "doc": {
+    "description_en": "Won revenue from accounts each campaign's leads became, against the campaign budget.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "query": "@query:/Marketing: Campaign ROI"
+          },
+          "id": "roi",
+          "props": {
+            "title_ar": "العائد على ميزانية الحملة (%)",
+            "title_en": "Return on campaign budget (%)"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "query": "@query:/Marketing: Campaign ROI"
+          },
+          "id": "roi_table",
+          "props": {
+            "title_ar": "الميزانية والإيراد المكسوب حسب الحملة",
+            "title_en": "Budget and won revenue by campaign"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "العائد",
+    "title_en": "Return"
+  },
+  "kind": "page",
+  "name": "marketing-roi",
+  "schema_version": 1
+}

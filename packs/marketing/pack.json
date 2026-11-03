@@ -2,7 +2,7 @@
   "format": "attome-pack/v1",
   "name": "marketing",
   "title": "Marketing",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "level": "starter",
   "depends": [
     "crm"

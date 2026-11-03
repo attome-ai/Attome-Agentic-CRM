@@ -1,0 +1,54 @@
+{
+  "app": "marketing",
+  "doc": {
+    "groups": [
+      {
+        "items": [
+          {
+            "kind": "page",
+            "label": "Campaigns",
+            "target": "@page:marketing/marketing-campaigns"
+          },
+          {
+            "kind": "page",
+            "label": "Funnel",
+            "target": "@page:marketing/marketing-funnel"
+          },
+          {
+            "kind": "page",
+            "label": "Email",
+            "target": "@page:marketing/marketing-email"
+          },
+          {
+            "kind": "page",
+            "label": "Attribution",
+            "target": "@page:marketing/marketing-attribution"
+          },
+          {
+            "kind": "page",
+            "label": "Return",
+            "target": "@page:marketing/marketing-roi"
+          }
+        ],
+        "label": "Dashboards"
+      }
+    ],
+    "landing": [
+      {
+        "item": "Dashboards/Campaigns",
+        "role": "@role:Marketing Manager"
+      }
+    ],
+    "settings": {
+      "icon": "las la-bullhorn",
+      "languages": [
+        "en",
+        "ar"
+      ],
+      "name": "Marketing"
+    }
+  },
+  "kind": "navigation",
+  "name": "marketing",
+  "schema_version": 1
+}
