@@ -5804,6 +5804,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/scaffold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make an entity's starting set
+         * @description Saves a draft main form, adds a kanban view when the entity has a status
+         *     choice, and returns the import template's columns and the entity's digest
+         *     entry. A piece already there is left as it is. Audited.
+         */
+        post: operations["scaffold_entity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/scaffold-ui": {
         parameters: {
             query?: never;
@@ -67846,6 +67868,32 @@ export interface components {
          * @enum {string}
          */
         ScaffoldKind: "form" | "list";
+        /** @description What a scaffold made or found. */
+        ScaffoldReport: {
+            /** @description The entity as the model digest lists it. */
+            digest: Record<string, never>;
+            entity: string;
+            /** @description `false` when a form of that name was already there. */
+            form_created: boolean;
+            /**
+             * Format: uuid
+             * @description The main form's draft object.
+             */
+            form_id: string;
+            /** @description The columns an import of this entity fills, in order. */
+            import_template: string[];
+            kanban_view_created: boolean;
+            /**
+             * Format: uuid
+             * @description The kanban view, when the entity has a status choice.
+             */
+            kanban_view_id?: string | null;
+            /**
+             * Format: int64
+             * @description Roles with no access to the entity yet (every role, until granted).
+             */
+            roles_without_access: number;
+        };
         ScaffoldResult: {
             /** @description The `.ts`, `.html`, and `.css` files written, in that order. */
             files: string[];
@@ -92019,6 +92067,65 @@ export interface operations {
             };
             /** @description The copy did not answer, has no such table, or the change fails there */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    scaffold_entity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Made or found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScaffoldReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description changeset_required or another changeset refusal */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

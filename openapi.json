@@ -29501,6 +29501,103 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/entities/{entity_id}/scaffold": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Make an entity's starting set",
+        "description": "Saves a draft main form, adds a kanban view when the entity has a status\nchoice, and returns the import template's columns and the entity's digest\nentry. A piece already there is left as it is. Audited.",
+        "operationId": "scaffold_entity",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Made or found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScaffoldReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "changeset_required or another changeset refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/entities/{entity_id}/scaffold-ui": {
       "post": {
         "tags": [
@@ -250106,6 +250203,60 @@
           "form",
           "list"
         ]
+      },
+      "ScaffoldReport": {
+        "type": "object",
+        "description": "What a scaffold made or found.",
+        "required": [
+          "entity",
+          "form_id",
+          "form_created",
+          "kanban_view_created",
+          "import_template",
+          "digest",
+          "roles_without_access"
+        ],
+        "properties": {
+          "digest": {
+            "type": "object",
+            "description": "The entity as the model digest lists it."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "form_created": {
+            "type": "boolean",
+            "description": "`false` when a form of that name was already there."
+          },
+          "form_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The main form's draft object."
+          },
+          "import_template": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The columns an import of this entity fills, in order."
+          },
+          "kanban_view_created": {
+            "type": "boolean"
+          },
+          "kanban_view_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The kanban view, when the entity has a status choice."
+          },
+          "roles_without_access": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Roles with no access to the entity yet (every role, until granted)."
+          }
+        }
       },
       "ScaffoldResult": {
         "type": "object",
