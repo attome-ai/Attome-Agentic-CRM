@@ -2,7 +2,7 @@
   "format": "attome-pack/v1",
   "name": "customer-service",
   "title": "Customer service",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "level": "starter",
   "depends": [
     "asset-management",

@@ -1,0 +1,123 @@
+{
+  "app": "customer-service",
+  "doc": {
+    "description_en": "The open tickets your team can see, those past their SLA first.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "children": [
+            {
+              "binding": {
+                "entity": "service_ticket",
+                "where": [
+                  {
+                    "field": "status",
+                    "op": "in",
+                    "value": [
+                      "new",
+                      "open",
+                      "in_progress",
+                      "waiting_on_customer"
+                    ]
+                  }
+                ]
+              },
+              "id": "open",
+              "props": {
+                "title_ar": "التذاكر المفتوحة",
+                "title_en": "Open tickets"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "entity": "service_ticket",
+                "where": [
+                  {
+                    "field": "sla_breached",
+                    "op": "eq",
+                    "value": true
+                  }
+                ]
+              },
+              "id": "breached",
+              "props": {
+                "title_ar": "تجاوزت اتفاقية الخدمة",
+                "title_en": "SLA breached"
+              },
+              "type": "metric"
+            }
+          ],
+          "id": "kpis",
+          "props": {
+            "layout": "row"
+          },
+          "type": "container"
+        },
+        {
+          "binding": {
+            "entity": "service_ticket",
+            "where": [
+              {
+                "field": "sla_breached",
+                "op": "eq",
+                "value": true
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/service_ticket/{id}"
+            }
+          ],
+          "id": "breached_list",
+          "props": {
+            "title_ar": "متجاوزة لاتفاقية الخدمة",
+            "title_en": "Past their SLA"
+          },
+          "type": "list"
+        },
+        {
+          "binding": {
+            "entity": "service_ticket",
+            "where": [
+              {
+                "field": "status",
+                "op": "in",
+                "value": [
+                  "new",
+                  "open",
+                  "in_progress",
+                  "waiting_on_customer"
+                ]
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/service_ticket/{id}"
+            }
+          ],
+          "id": "open_list",
+          "props": {
+            "title_ar": "التذاكر المفتوحة",
+            "title_en": "Open tickets"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "قائمة عملي",
+    "title_en": "My queue"
+  },
+  "kind": "page",
+  "name": "service-agent",
+  "schema_version": 1
+}

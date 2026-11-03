@@ -1,0 +1,43 @@
+{
+  "app": "customer-service",
+  "doc": {
+    "groups": [
+      {
+        "items": [
+          {
+            "kind": "page",
+            "label": "Service desk",
+            "target": "@page:customer-service/service-manager"
+          },
+          {
+            "kind": "page",
+            "label": "My queue",
+            "target": "@page:customer-service/service-agent"
+          }
+        ],
+        "label": "Dashboards"
+      }
+    ],
+    "landing": [
+      {
+        "item": "Dashboards/Service desk",
+        "role": "@role:Service Manager"
+      },
+      {
+        "item": "Dashboards/My queue",
+        "role": "@role:Service Agent"
+      }
+    ],
+    "settings": {
+      "icon": "las la-headset",
+      "languages": [
+        "en",
+        "ar"
+      ],
+      "name": "Service"
+    }
+  },
+  "kind": "navigation",
+  "name": "service",
+  "schema_version": 1
+}

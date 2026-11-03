@@ -1,0 +1,148 @@
+{
+  "app": "customer-service",
+  "doc": {
+    "description_en": "SLA, backlog, first contact resolution, handle time and satisfaction; select a ticket to open it.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "children": [
+            {
+              "binding": {
+                "entity": "service_ticket",
+                "where": [
+                  {
+                    "field": "status",
+                    "op": "in",
+                    "value": [
+                      "new",
+                      "open",
+                      "in_progress",
+                      "waiting_on_customer"
+                    ]
+                  }
+                ]
+              },
+              "id": "open",
+              "props": {
+                "title_ar": "التذاكر المفتوحة",
+                "title_en": "Open tickets"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "entity": "service_ticket",
+                "where": [
+                  {
+                    "field": "sla_breached",
+                    "op": "eq",
+                    "value": true
+                  }
+                ]
+              },
+              "id": "breached",
+              "props": {
+                "title_ar": "تجاوزت اتفاقية الخدمة",
+                "title_en": "SLA breached"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "query": "@query:/CS: First Contact Resolution"
+              },
+              "id": "fcr",
+              "props": {
+                "title_ar": "الحل من أول تواصل (%)",
+                "title_en": "First contact resolution (%)"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "query": "@query:service_ticket/CS: Average CSAT"
+              },
+              "id": "csat",
+              "props": {
+                "title_ar": "متوسط رضا العملاء",
+                "title_en": "Average CSAT"
+              },
+              "type": "metric"
+            }
+          ],
+          "id": "kpis",
+          "props": {
+            "layout": "row"
+          },
+          "type": "container"
+        },
+        {
+          "binding": {
+            "query": "@query:/CS: Backlog Age"
+          },
+          "id": "backlog",
+          "props": {
+            "title_ar": "التراكم حسب العمر",
+            "title_en": "Backlog by age"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "query": "@query:/CS: SLA Attainment by Customer"
+          },
+          "id": "sla_by_customer",
+          "props": {
+            "title_ar": "الالتزام باتفاقية الخدمة حسب العميل (%)",
+            "title_en": "SLA attainment by customer (%)"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "query": "@query:/CS: Handle Time by Agent"
+          },
+          "id": "handle_time",
+          "props": {
+            "title_ar": "مدة المعالجة حسب الموظف (ساعات)",
+            "title_en": "Handle time by agent (hours)"
+          },
+          "type": "list"
+        },
+        {
+          "binding": {
+            "entity": "service_ticket",
+            "where": [
+              {
+                "field": "sla_breached",
+                "op": "eq",
+                "value": true
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/service_ticket/{id}"
+            }
+          ],
+          "id": "breached_list",
+          "props": {
+            "title_ar": "التذاكر المتجاوزة لاتفاقية الخدمة",
+            "title_en": "Tickets past their SLA"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "مكتب الخدمة",
+    "title_en": "Service desk"
+  },
+  "kind": "page",
+  "name": "service-manager",
+  "schema_version": 1
+}

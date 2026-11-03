@@ -317,3 +317,13 @@ nothing else widens, and being on an account's team still grants nothing by itse
 Division structure file and the Arabic from the UN Arabic edition (ST/ESA/STAT/SER.M/4/Rev.4). It
 also upserts the sections from `0003` and the divisions from `0011`, so their Arabic matches the UN
 text. A group that the UN prints without a label of its own takes its division's label.
+
+## customer-service: dashboards
+
+`0005` adds the **Service Agent** (team access) and **Service Manager** (business unit, position
+hierarchy) roles and four report queries (G16-T1): first contact resolution over 90 days (a resolved
+ticket with at most one agent reply), backlog by age band, handle time by agent (claimed to resolved,
+in hours) and SLA attainment by customer. The pack's pages `service-manager` (open and breached
+tickets, first contact resolution, average CSAT, backlog age, SLA attainment by customer, handle time,
+tickets past their SLA) and `service-agent` (the team's open tickets, those past their SLA first) open a
+ticket from any list, and its **Service** menu lands each role on its page.
