@@ -264,7 +264,7 @@ export class PageNodeComponent {
     this.block.set(null);
     this.blockFailed.set(false);
     if (!found) return;
-    found.load().then(
+    void found.load().then(
       type => {
         if (this.node().component === name) this.block.set(type);
       },

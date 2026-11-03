@@ -29,7 +29,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use serde_json::{Value, json};
+use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -332,7 +332,7 @@ mod tests {
 
     #[test]
     fn the_spec_names_the_entity() {
-        let spec: Value = json!({ "entity_id": Uuid::nil() });
+        let spec: serde_json::Value = json!({ "entity_id": Uuid::nil() });
         assert!(spec.get("entity_id").is_some());
     }
 }
