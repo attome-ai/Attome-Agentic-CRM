@@ -9,8 +9,8 @@ PostgreSQL schema, so making one is a single call and needs no second server.
 - **The metadata, with its rows:** every configuration table a changeset can change, and the model
   store (forms, pages, flows and the other model objects), copied from live when the workspace is
   made.
-- **Every entity table, empty:** the same columns and indexes as live, with no records. Sample data
-  or a masked copy of live records comes with a later release.
+- **Every entity table:** the same columns and indexes as live, holding the records chosen when the
+  workspace is made (see below).
 - **Nothing about people:** users, teams, organisations, units, positions and API keys stay shared
   with live, as do sessions, the audit trail and background jobs.
 
@@ -18,7 +18,7 @@ PostgreSQL schema, so making one is a single call and needs no second server.
 
 | Call | What it does |
 |---|---|
-| `POST /api/v1/admin/workspaces` | Makes one: `{"name": "Sales rework", "purpose": "..."}` (name 1 to 100 characters). |
+| `POST /api/v1/admin/workspaces` | Makes one: `{"name": "Sales rework", "purpose": "...", "data": {...}}` (name 1 to 100 characters). The answer adds `data`: what was copied or generated. |
 | `GET /api/v1/admin/workspaces` | Lists the workspaces not discarded, newest first (paged). |
 | `GET /api/v1/admin/workspaces/{id}` | Shows one: its status, owner and how many tables it copied. |
 | `DELETE /api/v1/admin/workspaces/{id}` | Discards an open workspace and drops its schema. |
@@ -28,6 +28,27 @@ PostgreSQL schema, so making one is a single call and needs no second server.
 Every call needs the data-model administration area, except publish, which needs the metadata
 rollout privilege, as any changeset apply does. Making, discarding and publishing a workspace are
 audited as configuration changes.
+
+## Records
+
+`data` chooses the records a workspace starts with:
+
+| `data` | Records |
+|---|---|
+| `{"mode": "sample", "per_entity": 20}` (the default) | Up to `per_entity` records (1 to 200) generated for every entity from its columns. An email, phone, national id or name field gets a realistic fake. Other text gets the field's name and a number. Numbers, dates and flags come from the row number. A lookup points at a generated record of its target. An entity whose columns cannot all be filled is listed under `skipped`. |
+| `{"mode": "masked", "percent": 10}` | `percent` of every entity's live records (1 to 100), chosen by a hash of the id. Every record those point at through a lookup is copied too, until nothing more is added. |
+| `{"mode": "none"}` | No records. |
+
+In every mode:
+
+- Reference data is copied whole from live.
+- Credential tables (API keys, tokens, sessions) stay empty.
+- Every labelled field is masked with a key made for this workspace and never stored, so no live
+  personal value reaches it. Personal text is faked. Financial values are shuffled between records.
+  Health and secret values are cleared. A required column that cannot take a fake is shuffled.
+
+The storage the records need is estimated from live's tables before anything is copied. Past
+`metadata.workspace_data_max_mb` (1,024 MB unset), the workspace is refused with `422`.
 
 ## Working inside one
 
@@ -70,5 +91,4 @@ Removals (the contract phase) are returned as `contract_apply_ids`. Apply them w
 
 Discarding a workspace also abandons its changeset if it is empty.
 
-Sample and masked data, idle expiry and the picker in the web app follow in the next releases
-(roadmap T5-T5 to T5-T7).
+Idle expiry and the picker in the web app follow in the next releases (roadmap T5-T6 and T5-T7).

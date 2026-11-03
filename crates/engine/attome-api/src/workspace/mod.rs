@@ -7,8 +7,8 @@
 //! touching Run mode. Identity and access tables, sessions, audit and jobs
 //! stay shared with live.
 //!
-//! - `POST /api/v1/admin/workspaces` makes one (configuration only; sample or
-//!   masked data is T5-T5);
+//! - `POST /api/v1/admin/workspaces` makes one, with sample records, a masked
+//!   share of live's, or none ([`data`], T5-T5);
 //! - `GET /api/v1/admin/workspaces` and `.../{id}` list and show them;
 //! - `DELETE /api/v1/admin/workspaces/{id}` discards one and drops its schema.
 //!
@@ -21,6 +21,7 @@
 //! the metadata rollout privilege, as any changeset apply); creating,
 //! discarding and publishing are audited as configuration changes.
 
+pub mod data;
 pub mod proxy;
 pub mod publish;
 pub mod schema;
@@ -71,12 +72,25 @@ pub struct NewWorkspace {
     /// What it is for, at most 1,000 characters.
     #[serde(default)]
     pub purpose: Option<String>,
+    /// Its records: generated samples (the default), a masked share of
+    /// live's, or none.
+    #[serde(default)]
+    pub data: Option<data::DataRequest>,
+}
+
+/// A workspace just made, with what its data came to.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CreatedWorkspace {
+    #[serde(flatten)]
+    pub workspace: Workspace,
+    pub data: data::DataReport,
 }
 
 const COLUMNS: &str = "id, name, purpose, status, owner_ref, changeset_ref, metadata_tables, \
                        entity_tables, created_at, last_used_at, row_version";
 
-fn checked(body: NewWorkspace) -> Result<(String, Option<String>), AppError> {
+fn checked(body: NewWorkspace) -> Result<(String, Option<String>, data::DataPlan), AppError> {
+    let plan = data::checked(&body.data.unwrap_or_default())?;
     let name = body.name.trim().to_owned();
     if name.is_empty() || name.chars().count() > 100 {
         return Err(AppError::Validation("name is 1 to 100 characters".into()));
@@ -90,13 +104,16 @@ fn checked(body: NewWorkspace) -> Result<(String, Option<String>), AppError> {
             "purpose is at most 1,000 characters".into(),
         ));
     }
-    Ok((name, purpose))
+    Ok((name, purpose, plan))
 }
 
 /// Create a workspace
 ///
 /// Makes a Develop workspace: its own schema with a copy of the metadata
-/// (with its rows) and of every entity table (empty). Identity and access
+/// (with its rows) and of every entity table, holding generated sample
+/// records (the default), a masked share of live's, or none; every labelled
+/// field is masked. The data's storage is estimated first and refused past
+/// `metadata.workspace_data_max_mb`. Identity and access
 /// tables stay shared with live. Audited.
 #[utoipa::path(
     post,
@@ -106,10 +123,10 @@ fn checked(body: NewWorkspace) -> Result<(String, Option<String>), AppError> {
     request_body = NewWorkspace,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Create)])))),
     responses(
-        (status = 201, description = "Created", body = Workspace),
+        (status = 201, description = "Created", body = CreatedWorkspace),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
-        (status = 422, description = "The name or purpose is out of bounds", body = ErrorResponse),
+        (status = 422, description = "The name, purpose or data is out of bounds, or the data would pass the storage limit", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -117,11 +134,22 @@ async fn create(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<area::DataModel>>,
     Json(body): Json<NewWorkspace>,
-) -> Result<(StatusCode, Json<Workspace>), AppError> {
-    let (name, purpose) = checked(body)?;
+) -> Result<(StatusCode, Json<CreatedWorkspace>), AppError> {
+    let (name, purpose, plan) = checked(body)?;
+    let estimated = data::check_storage(&state, plan).await?;
     let id = Uuid::now_v7();
     let schema_name = schema::schema_name(id);
     let copied = schema::create(&state.base.db_migrator, &schema_name).await?;
+    let filled = data::fill(&state, &schema_name, plan, ctx.user_id, estimated).await;
+    let report = match filled {
+        Ok(report) => report,
+        Err(error) => {
+            if let Err(cleanup) = schema::drop_schema(&state.base.db_migrator, &schema_name).await {
+                tracing::warn!(schema = %schema_name, error = %cleanup, "workspace: a schema whose data failed was not dropped");
+            }
+            return Err(error);
+        }
+    };
     let opened = store::open(
         &state.base.db,
         &workspace_changeset(&state, id, &name, purpose.as_deref()),
@@ -138,6 +166,7 @@ async fn create(
                 &schema_name,
                 changeset.id,
                 copied,
+                &report,
             )
             .await;
             if made.is_err()
@@ -151,7 +180,13 @@ async fn create(
         Err(error) => Err(error),
     };
     match made {
-        Ok(workspace) => Ok((StatusCode::CREATED, Json(workspace))),
+        Ok(workspace) => Ok((
+            StatusCode::CREATED,
+            Json(CreatedWorkspace {
+                workspace,
+                data: report,
+            }),
+        )),
         Err(error) => {
             // The schema exists but nothing names it: take it back.
             if let Err(cleanup) = schema::drop_schema(&state.base.db_migrator, &schema_name).await {
@@ -203,6 +238,7 @@ async fn record_created(
     schema_name: &str,
     changeset: Uuid,
     copied: schema::CopySummary,
+    report: &data::DataReport,
 ) -> Result<Workspace, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let workspace: Workspace = sqlx::query_as(&format!(
@@ -234,8 +270,13 @@ async fn record_created(
         )
         .named("workspace.create")
         .comment(format!(
-            "workspace {name}: {} metadata tables, {} entity tables",
-            copied.metadata_tables, copied.entity_tables
+            "workspace {name}: {} metadata tables, {} entity tables, {:?} data: {} records, \
+             {} masked fields",
+            copied.metadata_tables,
+            copied.entity_tables,
+            report.mode,
+            report.records,
+            report.masked_fields.len()
         )),
     )
     .await?;
@@ -426,27 +467,32 @@ mod tests {
         let ok = checked(NewWorkspace {
             name: "  Sales rework ".into(),
             purpose: Some("   ".into()),
+            data: None,
         })
         .unwrap();
-        assert_eq!(ok, ("Sales rework".to_owned(), None));
+        assert_eq!((ok.0, ok.1), ("Sales rework".to_owned(), None));
+        assert_eq!(ok.2.mode, data::DataMode::Sample);
         assert!(
             checked(NewWorkspace {
                 name: " ".into(),
-                purpose: None
+                purpose: None,
+                data: None
             })
             .is_err()
         );
         assert!(
             checked(NewWorkspace {
                 name: "x".repeat(101),
-                purpose: None
+                purpose: None,
+                data: None
             })
             .is_err()
         );
         assert!(
             checked(NewWorkspace {
                 name: "ok".into(),
-                purpose: Some("p".repeat(1_001))
+                purpose: Some("p".repeat(1_001)),
+                data: None
             })
             .is_err()
         );

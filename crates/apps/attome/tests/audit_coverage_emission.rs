@@ -8372,7 +8372,7 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             "POST",
             "/api/v1/admin/workspaces",
             t,
-            Some(json!({"name": "emission"})),
+            Some(json!({"name": "emission", "data": {"mode": "none"}})),
         ),
         "DELETE /api/v1/admin/workspaces/{id}" => {
             // A registry row whose schema was never made: discarding drops

@@ -1,7 +1,8 @@
 //! L10-T1: masking a sandbox copy with deterministic fakes.
 //!
 //! `attome scratch create` (T5-T1) masks every labelled field of the copy
-//! before it boots. The rule follows the field's label unless its options
+//! before it boots, and a masked Develop workspace (T5-T5,
+//! `workspace::data`) every labelled field of its records. The rule follows the field's label unless its options
 //! name one (`{"masking": "fake" | "null" | "shuffle" | "keep"}`):
 //!
 //! | Label | Rule |
@@ -61,6 +62,38 @@ pub fn rule_for(label: &str, override_rule: Option<&str>, required: bool) -> Mas
         rule
     }
 }
+
+/// The rule a field is masked with: its label's or its override, a fake
+/// only for text (another type is cleared, or left when required). Pure.
+pub fn effective_rule(
+    label: &str,
+    override_rule: Option<&str>,
+    nullable: bool,
+    is_text: bool,
+) -> MaskRule {
+    let rule = rule_for(label, override_rule, !nullable);
+    match rule {
+        MaskRule::Fake if !is_text && nullable => MaskRule::Null,
+        MaskRule::Fake if !is_text => MaskRule::Keep,
+        other => other,
+    }
+}
+
+/// The tables whose rows are credentials issued for the source, never copied
+/// into a masked workspace and cleared in a sandbox copy when they exist.
+pub const CREDENTIAL_TABLES: &[&str] = &[
+    "api_key",
+    "refresh_token",
+    "agent_session_token",
+    "impersonation_session",
+    "integration_oauth_token",
+    "scim_token",
+    "webportal_token",
+    "webportal_refresh_token",
+    "password_reset_token",
+    "invitation_token",
+    "email_verification_token",
+];
 
 /// HMAC-SHA256 of `message` under `key`. Pure.
 pub fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {

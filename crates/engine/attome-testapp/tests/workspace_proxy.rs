@@ -57,7 +57,7 @@ async fn open_workspace(app: &TestApp) -> String {
         .request(
             Method::POST,
             "/api/v1/admin/workspaces",
-            Some(json!({ "name": "Proxy probe" })),
+            Some(json!({ "name": "Proxy probe", "data": { "mode": "none" } })),
         )
         .await;
     assert_eq!(status, StatusCode::CREATED, "{body}");

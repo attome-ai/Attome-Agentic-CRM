@@ -39,7 +39,7 @@ async fn create_workspace(app: &TestApp) -> (String, String, String) {
         .request(
             Method::POST,
             "/api/v1/admin/workspaces",
-            Some(json!({ "name": "Publish probe" })),
+            Some(json!({ "name": "Publish probe", "data": { "mode": "none" } })),
         )
         .await;
     assert_eq!(status, StatusCode::CREATED, "{body}");

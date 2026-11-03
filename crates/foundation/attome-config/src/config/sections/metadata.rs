@@ -50,6 +50,11 @@ pub struct MetadataSection {
     /// database: boot refuses a URL naming the same host, port and database.
     #[serde(default)]
     pub rehearsal_database_url: Option<Secret>,
+    /// T5-T5: the most storage a Develop workspace's sample or masked data
+    /// may take, in megabytes; a larger estimate is refused before anything
+    /// is copied. Unset is 1,024.
+    #[serde(default)]
+    pub workspace_data_max_mb: Option<i64>,
 }
 
 /// Y12-T11: the host, port and database a PostgreSQL URL names

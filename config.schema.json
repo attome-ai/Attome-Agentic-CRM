@@ -2461,6 +2461,15 @@
           "default": false,
           "description": "Y2-T9: the daily table-health job also sets each entity table's fill\nfactor from its measured updates (80 for a table whose updates miss\nheap-only updates, 100 for an append-only one). Off by default.",
           "type": "boolean"
+        },
+        "workspace_data_max_mb": {
+          "default": null,
+          "description": "T5-T5: the most storage a Develop workspace's sample or masked data\nmay take, in megabytes; a larger estimate is refused before anything\nis copied. Unset is 1,024.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       },
       "type": "object"

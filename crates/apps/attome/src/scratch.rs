@@ -25,6 +25,7 @@
 
 use std::path::PathBuf;
 
+use crate::masking::{CREDENTIAL_TABLES, effective_rule};
 use attome_config::AppConfig;
 
 /// What one copy did.
@@ -140,22 +141,6 @@ pub fn parse_args(args: &[String], source: &str) -> Result<ScratchArgs, String> 
     })
 }
 
-/// The tables whose rows are credentials issued for the source, cleared in
-/// the copy when they exist.
-const CREDENTIAL_TABLES: &[&str] = &[
-    "api_key",
-    "refresh_token",
-    "agent_session_token",
-    "impersonation_session",
-    "integration_oauth_token",
-    "scim_token",
-    "webportal_token",
-    "webportal_refresh_token",
-    "password_reset_token",
-    "invitation_token",
-    "email_verification_token",
-];
-
 /// One labelled field of the copy: entity, field, label (`sensitive` when
 /// only `is_sensitive` marks it), the masking override, whether its column
 /// is nullable and whether it is text.
@@ -179,23 +164,6 @@ const LABELLED_FIELDS: &str = "SELECT e.logicalname::text, a.logicalname::text, 
 
 /// Rows faked per statement.
 const FAKE_BATCH: i64 = 1000;
-
-/// The rule a field is masked with: its label's or its override, a fake
-/// only for text (another type is cleared, or left when required). Pure.
-pub fn effective_rule(
-    label: &str,
-    override_rule: Option<&str>,
-    nullable: bool,
-    is_text: bool,
-) -> crate::masking::MaskRule {
-    use crate::masking::MaskRule;
-    let rule = crate::masking::rule_for(label, override_rule, !nullable);
-    match rule {
-        MaskRule::Fake if !is_text && nullable => MaskRule::Null,
-        MaskRule::Fake if !is_text => MaskRule::Keep,
-        other => other,
-    }
-}
 
 fn hex_key(key: &[u8]) -> String {
     key.iter().map(|b| format!("{b:02x}")).collect()

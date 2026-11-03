@@ -83,7 +83,7 @@ fn checked(schema: &str) -> Result<&str, AppError> {
 }
 
 /// The live schema: the first on the search path.
-async fn live_schema(db: &DbPool) -> Result<String, AppError> {
+pub(crate) async fn live_schema(db: &DbPool) -> Result<String, AppError> {
     sqlx::query_scalar("SELECT current_schema()::text")
         .fetch_one(db)
         .await
@@ -91,7 +91,7 @@ async fn live_schema(db: &DbPool) -> Result<String, AppError> {
 }
 
 /// Whether `table` exists in `schema`.
-async fn exists(db: &DbPool, schema: &str, table: &str) -> Result<bool, AppError> {
+pub(crate) async fn exists(db: &DbPool, schema: &str, table: &str) -> Result<bool, AppError> {
     let found: Option<String> = sqlx::query_scalar("SELECT to_regclass($1)::text")
         .bind(format!("{}.{}", quote_ident(schema), quote_ident(table)))
         .fetch_one(db)
@@ -102,7 +102,11 @@ async fn exists(db: &DbPool, schema: &str, table: &str) -> Result<bool, AppError
 
 /// The columns of `schema.table` a copy may write: every column but the
 /// generated ones, in order.
-async fn writable_columns(db: &DbPool, schema: &str, table: &str) -> Result<Vec<String>, AppError> {
+pub(crate) async fn writable_columns(
+    db: &DbPool,
+    schema: &str,
+    table: &str,
+) -> Result<Vec<String>, AppError> {
     sqlx::query_scalar(
         "SELECT column_name::text FROM information_schema.columns \
           WHERE table_schema = $1 AND table_name = $2 AND is_generated = 'NEVER' \

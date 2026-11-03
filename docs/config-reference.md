@@ -467,6 +467,7 @@ Solution 7 Phase 1 (D-785) — how metadata admin writes are recorded as changes
 | `metadata.rehearsal_database_url` | string, optional |  | yes | Y12-T11: a restored copy of this deployment's database (a PostgreSQL URL) where a field change can be rehearsed and timed (`POST /api/v1/admin/entities/{entity_id}/rehearse`). Never the main database: boot refuses a URL naming the same host, port and database. |
 | `metadata.release_report.notify_roles` | array, optional | `null` |  | Who the post-apply notification goes to. Unset (the default) keeps today's recipients: the active holders of the admin privilege. Set, the notification goes to the active holders of these roles (by role `name`) instead; the recipient cap is unchanged. When none of the named roles has an active holder the notification falls back to the admin holders (logged at `warn`), so a stale name never silences it. A set list must be non-empty, without blanks or duplicates, at most [`MAX_NOTIFY_ROLES`] names (a boot error otherwise). |
 | `metadata.storage_tuning_enabled` | boolean | `false` |  | Y2-T9: the daily table-health job also sets each entity table's fill factor from its measured updates (80 for a table whose updates miss heap-only updates, 100 for an append-only one). Off by default. |
+| `metadata.workspace_data_max_mb` | integer, optional | `null` |  | T5-T5: the most storage a Develop workspace's sample or masked data may take, in megabytes; a larger estimate is refused before anything is copied. Unset is 1,024. |
 
 ## `notification`
 

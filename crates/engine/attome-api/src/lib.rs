@@ -85,6 +85,9 @@ pub mod label_drafts;
 pub mod leaver;
 /// AA9-T6 — the limits registry, its values and use.
 pub mod limits_admin;
+/// L10-T1: masking rules and keyed fakes, for sandbox copies (`attome
+/// scratch`) and masked Develop workspaces (T5-T5).
+pub mod masking;
 mod mentions;
 mod ratelimit_admin;
 /// B8-T2: creating and filling records from record templates.
