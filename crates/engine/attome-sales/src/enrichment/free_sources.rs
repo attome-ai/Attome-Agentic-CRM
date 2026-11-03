@@ -79,7 +79,11 @@ pub struct RegistrySource<'c> {
 /// digits (the register extends the class with two of its own). Pure.
 pub fn isic_class(code: &str) -> Option<&str> {
     let code = code.trim();
-    (code.len() >= 4 && code.bytes().all(|b| b.is_ascii_digit())).then(|| &code[..4])
+    if code.len() >= 4 && code.bytes().all(|b| b.is_ascii_digit()) {
+        code.get(..4)
+    } else {
+        None
+    }
 }
 
 /// The `isic_code` record for the first activity's class, when the ISIC
