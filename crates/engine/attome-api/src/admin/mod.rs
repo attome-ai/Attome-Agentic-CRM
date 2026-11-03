@@ -42,6 +42,8 @@ pub(crate) mod refactor_child;
 /// Y12-T11: rehearse a field change on the copy database.
 mod rehearse;
 mod release_report;
+/// A1-T7: the "free on creation" set of an entity.
+mod scaffold;
 
 use attome_audit::AuditFieldChange;
 use attome_cache::Store;
@@ -178,6 +180,7 @@ pub(crate) fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(refactor_child::openapi_fragment());
     doc.merge(release_report::openapi_fragment());
     doc.merge(rehearse::openapi_fragment());
+    doc.merge(scaffold::openapi_fragment());
     // Gated like every other reference to this module (lines 18/36/178): the
     // scaffold is physically absent from release binaries, so an unconditional
     // call here fails `cargo build --release` outright — which is exactly what
@@ -243,6 +246,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .merge(recovery_archive::routes())
         .merge(rehearse::routes())
+        .merge(scaffold::routes())
         .merge(ddl_log::routes())
         .merge(index_proposals::routes())
         .merge(data_step_runs::routes())

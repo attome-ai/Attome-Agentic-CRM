@@ -110,6 +110,73 @@ pub fn default_form(entity: Uuid, attributes: &[Uuid]) -> Value {
     })
 }
 
+/// Fields a lazily loaded tab of a scaffolded form holds (A1-T7).
+pub const SCAFFOLD_TAB_FIELDS: usize = 12;
+
+/// One attribute as [`scaffold_form`] places it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScaffoldField {
+    pub id: Uuid,
+    /// The entity's primary name.
+    pub primary: bool,
+    pub required: bool,
+    pub lookup: bool,
+}
+
+/// A1-T7: the form a new entity starts with. The first tab holds the
+/// primary name, then the required attributes, then the lookups; every other
+/// attribute follows in tabs of [`SCAFFOLD_TAB_FIELDS`], marked `lazy` so a
+/// client loads them when opened. Pure; passes [`FormKind`]'s shape check
+/// for up to [`MAX_FIELDS`] attributes.
+pub fn scaffold_form(entity: Uuid, fields: &[ScaffoldField]) -> Value {
+    let mut seen = std::collections::BTreeSet::new();
+    let fields: Vec<&ScaffoldField> = fields
+        .iter()
+        .filter(|f| seen.insert(f.id))
+        .take(MAX_FIELDS)
+        .collect();
+    let first: Vec<&ScaffoldField> = fields
+        .iter()
+        .filter(|f| f.primary)
+        .chain(fields.iter().filter(|f| !f.primary && f.required))
+        .chain(
+            fields
+                .iter()
+                .filter(|f| !f.primary && !f.required && f.lookup),
+        )
+        .copied()
+        .collect();
+    let rest: Vec<&ScaffoldField> = fields
+        .iter()
+        .filter(|f| !f.primary && !f.required && !f.lookup)
+        .copied()
+        .collect();
+    let ids = |group: &[&ScaffoldField]| -> Vec<String> {
+        group.iter().map(|f| f.id.to_string()).collect()
+    };
+    let mut tabs = vec![json!({
+        "label": "General",
+        "sections": [{ "label": "Details", "fields": ids(&first) }],
+    })];
+    for (n, chunk) in rest.chunks(SCAFFOLD_TAB_FIELDS).enumerate() {
+        let label = if n == 0 {
+            "More".to_owned()
+        } else {
+            format!("More {}", n + 1)
+        };
+        tabs.push(json!({
+            "label": label,
+            "lazy": true,
+            "sections": [{ "label": "Details", "fields": ids(chunk) }],
+        }));
+    }
+    json!({
+        "entity": entity.to_string(),
+        "form_kind": "main",
+        "tabs": tabs,
+    })
+}
+
 fn check_uuid_list(doc: &Value, path: &str, what: &str, issues: &mut Vec<Issue>) {
     match doc {
         Value::Null => {}
@@ -290,6 +357,7 @@ impl Kind for FormKind {
                         "additionalProperties": false,
                         "properties": {
                             "label": { "type": "string", "minLength": 1 },
+                            "lazy": { "type": "boolean" },
                             "sections": { "type": "array", "items": section }
                         }
                     }
@@ -674,6 +742,51 @@ mod tests {
         assert!(FormKind.validate_shape(&default).is_ok());
         assert_eq!(
             default["sections"][0]["fields"].as_array().unwrap().len(),
+            3
+        );
+    }
+
+    #[test]
+    fn a_scaffolded_form_puts_key_fields_first_and_the_rest_in_lazy_tabs() {
+        let entity = Uuid::now_v7();
+        let field = |primary, required, lookup| ScaffoldField {
+            id: Uuid::now_v7(),
+            primary,
+            required,
+            lookup,
+        };
+        let mut fields = vec![field(false, false, true), field(false, true, false)];
+        fields.extend((0..15).map(|_| field(false, false, false)));
+        fields.push(field(true, true, false));
+        let doc = scaffold_form(entity, &fields);
+        assert!(FormKind.validate_shape(&doc).is_ok(), "{doc}");
+        let first: Vec<String> = doc["tabs"][0]["sections"][0]["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap().to_owned())
+            .collect();
+        // The primary name, then the required field, then the lookup.
+        let expected: Vec<String> = [fields[17].id, fields[1].id, fields[0].id]
+            .iter()
+            .map(Uuid::to_string)
+            .collect();
+        assert_eq!(first, expected);
+        assert_eq!(doc["tabs"][0]["lazy"], Value::Null);
+        assert_eq!(doc["tabs"][1]["lazy"], true);
+        assert_eq!(
+            doc["tabs"][1]["sections"][0]["fields"]
+                .as_array()
+                .unwrap()
+                .len(),
+            12
+        );
+        assert_eq!(doc["tabs"][2]["label"], "More 2");
+        assert_eq!(
+            doc["tabs"][2]["sections"][0]["fields"]
+                .as_array()
+                .unwrap()
+                .len(),
             3
         );
     }

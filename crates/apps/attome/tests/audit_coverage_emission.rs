@@ -66,6 +66,13 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/admin/entities/{entity_id}/scaffold",
+        "needs a live entity with its fields (made through the entity and field routes first); \
+         its form draft writes the Configuration event through write_security_event in the \
+         model-store transaction; attome-testapp's entity_scaffold.rs \
+         scaffold_creates_form_views_and_template drives it",
+    ),
+    (
         "POST /api/v1/admin/workspaces/{id}/refresh",
         "needs a workspace with its own schema (made by POST /api/v1/admin/workspaces, which \
          copies every entity table); the refresh writes its Configuration event through \

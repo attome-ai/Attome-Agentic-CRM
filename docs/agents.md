@@ -194,6 +194,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   fields, relationships, Arabic and English labels, up to 20 sample rows; a spreadsheet's cells never
   reach the model, only its headers) and returns the build-tool calls that would make it.
   `model.review` checks a draft against the existing model and returns findings. Both save nothing.
+  Once an entity's fields are in, `POST /api/v1/admin/entities/{entity_id}/scaffold` gives it its
+  starting set: a draft main form, a kanban view over its status choice, the import template's
+  columns and its digest entry.
 - Outages: `system.status` lists the services (object storage, email, the job queues) and which are
   down. A call refused because one is down names it under `degraded` with `retryable`: `true` for a
   short outage, `false` once it has lasted five minutes, so the agent stops and tells the person.

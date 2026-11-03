@@ -31,7 +31,7 @@ use attome_records::query_admin::{
 
 #[derive(sqlx::FromRow, Serialize, ToSchema)]
 pub(crate) struct ViewDetail {
-    id: Uuid,
+    pub(crate) id: Uuid,
     name: String,
     icon: String,
     entity_logical_name: Uuid,
@@ -644,17 +644,30 @@ async fn create_view(
         body.entity_logical_name,
         &body.view_metadata,
     )?;
+    let row = create_recorded(&state, ctx.user_id, &recording, &body).await?;
+    Ok((StatusCode::CREATED, Json(row)))
+}
+
+/// A1-T7: a validated view's create, recorded and audited as the route's:
+/// the changeset resolved first, the insert, the recorded operation and the
+/// `Configuration / Create` event in one transaction.
+pub(crate) async fn create_recorded(
+    state: &EngineState,
+    actor: Uuid,
+    recording: &Recording,
+    body: &ViewBody,
+) -> Result<ViewDetail, AppError> {
     // D-785: resolve the changeset (or refuse) before any write.
     recording.preflight(&state.base.db).await?;
     let id = Uuid::now_v7();
     // D-541 rule 4: a system view is shared configuration; its event commits
     // with the insert (D-062).
     let mut tx = SecurityTx::begin(
-        &state,
+        state,
         SecurityEvent::new(
             MandatoryCategory::Configuration,
             AuditOperation::Create,
-            ctx.user_id,
+            actor,
             "view",
             Some(id),
         )
@@ -662,14 +675,24 @@ async fn create_view(
         .comment(format!("system view '{}' created", body.name.trim())),
     )
     .await?;
-    let row = create_view_in_tx(tx.tx(), &recording, id, ctx.user_id, &body).await?;
+    let row = create_view_in_tx(tx.tx(), recording, id, actor, body).await?;
     // Last before commit (the security event is written by `commit` itself,
     // a plain insert that takes no lock after the changeset row's).
     recording
         .record(tx.tx(), view_op(Op::UpsertView, &row)?)
         .await?;
     tx.commit().await?;
-    Ok((StatusCode::CREATED, Json(row)))
+    Ok(row)
+}
+
+/// A1-T7: checks a view body as the create route does, for a caller that
+/// builds the body itself.
+pub(crate) fn check_new_view(state: &EngineState, body: &ViewBody) -> Result<(), AppError> {
+    if body.name.trim().is_empty() {
+        return Err(AppError::Validation("view name is required".into()));
+    }
+    validate_view_kind_metadata(&body.kind, &body.view_metadata)?;
+    validate_view_filters(state, None, body.entity_logical_name, &body.view_metadata)
 }
 
 /// Reads one view row (any state) inside `tx` — the post-write snapshot a

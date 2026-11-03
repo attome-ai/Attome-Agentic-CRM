@@ -17,6 +17,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `POST /api/v1/admin/entities/{entity_id}/scaffold` (A1-T7): an entity's starting set, a draft main
+  form (key fields first, the rest in lazy tabs of 12), a kanban view over its status choice, the
+  import template's columns and its digest entry; a form tab may be marked `lazy`.
 - `model.draft` and `model.review` (A1-T13): a building agent drafts a data model from a description or
   a CSV, reviewed against the existing model, and returns the build-tool calls that would make it.
 - Agent build tools `model.entity.create` and `model.attribute.create` (N12-T1): an entity or a field
