@@ -4,6 +4,7 @@ import { SdkService } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
 
 import { PlanStore, StoredPlan } from './plan-store';
+import type { FormHookAnswer, FormHookRequest } from './form-renderer/form-hooks';
 
 // ── Wire types (mirror attome_api::model_admin's FormPlan exactly) ──
 
@@ -252,6 +253,13 @@ export class ModelService {
   /** Drops the in-memory plans, so the next read revalidates each one. */
   forgetPlans(): void {
     this.plans.clear();
+  }
+
+  /** A12-T4: runs the entity's form hooks (its extensions) on the form's state. */
+  formHooks(entity: string, request: FormHookRequest): Observable<FormHookAnswer> {
+    return this.sdk.post<FormHookAnswer>(
+      `/api/v1/${encodeURIComponent(entity)}/form-hooks`, { body: request },
+    );
   }
 
   /** A12-T2: the entity's schema, for its fields' kinds and the caller's business rules. */

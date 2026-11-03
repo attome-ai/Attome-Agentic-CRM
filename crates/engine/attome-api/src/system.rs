@@ -371,6 +371,13 @@ impl EngineSystem {
                 "core",
             ))
             .merge(license_gate(
+                // A12-T4: a record form's extension hooks, same shape.
+                crate::form_hooks::routes(),
+                self.state.modules.clone(),
+                MODULE_CORE,
+                "core",
+            ))
+            .merge(license_gate(
                 attome_content::admin::routes(),
                 self.state.modules.clone(),
                 MODULE_CONTENT,

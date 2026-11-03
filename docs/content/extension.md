@@ -97,6 +97,17 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   reads the Arabic text, everyone else the English. An
   extension that fails refuses the write. A newly published version runs within five seconds;
   switching one off takes effect at once.
+- **Form hooks.** An extension can also answer a record form while someone works in it: stage
+  `form_load` (the form opened a record or a new one) or `form_change` (a value changed). The form
+  calls `POST /api/v1/{entity}/form-hooks` with `{"event": "load" | "change" | "before_save",
+  "record_id", "values", "previous"}`; the server runs the matching extensions on those values
+  exactly as it runs record hooks (same input, grants and limits; customer code never runs in the
+  browser) and answers `{"changes", "rejection", "rejection_translations", "events"}`. A `change`
+  fills values in the form and a `reject` shows its message; nothing is saved. `before_save` runs
+  the write's own `before_validation` and `before_save` hooks ahead of the save, so a refusal shows
+  before the person saves; the save runs them again. `events` names the form events with an
+  extension on the entity, so the form calls only those (a change after a 400 ms pause). The caller
+  needs read access to the entity's records.
 - **Versions.** `POST /api/v1/admin/extensions` uploads a module and its manifest as the next
   version; `.../{name}/versions/{v}/publish` makes one version live (publishing an older one rolls
   back) and `.../{name}/off` stops every version.

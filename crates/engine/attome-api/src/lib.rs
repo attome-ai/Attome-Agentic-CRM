@@ -171,6 +171,7 @@ pub mod features_admin;
 pub mod field_changes;
 /// Solution 7 Phase 2 (D-788) — the field reference-hook registry.
 pub mod field_hooks;
+pub mod form_hooks;
 pub mod inbound_hooks;
 /// M18 Data Catalog Phase 1 (D-466) — idempotent `glossary_term`
 /// registration; see that module's doc.

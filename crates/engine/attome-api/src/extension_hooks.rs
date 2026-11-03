@@ -80,6 +80,91 @@ fn current() -> Arc<Snapshot> {
     )
 }
 
+/// A12-T4: whether a published extension runs at `point` on `entity`.
+pub fn watches(entity: &str, point: HookPoint) -> bool {
+    current().watches(entity, point)
+}
+
+/// Runs every published extension declared on `input.entity` at
+/// `input.stage`, in order, each seeing the values with the earlier ones'
+/// changes, and judges the answers: the record write hooks' path, and
+/// (A12-T4) the form hooks'.
+pub(crate) async fn run_point(
+    state: &EngineState,
+    input: HookInput,
+) -> Result<HookOutcome, AppError> {
+    let point = input.stage;
+    let snapshot = current();
+    let limits = Limits::from(&state.base.config.extensions);
+    let mut changes = Map::new();
+    for target in snapshot
+        .targets
+        .iter()
+        .filter(|t| t.entity == input.entity && t.point == point)
+    {
+        // Switched off or superseded since the snapshot: skip.
+        let live = crate::extension_admin::published(&state.base.db, &target.name)
+            .await?
+            .is_some_and(|v| v.version == target.version);
+        if !live {
+            continue;
+        }
+        let Some(module) = target.module.clone() else {
+            return Err(AppError::CapabilityUnavailable(
+                "an extension on this entity could not be loaded",
+            ));
+        };
+        let mut call = input.clone();
+        call.values.extend(changes.clone());
+        let grants = target.grants.clone();
+        let (answer, cost) = tokio::task::spawn_blocking(move || match Runtime::shared() {
+            Ok(rt) => call_hook(rt, &module, &call, &grants, &limits),
+            Err(e) => (Err(e.to_string()), attome_extension::CallCost::default()),
+        })
+        .await
+        .map_err(AppError::internal)?;
+        let error = answer.as_ref().err().cloned();
+        if let Err(log_error) = crate::extension_admin::record_run(
+            &state.base.db,
+            &target.name,
+            target.version,
+            cost,
+            error.as_deref(),
+            &[],
+            &[],
+            false,
+        )
+        .await
+        {
+            tracing::warn!(extension = %target.name, error = %log_error, "an extension run was not logged");
+        }
+        match answer {
+            Err(error) => {
+                return Err(AppError::Validation(format!(
+                    "the extension {} failed: {error}",
+                    target.name
+                )));
+            }
+            Ok(HookAnswer::Continue) => {}
+            Ok(HookAnswer::Change(set)) => changes.extend(set),
+            Ok(HookAnswer::Reject(rejection)) => {
+                let mut translations =
+                    attome_extension::grants::rejection_texts(&target.grants, &rejection);
+                let message = translations.remove("en").unwrap_or_default();
+                return Ok(HookOutcome::Reject(HookRejection {
+                    message,
+                    translations,
+                }));
+            }
+        }
+    }
+    Ok(if changes.is_empty() {
+        HookOutcome::Continue
+    } else {
+        HookOutcome::Change(changes)
+    })
+}
+
 fn point_of(stage: HookStage) -> HookPoint {
     match stage {
         HookStage::BeforeValidation => HookPoint::BeforeValidation,
@@ -254,85 +339,16 @@ impl RecordHook for ExtensionHooks {
 
     fn run<'a>(&'a self, state: &'a EngineState, event: HookEvent<'a>) -> HookFuture<'a> {
         Box::pin(async move {
-            let point = point_of(self.stage);
-            let snapshot = current();
-            let limits = Limits::from(&state.base.config.extensions);
-            let mut changes = Map::new();
-            for target in snapshot
-                .targets
-                .iter()
-                .filter(|t| t.entity == event.entity && t.point == point)
-            {
-                // Switched off or superseded since the snapshot: skip.
-                let live = crate::extension_admin::published(&state.base.db, &target.name)
-                    .await?
-                    .is_some_and(|v| v.version == target.version);
-                if !live {
-                    continue;
-                }
-                let Some(module) = target.module.clone() else {
-                    return Err(AppError::CapabilityUnavailable(
-                        "an extension on this entity could not be loaded",
-                    ));
-                };
-                let mut values = event.values.clone();
-                values.extend(changes.clone());
-                let input = HookInput {
-                    stage: point,
-                    entity: event.entity.to_owned(),
-                    record_id: event.record_id.map(|id| id.to_string()),
-                    is_create: event.is_create,
-                    values,
-                    previous: event.previous.cloned(),
-                    actor: event.actor.map(|id| id.to_string()),
-                };
-                let grants = target.grants.clone();
-                let (answer, cost) = tokio::task::spawn_blocking(move || match Runtime::shared() {
-                    Ok(rt) => call_hook(rt, &module, &input, &grants, &limits),
-                    Err(e) => (Err(e.to_string()), attome_extension::CallCost::default()),
-                })
-                .await
-                .map_err(AppError::internal)?;
-                let error = answer.as_ref().err().cloned();
-                if let Err(log_error) = crate::extension_admin::record_run(
-                    &state.base.db,
-                    &target.name,
-                    target.version,
-                    cost,
-                    error.as_deref(),
-                    &[],
-                    &[],
-                    false,
-                )
-                .await
-                {
-                    tracing::warn!(extension = %target.name, error = %log_error, "an extension run was not logged");
-                }
-                match answer {
-                    Err(error) => {
-                        return Err(AppError::Validation(format!(
-                            "the extension {} failed: {error}",
-                            target.name
-                        )));
-                    }
-                    Ok(HookAnswer::Continue) => {}
-                    Ok(HookAnswer::Change(set)) => changes.extend(set),
-                    Ok(HookAnswer::Reject(rejection)) => {
-                        let mut translations =
-                            attome_extension::grants::rejection_texts(&target.grants, &rejection);
-                        let message = translations.remove("en").unwrap_or_default();
-                        return Ok(HookOutcome::Reject(HookRejection {
-                            message,
-                            translations,
-                        }));
-                    }
-                }
-            }
-            Ok(if changes.is_empty() {
-                HookOutcome::Continue
-            } else {
-                HookOutcome::Change(changes)
-            })
+            let input = HookInput {
+                stage: point_of(self.stage),
+                entity: event.entity.to_owned(),
+                record_id: event.record_id.map(|id| id.to_string()),
+                is_create: event.is_create,
+                values: event.values.clone(),
+                previous: event.previous.cloned(),
+                actor: event.actor.map(|id| id.to_string()),
+            };
+            run_point(state, input).await
         })
     }
 }

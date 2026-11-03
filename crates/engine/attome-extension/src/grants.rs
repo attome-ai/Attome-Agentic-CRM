@@ -20,7 +20,8 @@ pub struct EntityGrant {
     pub attributes: BTreeSet<String>,
 }
 
-/// Y10-T2: a stage of the record write pipeline an extension is called at.
+/// Y10-T2: a stage of the record write pipeline an extension is called at,
+/// or (A12-T4) a record form's event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HookPoint {
@@ -28,6 +29,12 @@ pub enum HookPoint {
     BeforeSave,
     AfterSave,
     AfterCommit,
+    /// A12-T4: a record form opened (a new record or a stored one). A
+    /// `change` fills values in the form and a `reject` shows its message;
+    /// nothing is saved.
+    FormLoad,
+    /// A12-T4: a value changed in a record form; answered as `form_load`.
+    FormChange,
 }
 
 /// Y10-T2: one write an extension is called on.
@@ -411,5 +418,18 @@ mod tests {
             check(&hooked),
             vec!["a hook on deal needs a read grant on it".to_owned()]
         );
+
+        // A12-T4: form events are hook points too.
+        let form: Grants = serde_json::from_value(serde_json::json!({
+            "entities": { "account": { "read": true, "write": true } },
+            "hooks": [
+                { "entity": "account", "stage": "form_load" },
+                { "entity": "account", "stage": "form_change" }
+            ]
+        }))
+        .unwrap();
+        assert_eq!(form.hooks[0].stage, HookPoint::FormLoad);
+        assert_eq!(form.hooks[1].stage, HookPoint::FormChange);
+        assert!(check(&form).is_empty());
     }
 }

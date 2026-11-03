@@ -64,6 +64,9 @@
         }
       </fieldset>
     }
+    @if (hookMessage(); as message) {
+      <p class="fr-error" role="alert" data-testid="form-renderer-hook-message">{{ message }}</p>
+    }
     @if (error(); as error) {
       <p class="fr-error" role="alert">{{ error }}</p>
     }

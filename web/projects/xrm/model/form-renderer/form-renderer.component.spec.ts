@@ -73,11 +73,13 @@ describe('FormRendererComponent', () => {
   let svc: {
     formPlan: ReturnType<typeof vi.fn>; record: ReturnType<typeof vi.fn>;
     updateRecord: ReturnType<typeof vi.fn>; schema: ReturnType<typeof vi.fn>;
+    formHooks: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     svc = {
       schema: vi.fn().mockReturnValue(of(SCHEMA)),
+      formHooks: vi.fn().mockReturnValue(of({ changes: {}, rejection: null, rejection_translations: {}, events: [] })),
       formPlan: vi.fn().mockReturnValue(of(PLAN)),
       record: vi.fn().mockReturnValue(of({ id: 'r1', row_version: 4, data: { full_name: 'Ada', age: 36, active: true } })),
       updateRecord: vi.fn().mockReturnValue(of({ id: 'r1', row_version: 5, data: { full_name: 'Ada L.', age: 36, active: true } })),
@@ -88,7 +90,7 @@ describe('FormRendererComponent', () => {
         { provide: ModelService, useValue: svc },
         { provide: SdkService, useValue: sdkFromApi({ post: vi.fn().mockReturnValue(of({ status: 'completed', result: { suggestion: 'AI text' } })) }) },
         { provide: LiveService, useValue: { connect: vi.fn() } },
-        { provide: LangService, useValue: { translate: (key: string) => key } },
+        { provide: LangService, useValue: { translate: (key: string) => key, current: () => 'en' } },
         { provide: RulesEvaluatorService, useValue: { evaluate: vi.fn() } },
       ],
     });
@@ -114,12 +116,12 @@ describe('FormRendererComponent', () => {
     expect(el.querySelector<HTMLInputElement>('[data-attribute="active"] input')?.checked).toBe(true);
   });
 
-  it('saves only the changed fields with the record\'s row version', () => {
+  it('saves only the changed fields with the record\'s row version', async () => {
     const fixture = render('r1');
     const cmp = fixture.componentInstance;
     cmp.set(PLAN.sections[0].fields[0], 'Ada L.');
     expect(cmp.changed()).toEqual(['full_name']);
-    cmp.save();
+    await cmp.save();
     expect(svc.updateRecord).toHaveBeenCalledWith('contact', 'r1', { full_name: 'Ada L.' }, 4);
     expect(cmp.saved()).toBe(true);
     expect(cmp.changed()).toEqual([]);

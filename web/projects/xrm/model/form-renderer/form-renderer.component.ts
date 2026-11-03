@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { ApiError, RulesEvaluatorService, SdkService, TranslatePipe } from '@attome/base';
+import { ApiError, LangService, RulesEvaluatorService, SdkService, TranslatePipe } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
 import {
   computeFieldPolicies, fieldKindResolver, ruleExpressions, rulesTypesOf,
@@ -7,6 +7,7 @@ import {
 
 import { LiveService } from '../live.service';
 import { FormPlan, FormPlanField, ModelService, RecordView, tabSections } from '../model.service';
+import { CHANGE_DEBOUNCE_MS, FormHookAnswer, FormHookEvent, rejectionText, withChanges } from './form-hooks';
 
 /** How a field is edited, from its attribute's field type number. */
 export type FieldControl = 'text' | 'number' | 'date' | 'checkbox' | 'readonly';
@@ -166,6 +167,52 @@ export class FormRendererComponent {
     this.activeTab.set(index);
   }
 
+  // ── A12-T4: form hooks ─────────────────────────────────────────────────
+  private readonly lang = inject(LangService);
+  /** The form events with an extension on this entity (from the last answer). */
+  readonly hookEvents = signal<readonly FormHookEvent[]>([]);
+  /** The extensions' last refusal, in the person's language. */
+  readonly hookMessage = signal<string | null>(null);
+  private changeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Asks the server to run the entity's extensions for `event` on the
+   * form's values; fills in what they set and shows a refusal. Resolves to
+   * the answer, or `null` when the call failed (the form carries on: the
+   * save runs the write hooks itself).
+   */
+  runHooks(event: FormHookEvent): Promise<FormHookAnswer | null> {
+    const plan = this.plan();
+    if (!plan) return Promise.resolve(null);
+    const record = this.record();
+    return new Promise(resolve => {
+      this.model.formHooks(plan.entity, {
+        event,
+        record_id: record?.id ?? null,
+        values: this.values(),
+        previous: record?.data ?? null,
+      }).subscribe({
+        next: answer => {
+          this.hookEvents.set(answer.events);
+          if (Object.keys(answer.changes).length) this.values.set(withChanges(this.values(), answer));
+          this.hookMessage.set(rejectionText(answer, this.lang.current()));
+          resolve(answer);
+        },
+        error: () => resolve(null),
+      });
+    });
+  }
+
+  /** After a change, once typing pauses, when an extension listens. */
+  private scheduleChangeHooks(): void {
+    if (!this.hookEvents().includes('change')) return;
+    if (this.changeTimer) clearTimeout(this.changeTimer);
+    this.changeTimer = setTimeout(() => {
+      this.changeTimer = null;
+      void this.runHooks('change');
+    }, CHANGE_DEBOUNCE_MS);
+  }
+
   private load(formId: string, recordId: string | null): void {
     this.loading.set(true);
     this.error.set(null);
@@ -185,6 +232,7 @@ export class FormRendererComponent {
           this.record.set(null);
           this.values.set({});
           this.loading.set(false);
+          void this.runHooks('load');
           return;
         }
         this.model.record(plan.entity, recordId).subscribe({
@@ -192,6 +240,7 @@ export class FormRendererComponent {
             this.record.set(record);
             this.values.set({ ...record.data });
             this.loading.set(false);
+            void this.runHooks('load');
           },
           error: (e: ApiError) => { this.error.set(e.message); this.loading.set(false); },
         });
@@ -224,12 +273,22 @@ export class FormRendererComponent {
     if (control === 'date' && raw === '') value = null;
     this.values.update(values => ({ ...values, [field.attribute]: value }));
     this.saved.set(false);
+    this.scheduleChangeHooks();
   }
 
-  save(): void {
+  /**
+   * Saves the changed fields. A12-T4: when an extension listens before a
+   * save, it runs first; a refusal stops the save and shows its message,
+   * and the values it sets are saved with the rest.
+   */
+  async save(): Promise<void> {
     const plan = this.plan();
     const record = this.record();
     if (!plan || !record || this.changed().length === 0) return;
+    if (this.hookEvents().includes('before_save')) {
+      const answer = await this.runHooks('before_save');
+      if (answer?.rejection) return;
+    }
     const values = this.values();
     const patch: Record<string, unknown> = {};
     for (const key of this.changed()) patch[key] = values[key];
