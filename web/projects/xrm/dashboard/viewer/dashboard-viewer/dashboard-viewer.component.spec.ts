@@ -65,7 +65,7 @@ function publishedView(
 }
 
 function pageResponse(pageId: string): PageDataResponse {
-  return { page_id: pageId, definition_source: 'published', published_version_number: 1, widgets: [] };
+  return { page_id: pageId, definition_source: 'published', published_version_number: 1, widgets: [], reads: 0, over_query_budget: false };
 }
 
 function setup(options: {
