@@ -51,6 +51,8 @@ pub mod dashboard_explain;
 pub mod deliverability;
 pub mod draft_article;
 pub mod draft_email;
+/// A1-T13: model.draft, a data model from a description or a CSV.
+pub mod draft_model;
 pub mod duplicates;
 /// Z11-T12: expression.validate and expression.spec.
 pub mod expression;
@@ -115,6 +117,8 @@ pub mod read;
 pub mod record_schema;
 pub mod record_update_field;
 pub mod record_write;
+/// A1-T13: model.review, findings on a drafted model.
+pub mod review_model;
 /// F11-T12: revrec.explain_period, revrec.propose_revenue_rule, revrec.draft_disclosure.
 pub mod revrec;
 pub mod route_classify;
@@ -185,6 +189,8 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(layer_conflict_propose::descriptor());
     all.push(dashboard_explain::descriptor());
     all.extend(metric_draft::descriptors());
+    all.extend(draft_model::descriptors());
+    all.extend(review_model::descriptors());
     all.extend(rpa_draft::descriptors());
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
@@ -305,6 +311,8 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(layer_conflict_propose::ProposeConflictResolution));
     all.push(Box::new(dashboard_explain::DashboardExplain));
     all.extend(metric_draft::executors());
+    all.extend(draft_model::executors());
+    all.extend(review_model::executors());
     all.extend(rpa_draft::executors());
     all.extend(search_ask::executors());
     all.extend(catalog::executors());

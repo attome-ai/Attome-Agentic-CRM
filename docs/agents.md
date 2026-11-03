@@ -190,6 +190,10 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   `model.attribute.create` make an entity or a field (its table or column) through the admin API's
   own create path; they are consequential, so a person confirms each. Called in a Develop workspace
   (`X-Attome-Workspace`), they land in the workspace and its changeset, not in live.
+  `model.draft` drafts a data model from a description or a spreadsheet's CSV text (entities, typed
+  fields, relationships, Arabic and English labels, up to 20 sample rows; a spreadsheet's cells never
+  reach the model, only its headers) and returns the build-tool calls that would make it.
+  `model.review` checks a draft against the existing model and returns findings. Both save nothing.
 - Outages: `system.status` lists the services (object storage, email, the job queues) and which are
   down. A call refused because one is down names it under `degraded` with `retryable`: `true` for a
   short outage, `false` once it has lasted five minutes, so the agent stops and tells the person.

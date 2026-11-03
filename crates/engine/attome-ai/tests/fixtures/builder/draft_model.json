@@ -1,0 +1,46 @@
+{
+  "note": "A1-T13: descriptions for model.draft and the entities a good draft holds. The live, per-model run scores a draft by the expected entities it names (by name or a listed alias) and by the review findings it avoids; this file is checked for shape without a model (tests/draft_model_eval.rs).",
+  "cases": [
+    {
+      "id": "clinic-appointments",
+      "language": "en",
+      "description": "A small clinic books patient appointments with its doctors, records each visit's diagnosis and the prescriptions written, and bills the visit.",
+      "expected_entities": [
+        { "name": "appointment", "aliases": ["booking"] },
+        { "name": "visit", "aliases": ["consultation", "encounter"] },
+        { "name": "prescription", "aliases": [] },
+        { "name": "invoice", "aliases": ["bill"] }
+      ],
+      "reuse_existing": ["contact"],
+      "must_not_find": ["extend_party"]
+    },
+    {
+      "id": "property-maintenance",
+      "language": "ar",
+      "description": "شركة إدارة عقارات تتابع العقارات والوحدات والمستأجرين وعقود الإيجار وطلبات الصيانة وزيارات الفنيين لكل طلب.",
+      "expected_entities": [
+        { "name": "property", "aliases": ["building"] },
+        { "name": "unit", "aliases": ["apartment"] },
+        { "name": "lease", "aliases": ["rental_contract", "lease_contract"] },
+        { "name": "maintenance_request", "aliases": ["work_order", "service_request"] },
+        { "name": "technician_visit", "aliases": ["visit", "site_visit"] }
+      ],
+      "reuse_existing": ["contact"],
+      "must_not_find": ["extend_party"]
+    },
+    {
+      "id": "training-courses",
+      "language": "en",
+      "description": "A training center runs courses in sessions, enrolls trainees in a session, tracks attendance per day and issues a certificate when a trainee passes.",
+      "expected_entities": [
+        { "name": "course", "aliases": ["program"] },
+        { "name": "session", "aliases": ["course_session", "class"] },
+        { "name": "enrollment", "aliases": ["registration"] },
+        { "name": "attendance", "aliases": ["attendance_record"] },
+        { "name": "certificate", "aliases": [] }
+      ],
+      "reuse_existing": ["contact"],
+      "must_not_find": ["extend_party"]
+    }
+  ]
+}

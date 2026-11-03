@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `model.draft` and `model.review` (A1-T13): a building agent drafts a data model from a description or
+  a CSV, reviewed against the existing model, and returns the build-tool calls that would make it.
 - Agent build tools `model.entity.create` and `model.attribute.create` (N12-T1): an entity or a field
   through the admin create path, in the Develop workspace a call names.
 - `attome workspace list|create|switch|preview|publish|refresh|rollback` (T4-T3): Develop workspaces from
