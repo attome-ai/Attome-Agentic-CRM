@@ -232,8 +232,15 @@ impl<'a> KnowledgeVisibility<'a> {
 /// The collection entity is created at runtime through the admin API, so its
 /// physical table name is a parameter rather than a constant here — this layer
 /// must not hard-code a metadata-defined table.
+///
+/// A grant condition on `{collection_entity}.read` (D-369) narrows the list
+/// as it narrows a record read. This path holds no metadata registry, so the
+/// collection entity's attributes are read once, and only when a condition
+/// applies; a condition that cannot render, or an entity with no metadata,
+/// leaves nothing readable (fails closed).
 pub async fn readable_collections(
     db: &sqlx::PgPool,
+    ctx: &SecurityContext,
     collection_entity: &str,
     records: &PolymorphicVisibility<'_>,
 ) -> Result<Vec<Uuid>, attome_types::AppError> {
@@ -245,10 +252,54 @@ pub async fn readable_collections(
     // knowledge-specific access rule anywhere in this file — that is I-1.
     records.push(&mut qb, &format!("'{collection_entity}'"), "t.id");
 
-    qb.build_query_scalar()
+    let ids: Vec<Uuid> = qb
+        .build_query_scalar()
         .fetch_all(db)
         .await
-        .map_err(attome_types::AppError::internal)
+        .map_err(attome_types::AppError::internal)?;
+    collections_meeting_condition(db, ctx, collection_entity, ids).await
+}
+
+/// `ids` narrowed by `ctx`'s grant condition on `{collection_entity}.read`.
+async fn collections_meeting_condition(
+    db: &sqlx::PgPool,
+    ctx: &SecurityContext,
+    collection_entity: &str,
+    ids: Vec<Uuid>,
+) -> Result<Vec<Uuid>, AppError> {
+    let key = format!("{collection_entity}.read");
+    if ids.is_empty() || ctx.is_admin || !ctx.condition_grants.contains_key(&key) {
+        return Ok(ids);
+    }
+    let entity_id: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM entity_info WHERE logicalname = $1 \
+         AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(collection_entity)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(entity_id) = entity_id else {
+        return Ok(Vec::new());
+    };
+    let Some(meta) = attome_core::meta_registry::fetch_entity_snapshot(db, entity_id).await? else {
+        return Ok(Vec::new());
+    };
+    let Some(condition) =
+        attome_security::conditions::condition_predicate(ctx, &key, &meta.attrs, "t", 2)
+    else {
+        return Ok(ids);
+    };
+    let sql = format!(
+        "SELECT t.id FROM {} t WHERE t.id = ANY($1) AND ({})",
+        attome_core::sql_ident::quote_ident(collection_entity),
+        condition.sql
+    );
+    let mut query = sqlx::query_scalar::<_, Uuid>(&sql).bind(&ids);
+    for bind in &condition.binds {
+        query = query.bind(bind);
+    }
+    query.fetch_all(db).await.map_err(AppError::internal)
 }
 
 // ── M37 Phase 2: staleness + semantic neighbors (D-452) ────────────────────
@@ -687,7 +738,7 @@ async fn retrieve(
     // sized in tens. The Data Source is the collection `collection_ref`
     // points at (D-489).
     let mut collections =
-        readable_collections(db, crate::knowledge_index::COLLECTION_ENTITY, &records).await?;
+        readable_collections(db, ctx, crate::knowledge_index::COLLECTION_ENTITY, &records).await?;
     // D-512 §7: an agent session's knowledge scope narrows the caller's own
     // readable set here, before any chunk is queried. Intersection only: a
     // scope naming a collection the caller cannot read reaches nothing extra,

@@ -68,6 +68,7 @@ related columns, the change feed and live stream, and the engines' own lists (`a
 binds the tier, owner visibility and conditions together). Search holds no record fields, so search,
 similar passages, image search and the record graph check their hits against the records and leave out
 those a condition hides; search does so before it counts, so its total and facets agree with what is shown.
+Knowledge retrieval narrows the collections it searches by the condition on the collection entity's read.
 
 ## Suggested roles
 
