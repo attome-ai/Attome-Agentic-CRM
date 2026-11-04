@@ -228,15 +228,18 @@
           {
             "name": "page",
             "in": "query",
+            "description": "One-based page number; below 1 is page 1.",
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page, at most the platform's page-size cap.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -381,6 +384,7 @@
           "admin-security"
         ],
         "summary": "Get an agent principal",
+        "description": "One agent principal: its account, lifecycle state, sponsor and keys' summary.",
         "operationId": "get_agent_principal",
         "parameters": [
           {
@@ -664,7 +668,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Pause an agent principal\n\nAn active agent stops acting until resumed. Takes `If-Match`. Audited.",
+        "summary": "Pause an agent principal",
+        "description": "An active agent stops acting until resumed. Takes `If-Match`. Audited.",
         "operationId": "pause_agent_principal",
         "parameters": [
           {
@@ -780,7 +785,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Resume an agent principal\n\nA paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited.",
+        "summary": "Resume an agent principal",
+        "description": "A paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited.",
         "operationId": "resume_agent_principal",
         "parameters": [
           {
@@ -896,7 +902,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Revoke an agent principal\n\nFinal: its keys, sessions and account end. Takes `If-Match`. Audited.",
+        "summary": "Revoke an agent principal",
+        "description": "Final: its keys, sessions and account end. Takes `If-Match`. Audited.",
         "operationId": "revoke_agent_principal",
         "parameters": [
           {
@@ -1129,7 +1136,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Suspend an agent principal\n\nAn active or paused agent is held, for review. Takes `If-Match`. Audited.",
+        "summary": "Suspend an agent principal",
+        "description": "An active or paused agent is held, for review. Takes `If-Match`. Audited.",
         "operationId": "suspend_agent_principal",
         "parameters": [
           {
@@ -15286,6 +15294,7 @@
           "admin"
         ],
         "summary": "List derived entities",
+        "description": "Every derived entity: its anchor, mode, condition and refresh state.",
         "operationId": "list_derived_entities",
         "responses": {
           "200": {
@@ -22325,6 +22334,7 @@
           "admin"
         ],
         "summary": "List extension versions",
+        "description": "Every extension version: its hook, status and when it was published.",
         "operationId": "list_extensions",
         "responses": {
           "200": {
@@ -24470,7 +24480,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Evidence"
+                  "$ref": "#/components/schemas/GovernanceEvidence"
                 }
               }
             }
@@ -36393,7 +36403,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReviewBody"
+                "$ref": "#/components/schemas/CatalogueReviewBody"
               }
             }
           },
@@ -56704,7 +56714,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Published"
+                  "$ref": "#/components/schemas/WorkspacePublished"
                 }
               }
             }
@@ -97694,6 +97704,32 @@
           }
         }
       },
+      "CatalogueReviewBody": {
+        "type": "object",
+        "description": "Body of `POST /api/v1/admin/packages/catalogue/{id}/review`.",
+        "required": [
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/CatalogueReviewDecision"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CatalogueReviewDecision": {
+        "type": "string",
+        "description": "A review's decision.",
+        "enum": [
+          "approved",
+          "rejected"
+        ]
+      },
       "Certification": {
         "type": "object",
         "required": [
@@ -99424,38 +99460,6 @@
           "token": {
             "type": "string",
             "description": "The signed token from the link."
-          }
-        }
-      },
-      "Conflict": {
-        "type": "object",
-        "description": "T8-T3: one property an upgrade cannot merge on its own: the package's\nnew version and the customer both changed it, differently.",
-        "required": [
-          "object",
-          "property",
-          "installed",
-          "customer",
-          "package"
-        ],
-        "properties": {
-          "customer": {
-            "type": "object",
-            "description": "What the deployment has now."
-          },
-          "installed": {
-            "type": "object",
-            "description": "What the installed version set."
-          },
-          "object": {
-            "type": "string",
-            "description": "`entity` or `entity.attribute`."
-          },
-          "package": {
-            "type": "object",
-            "description": "What the new version sets."
-          },
-          "property": {
-            "type": "string"
           }
         }
       },
@@ -105207,51 +105211,6 @@
           "request_id": "018f0a1b-2c3d-7e4f-8a9b-0c1d2e3f4a5b"
         }
       },
-      "Evidence": {
-        "type": "object",
-        "description": "The governance evidence for an audit.",
-        "required": [
-          "generated_at",
-          "roles",
-          "policies",
-          "exceptions",
-          "approvals"
-        ],
-        "properties": {
-          "approvals": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "Governed-change approval requests: `{id, status, requested_by, requested_at}`."
-          },
-          "exceptions": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "`{id, policy_id, target_ref, reason, status, approved_by, expires_at}`."
-          },
-          "generated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "policies": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "`{id, domain_id, name_en, name_ar, version, enforcements: [{kind, target_ref}]}`."
-          },
-          "roles": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "`{domain_id, domain, user_id, role}`."
-          }
-        }
-      },
       "ExceptionBody": {
         "type": "object",
         "required": [
@@ -107492,6 +107451,51 @@
           },
           "name_en": {
             "type": "string"
+          }
+        }
+      },
+      "GovernanceEvidence": {
+        "type": "object",
+        "description": "The governance evidence for an audit.",
+        "required": [
+          "generated_at",
+          "roles",
+          "policies",
+          "exceptions",
+          "approvals"
+        ],
+        "properties": {
+          "approvals": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Governed-change approval requests: `{id, status, requested_by, requested_at}`."
+          },
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{id, policy_id, target_ref, reason, status, approved_by, expires_at}`."
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "policies": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{id, domain_id, name_en, name_ar, version, enforcements: [{kind, target_ref}]}`."
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{domain_id, domain, user_id, role}`."
           }
         }
       },
@@ -113212,6 +113216,38 @@
           }
         }
       },
+      "PackageConflict": {
+        "type": "object",
+        "description": "T8-T3: one property an upgrade cannot merge on its own: the package's\nnew version and the customer both changed it, differently.",
+        "required": [
+          "object",
+          "property",
+          "installed",
+          "customer",
+          "package"
+        ],
+        "properties": {
+          "customer": {
+            "type": "object",
+            "description": "What the deployment has now."
+          },
+          "installed": {
+            "type": "object",
+            "description": "What the installed version set."
+          },
+          "object": {
+            "type": "string",
+            "description": "`entity` or `entity.attribute`."
+          },
+          "package": {
+            "type": "object",
+            "description": "What the new version sets."
+          },
+          "property": {
+            "type": "string"
+          }
+        }
+      },
       "PackageDriftResponse": {
         "type": "object",
         "description": "A package's drift.",
@@ -113371,7 +113407,7 @@
           "conflicts": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Conflict"
+              "$ref": "#/components/schemas/PackageConflict"
             },
             "description": "Properties both the new version and the customer changed."
           },
@@ -131646,36 +131682,6 @@
           }
         }
       },
-      "Published": {
-        "type": "object",
-        "description": "`POST .../publish`'s answer.",
-        "required": [
-          "workspace",
-          "plan",
-          "apply",
-          "contract_apply_ids"
-        ],
-        "properties": {
-          "apply": {
-            "$ref": "#/components/schemas/ApplyChangesetsAccepted",
-            "description": "The queued apply (or the approval it waits on)."
-          },
-          "contract_apply_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Contract rows (removals), applied with\n`POST /api/v1/admin/metadata/changesets/apply` once the expand rows\nsucceeded; empty when there are none or they were queued here."
-          },
-          "plan": {
-            "$ref": "#/components/schemas/ChangesetPlan"
-          },
-          "workspace": {
-            "$ref": "#/components/schemas/Workspace"
-          }
-        }
-      },
       "PurposePreferences": {
         "type": "object",
         "description": "One purpose and its channels.",
@@ -134641,32 +134647,6 @@
             "description": "The amounts at that rate, in the base currency."
           }
         }
-      },
-      "ReviewBody": {
-        "type": "object",
-        "description": "Body of `POST /api/v1/admin/packages/catalogue/{id}/review`.",
-        "required": [
-          "decision"
-        ],
-        "properties": {
-          "decision": {
-            "$ref": "#/components/schemas/ReviewDecision"
-          },
-          "note": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
-      "ReviewDecision": {
-        "type": "string",
-        "description": "A review's decision.",
-        "enum": [
-          "approved",
-          "rejected"
-        ]
       },
       "ReviewRequested": {
         "type": "object",
@@ -142453,6 +142433,36 @@
             ],
             "format": "uuid",
             "description": "T1-T3: the team whose builders work in it beside its owner."
+          }
+        }
+      },
+      "WorkspacePublished": {
+        "type": "object",
+        "description": "`POST .../publish`'s answer.",
+        "required": [
+          "workspace",
+          "plan",
+          "apply",
+          "contract_apply_ids"
+        ],
+        "properties": {
+          "apply": {
+            "$ref": "#/components/schemas/ApplyChangesetsAccepted",
+            "description": "The queued apply (or the approval it waits on)."
+          },
+          "contract_apply_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Contract rows (removals), applied with\n`POST /api/v1/admin/metadata/changesets/apply` once the expand rows\nsucceeded; empty when there are none or they were queued here."
+          },
+          "plan": {
+            "$ref": "#/components/schemas/ChangesetPlan"
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/Workspace"
           }
         }
       },

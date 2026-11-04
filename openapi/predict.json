@@ -415,6 +415,7 @@
           "predict"
         ],
         "summary": "List next-best actions",
+        "description": "Every next-best action rule, by entity. AI administrators only.",
         "operationId": "list_nba_actions",
         "responses": {
           "200": {
@@ -649,6 +650,7 @@
           {
             "name": "regarding_entity",
             "in": "query",
+            "description": "The record's entity.",
             "required": true,
             "schema": {
               "type": "string"
@@ -657,6 +659,7 @@
           {
             "name": "regarding_id",
             "in": "query",
+            "description": "The record.",
             "required": true,
             "schema": {
               "type": "string",
@@ -672,7 +675,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Recommendation"
+                    "$ref": "#/components/schemas/NbaRecommendation"
                   }
                 }
               }
@@ -1405,6 +1408,44 @@
           }
         }
       },
+      "NbaRecommendation": {
+        "type": "object",
+        "description": "One ranked action on a record.",
+        "required": [
+          "recommendation_id",
+          "action_id",
+          "name",
+          "score",
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "object"
+          },
+          "action_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recommendation_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The logged recommendation, to accept or reject."
+          },
+          "score": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "PaginatedResponse_ModelSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -1655,51 +1696,6 @@
               "$ref": "#/components/schemas/Warning"
             },
             "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
-          }
-        }
-      },
-      "Recommendation": {
-        "type": "object",
-        "description": "One recommendation on an approval request: approve or reject and why,\nfrom an eligible approver or an agent acting for one. It decides nothing.",
-        "required": [
-          "id",
-          "request_id",
-          "recommended",
-          "reasons",
-          "recommended_by",
-          "created_at"
-        ],
-        "properties": {
-          "agent_session": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid",
-            "description": "The agent session that wrote it, when an agent did."
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "reasons": {
-            "type": "string"
-          },
-          "recommended": {
-            "type": "string",
-            "description": "`approve` or `reject`."
-          },
-          "recommended_by": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "request_id": {
-            "type": "string",
-            "format": "uuid"
           }
         }
       },

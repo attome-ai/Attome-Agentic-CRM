@@ -909,36 +909,65 @@
         }
       },
       "Conflict": {
-        "type": "object",
-        "description": "T8-T3: one property an upgrade cannot merge on its own: the package's\nnew version and the customer both changed it, differently.",
-        "required": [
-          "object",
-          "property",
-          "installed",
-          "customer",
-          "package"
-        ],
-        "properties": {
-          "customer": {
+        "oneOf": [
+          {
             "type": "object",
-            "description": "What the deployment has now."
+            "description": "An open opportunity on the same customer account.",
+            "required": [
+              "id",
+              "kind"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "opportunity"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
           },
-          "installed": {
+          {
             "type": "object",
-            "description": "What the installed version set."
-          },
-          "object": {
-            "type": "string",
-            "description": "`entity` or `entity.attribute`."
-          },
-          "package": {
-            "type": "object",
-            "description": "What the new version sets."
-          },
-          "property": {
-            "type": "string"
+            "description": "Another partner's live registration for the same customer.",
+            "required": [
+              "id",
+              "status",
+              "kind"
+            ],
+            "properties": {
+              "customer_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "registration"
+                ]
+              },
+              "status": {
+                "type": "string"
+              }
+            }
           }
-        }
+        ],
+        "description": "What a registration conflicts with."
       },
       "Conflicts": {
         "type": "object",

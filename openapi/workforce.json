@@ -420,6 +420,7 @@
           {
             "name": "from",
             "in": "query",
+            "description": "The first day of the period, inclusive.",
             "required": true,
             "schema": {
               "type": "string",
@@ -429,6 +430,7 @@
           {
             "name": "to",
             "in": "query",
+            "description": "The last day of the period, inclusive.",
             "required": true,
             "schema": {
               "type": "string",
@@ -1614,74 +1616,6 @@
   },
   "components": {
     "schemas": {
-      "AppClash": {
-        "type": "object",
-        "description": "A property two apps set.",
-        "required": [
-          "object_kind",
-          "object_key",
-          "property",
-          "other_app"
-        ],
-        "properties": {
-          "object_key": {
-            "type": "string",
-            "description": "The entity's logical name, or `<entity>.<field>`."
-          },
-          "object_kind": {
-            "type": "string",
-            "description": "`entity` or `attribute`."
-          },
-          "other_app": {
-            "type": "string",
-            "description": "The installed app that set it."
-          },
-          "property": {
-            "type": "string"
-          }
-        }
-      },
-      "ApplyChangesetsAccepted": {
-        "type": "object",
-        "description": "`POST …/apply` (202).",
-        "required": [
-          "status",
-          "apply_ids",
-          "approval_pending"
-        ],
-        "properties": {
-          "apply_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "approval_pending": {
-            "type": "boolean",
-            "description": "`true` when this call only submitted an approval request; a second,\ndifferent `system.admin` must approve it before the rows are queued."
-          },
-          "approval_request_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "status": {
-            "type": "string",
-            "description": "`queued` once the job is durably enqueued; `planned` while an\napproval request is pending."
-          }
-        }
-      },
-      "ApplyPhase": {
-        "type": "string",
-        "description": "The phase a ledger row covers.",
-        "enum": [
-          "expand",
-          "contract"
-        ]
-      },
       "AssignmentPatch": {
         "type": "object",
         "description": "An assignment change.",
@@ -1805,45 +1739,6 @@
           "run_id": {
             "type": "string",
             "format": "uuid"
-          }
-        }
-      },
-      "ChangesetPlan": {
-        "type": "object",
-        "description": "`POST /api/v1/admin/metadata/changesets/plan`'s response.",
-        "required": [
-          "changesets",
-          "apply_ids",
-          "contract_apply_ids",
-          "applicable"
-        ],
-        "properties": {
-          "applicable": {
-            "type": "boolean",
-            "description": "Nothing is blocked anywhere."
-          },
-          "apply_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Every planned expand row, in apply order — what `apply` takes for\n`phase = expand`."
-          },
-          "changesets": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlannedChangeset"
-            },
-            "description": "In apply order."
-          },
-          "contract_apply_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Every contract row, in apply order."
           }
         }
       },
@@ -2419,145 +2314,6 @@
           }
         }
       },
-      "PlannedChangeset": {
-        "type": "object",
-        "description": "One changeset's plan.",
-        "required": [
-          "changeset_id",
-          "ref",
-          "layer",
-          "scope",
-          "seq",
-          "checksum",
-          "status",
-          "blocked",
-          "phases",
-          "clashes"
-        ],
-        "properties": {
-          "blocked": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Changeset-level blocks (`missing_dependency`, `platform_floor`,\n`module_off`, `app_clash`)."
-          },
-          "changeset_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "checksum": {
-            "type": "string"
-          },
-          "clashes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AppClash"
-            },
-            "description": "Y11-T11: for an app's (`product`) changeset, the properties other\ninstalled apps already set on what it touches. They block the\nchangeset unless the plan request accepts them."
-          },
-          "layer": {
-            "type": "string"
-          },
-          "phases": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlannedPhase"
-            }
-          },
-          "ref": {
-            "type": "string"
-          },
-          "scope": {
-            "type": "string"
-          },
-          "seq": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "status": {
-            "type": "string",
-            "description": "`planned`, `already_applied` or `blocked`."
-          }
-        }
-      },
-      "PlannedOp": {
-        "type": "object",
-        "description": "One operation's line in a plan.",
-        "required": [
-          "seq",
-          "op",
-          "phase",
-          "target",
-          "action",
-          "risky"
-        ],
-        "properties": {
-          "action": {
-            "type": "string",
-            "description": "`create`, `update`, `retire`, `noop` or `blocked`."
-          },
-          "op": {
-            "type": "string"
-          },
-          "phase": {
-            "$ref": "#/components/schemas/ApplyPhase"
-          },
-          "reason": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "risky": {
-            "type": "boolean",
-            "description": "Phase 1 criteria: a contract operation, or a field made required."
-          },
-          "seq": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "target": {
-            "type": "object"
-          }
-        }
-      },
-      "PlannedPhase": {
-        "type": "object",
-        "description": "One (changeset, phase)'s plan.",
-        "required": [
-          "phase",
-          "status",
-          "applicable",
-          "operations"
-        ],
-        "properties": {
-          "applicable": {
-            "type": "boolean",
-            "description": "Nothing in this phase is blocked."
-          },
-          "apply_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid",
-            "description": "The ledger row; `None` for a changeset that is already applied or\nblocked before any row was written."
-          },
-          "operations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlannedOp"
-            }
-          },
-          "phase": {
-            "$ref": "#/components/schemas/ApplyPhase"
-          },
-          "status": {
-            "type": "string"
-          }
-        }
-      },
       "Preference": {
         "type": "object",
         "description": "One preference.",
@@ -2600,31 +2356,31 @@
       },
       "Published": {
         "type": "object",
-        "description": "`POST .../publish`'s answer.",
+        "description": "The published schedule.",
         "required": [
-          "workspace",
-          "plan",
-          "apply",
-          "contract_apply_ids"
+          "schedule_id",
+          "bookings",
+          "superseded",
+          "row_version"
         ],
         "properties": {
-          "apply": {
-            "$ref": "#/components/schemas/ApplyChangesetsAccepted",
-            "description": "The queued apply (or the approval it waits on)."
+          "bookings": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           },
-          "contract_apply_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Contract rows (removals), applied with\n`POST /api/v1/admin/metadata/changesets/apply` once the expand rows\nsucceeded; empty when there are none or they were queued here."
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
           },
-          "plan": {
-            "$ref": "#/components/schemas/ChangesetPlan"
+          "schedule_id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "workspace": {
-            "$ref": "#/components/schemas/Workspace"
+          "superseded": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
@@ -2962,90 +2718,6 @@
               "string",
               "null"
             ]
-          }
-        }
-      },
-      "Workspace": {
-        "type": "object",
-        "description": "One workspace.",
-        "required": [
-          "id",
-          "name",
-          "status",
-          "owner_ref",
-          "metadata_tables",
-          "entity_tables",
-          "created_at",
-          "last_used_at",
-          "row_version"
-        ],
-        "properties": {
-          "changeset_ref": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid",
-            "description": "The changeset its metadata writes record into (T5-T4)."
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "entity_tables": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Entity and join tables copied empty."
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "last_used_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "metadata_tables": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Metadata tables copied with their rows."
-          },
-          "name": {
-            "type": "string"
-          },
-          "owner_ref": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "purpose": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "review_request_ref": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid",
-            "description": "T1-T3: the owner's review a builder's publish waits on."
-          },
-          "row_version": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "status": {
-            "type": "string",
-            "description": "`open`, `in_review` (a builder's publish waits for the owner, T1-T3),\n`publishing`, `published` or `discarded`."
-          },
-          "team_ref": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid",
-            "description": "T1-T3: the team whose builders work in it beside its owner."
           }
         }
       }

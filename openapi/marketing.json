@@ -1391,7 +1391,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_Handoff"
+                  "$ref": "#/components/schemas/PaginatedResponse_NurtureHandoff"
                 }
               }
             }
@@ -1459,7 +1459,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Handoff"
+                  "$ref": "#/components/schemas/NurtureHandoff"
                 }
               }
             }
@@ -5400,34 +5400,6 @@
           }
         }
       },
-      "EnrolOutcome": {
-        "type": "object",
-        "description": "What an enrolment did.",
-        "required": [
-          "enrolled",
-          "skipped_active",
-          "skipped_missing"
-        ],
-        "properties": {
-          "enrolled": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "skipped_active": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Already active in this sequence.",
-            "minimum": 0
-          },
-          "skipped_missing": {
-            "type": "integer",
-            "format": "int64",
-            "description": "No such live contact.",
-            "minimum": 0
-          }
-        }
-      },
       "ErrorDetails": {
         "oneOf": [
           {
@@ -5767,86 +5739,6 @@
           }
         }
       },
-      "Handoff": {
-        "type": "object",
-        "description": "One hand-off.",
-        "required": [
-          "id",
-          "ticket_id",
-          "from_kind",
-          "from_ref",
-          "to_kind",
-          "to_ref",
-          "summary",
-          "reasoning",
-          "status",
-          "created_at",
-          "row_version"
-        ],
-        "properties": {
-          "accepted_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "agent_session_ref": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "from_kind": {
-            "type": "string"
-          },
-          "from_ref": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "reasoning": {
-            "type": "string"
-          },
-          "returned_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "row_version": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "status": {
-            "type": "string",
-            "description": "`pending`, `accepted`, `returned` or `cancelled`."
-          },
-          "summary": {
-            "type": "string"
-          },
-          "ticket_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "to_kind": {
-            "type": "string"
-          },
-          "to_ref": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
-      },
       "IncomingEvent": {
         "type": "object",
         "description": "One event sent.",
@@ -5923,6 +5815,44 @@
             "items": {
               "$ref": "#/components/schemas/NodeCount"
             }
+          }
+        }
+      },
+      "JourneyEnrolOutcome": {
+        "type": "object",
+        "description": "What one enrolment did.",
+        "required": [
+          "enrolled",
+          "skipped_active",
+          "skipped_re_entry",
+          "skipped_cap",
+          "skipped_invalid"
+        ],
+        "properties": {
+          "enrolled": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_active": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_cap": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_invalid": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_re_entry": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
@@ -6082,7 +6012,7 @@
       "ManualEnrolResult": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/EnrolOutcome"
+            "$ref": "#/components/schemas/JourneyEnrolOutcome"
           },
           {
             "type": "object",
@@ -6437,6 +6367,76 @@
           }
         }
       },
+      "NurtureHandoff": {
+        "type": "object",
+        "description": "One hand-off.",
+        "required": [
+          "id",
+          "program_id",
+          "person_id",
+          "status",
+          "summary",
+          "created_at"
+        ],
+        "properties": {
+          "assigned_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decided_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "program_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "return_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "status": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "object"
+          }
+        }
+      },
       "NurtureHistory": {
         "type": "object",
         "required": [
@@ -6455,7 +6455,7 @@
           "handoffs": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Handoff"
+              "$ref": "#/components/schemas/NurtureHandoff"
             }
           },
           "person_id": {
@@ -6576,120 +6576,6 @@
                 "sent": {
                   "type": "integer",
                   "format": "int64"
-                }
-              }
-            }
-          },
-          "page": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "page_size": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "total": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "warnings": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Warning"
-            },
-            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
-          }
-        }
-      },
-      "PaginatedResponse_Handoff": {
-        "type": "object",
-        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
-        "required": [
-          "items",
-          "total",
-          "page",
-          "page_size"
-        ],
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "description": "One hand-off.",
-              "required": [
-                "id",
-                "ticket_id",
-                "from_kind",
-                "from_ref",
-                "to_kind",
-                "to_ref",
-                "summary",
-                "reasoning",
-                "status",
-                "created_at",
-                "row_version"
-              ],
-              "properties": {
-                "accepted_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "format": "date-time"
-                },
-                "agent_session_ref": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "format": "uuid"
-                },
-                "created_at": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "from_kind": {
-                  "type": "string"
-                },
-                "from_ref": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "reasoning": {
-                  "type": "string"
-                },
-                "returned_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "format": "date-time"
-                },
-                "row_version": {
-                  "type": "integer",
-                  "format": "int64"
-                },
-                "status": {
-                  "type": "string",
-                  "description": "`pending`, `accepted`, `returned` or `cancelled`."
-                },
-                "summary": {
-                  "type": "string"
-                },
-                "ticket_id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "to_kind": {
-                  "type": "string"
-                },
-                "to_ref": {
-                  "type": "string",
-                  "format": "uuid"
                 }
               }
             }
@@ -7135,6 +7021,110 @@
                 "waiting_count": {
                   "type": "integer",
                   "format": "int64"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_NurtureHandoff": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One hand-off.",
+              "required": [
+                "id",
+                "program_id",
+                "person_id",
+                "status",
+                "summary",
+                "created_at"
+              ],
+              "properties": {
+                "assigned_to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "decided_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "due_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "person_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "program_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "return_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "score": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "object"
                 }
               }
             }

@@ -3030,7 +3030,7 @@
           "recordings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Recording"
+              "$ref": "#/components/schemas/VideoRecording"
             }
           }
         }
@@ -3558,24 +3558,6 @@
           }
         }
       },
-      "Recording": {
-        "type": "object",
-        "description": "A recording to play.",
-        "required": [
-          "download_url",
-          "expires_in_secs"
-        ],
-        "properties": {
-          "download_url": {
-            "type": "string"
-          },
-          "expires_in_secs": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          }
-        }
-      },
       "ReplayBody": {
         "type": "object",
         "required": [
@@ -4078,6 +4060,24 @@
         "properties": {
           "variable_map": {
             "type": "object"
+          }
+        }
+      },
+      "VideoRecording": {
+        "type": "object",
+        "description": "A meeting's recording.",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string"
           }
         }
       },

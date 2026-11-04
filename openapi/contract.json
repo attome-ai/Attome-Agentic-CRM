@@ -670,7 +670,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportAccepted"
+                  "$ref": "#/components/schemas/ContractImportAccepted"
                 }
               }
             }
@@ -1024,6 +1024,24 @@
           }
         }
       },
+      "ContractImportAccepted": {
+        "type": "object",
+        "description": "An accepted import.",
+        "required": [
+          "contract_id",
+          "obligations"
+        ],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "obligations": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
       "CounterpartyDecideBody": {
         "type": "object",
         "required": [
@@ -1320,31 +1338,6 @@
               "type": "object"
             },
             "description": "Each obligation's title, due_date and owed_by (`us` or\n`counterparty`)."
-          }
-        }
-      },
-      "ImportAccepted": {
-        "type": "object",
-        "description": "A queued phase.",
-        "required": [
-          "job_id",
-          "status"
-        ],
-        "properties": {
-          "approval_request_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid",
-            "description": "When the apply waits for approval: the request."
-          },
-          "job_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "status": {
-            "type": "string"
           }
         }
       },

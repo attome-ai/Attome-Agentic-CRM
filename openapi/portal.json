@@ -9608,6 +9608,7 @@
           {
             "name": "city",
             "in": "query",
+            "description": "The delivery city, for city-specific rates.",
             "required": false,
             "schema": {
               "type": "string"
@@ -13034,29 +13035,27 @@
       },
       "ReviewBody": {
         "type": "object",
-        "description": "Body of `POST /api/v1/admin/packages/catalogue/{id}/review`.",
         "required": [
-          "decision"
+          "product_id",
+          "rating"
         ],
         "properties": {
-          "decision": {
-            "$ref": "#/components/schemas/ReviewDecision"
-          },
-          "note": {
+          "body": {
             "type": [
               "string",
               "null"
             ]
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1 to 5."
           }
         }
-      },
-      "ReviewDecision": {
-        "type": "string",
-        "description": "A review's decision.",
-        "enum": [
-          "approved",
-          "rejected"
-        ]
       },
       "ReviewTaken": {
         "type": "object",

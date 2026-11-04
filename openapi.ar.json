@@ -662,15 +662,18 @@
           {
             "name": "page",
             "in": "query",
+            "description": "One-based page number; below 1 is page 1.",
             "required": false,
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 1
             }
           },
           {
             "name": "page_size",
             "in": "query",
+            "description": "Rows per page, at most the platform's page-size cap.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -1147,6 +1150,7 @@
           "admin-security"
         ],
         "summary": "Get an agent principal",
+        "description": "One agent principal: its account, lifecycle state, sponsor and keys' summary.",
         "operationId": "get_agent_principal",
         "parameters": [
           {
@@ -1430,7 +1434,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Pause an agent principal\n\nAn active agent stops acting until resumed. Takes `If-Match`. Audited.",
+        "summary": "Pause an agent principal",
+        "description": "An active agent stops acting until resumed. Takes `If-Match`. Audited.",
         "operationId": "pause_agent_principal",
         "parameters": [
           {
@@ -1546,7 +1551,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Resume an agent principal\n\nA paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited.",
+        "summary": "Resume an agent principal",
+        "description": "A paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited.",
         "operationId": "resume_agent_principal",
         "parameters": [
           {
@@ -1662,7 +1668,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Revoke an agent principal\n\nFinal: its keys, sessions and account end. Takes `If-Match`. Audited.",
+        "summary": "Revoke an agent principal",
+        "description": "Final: its keys, sessions and account end. Takes `If-Match`. Audited.",
         "operationId": "revoke_agent_principal",
         "parameters": [
           {
@@ -1895,7 +1902,8 @@
         "tags": [
           "admin-security"
         ],
-        "summary": "Suspend an agent principal\n\nAn active or paused agent is held, for review. Takes `If-Match`. Audited.",
+        "summary": "Suspend an agent principal",
+        "description": "An active or paused agent is held, for review. Takes `If-Match`. Audited.",
         "operationId": "suspend_agent_principal",
         "parameters": [
           {
@@ -25169,6 +25177,7 @@
           "admin"
         ],
         "summary": "List derived entities",
+        "description": "Every derived entity: its anchor, mode, condition and refresh state.",
         "operationId": "list_derived_entities",
         "responses": {
           "200": {
@@ -33023,6 +33032,7 @@
           "admin"
         ],
         "summary": "List extension versions",
+        "description": "Every extension version: its hook, status and when it was published.",
         "operationId": "list_extensions",
         "responses": {
           "200": {
@@ -35168,7 +35178,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Evidence"
+                  "$ref": "#/components/schemas/GovernanceEvidence"
                 }
               }
             }
@@ -49109,7 +49119,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReviewBody"
+                "$ref": "#/components/schemas/CatalogueReviewBody"
               }
             }
           },
@@ -50065,6 +50075,7 @@
           "predict"
         ],
         "summary": "List next-best actions",
+        "description": "Every next-best action rule, by entity. AI administrators only.",
         "operationId": "list_nba_actions",
         "responses": {
           "200": {
@@ -74860,7 +74871,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Published"
+                  "$ref": "#/components/schemas/WorkspacePublished"
                 }
               }
             }
@@ -98183,7 +98194,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportAccepted"
+                  "$ref": "#/components/schemas/ContractImportAccepted"
                 }
               }
             }
@@ -109200,7 +109211,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_Handoff"
+                  "$ref": "#/components/schemas/PaginatedResponse_NurtureHandoff"
                 }
               }
             }
@@ -109268,7 +109279,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Handoff"
+                  "$ref": "#/components/schemas/NurtureHandoff"
                 }
               }
             }
@@ -124629,6 +124640,7 @@
           {
             "name": "regarding_entity",
             "in": "query",
+            "description": "The record's entity.",
             "required": true,
             "schema": {
               "type": "string"
@@ -124637,6 +124649,7 @@
           {
             "name": "regarding_id",
             "in": "query",
+            "description": "The record.",
             "required": true,
             "schema": {
               "type": "string",
@@ -124652,7 +124665,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Recommendation"
+                    "$ref": "#/components/schemas/NbaRecommendation"
                   }
                 }
               }
@@ -149972,6 +149985,7 @@
           {
             "name": "from",
             "in": "query",
+            "description": "The first day of the period, inclusive.",
             "required": true,
             "schema": {
               "type": "string",
@@ -149981,6 +149995,7 @@
           {
             "name": "to",
             "in": "query",
+            "description": "The last day of the period, inclusive.",
             "required": true,
             "schema": {
               "type": "string",
@@ -168304,6 +168319,7 @@
           {
             "name": "city",
             "in": "query",
+            "description": "The delivery city, for city-specific rates.",
             "required": false,
             "schema": {
               "type": "string"
@@ -179361,6 +179377,32 @@
           }
         }
       },
+      "CatalogueReviewBody": {
+        "type": "object",
+        "description": "Body of `POST /api/v1/admin/packages/catalogue/{id}/review`.",
+        "required": [
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/CatalogueReviewDecision"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CatalogueReviewDecision": {
+        "type": "string",
+        "description": "A review's decision.",
+        "enum": [
+          "approved",
+          "rejected"
+        ]
+      },
       "Certification": {
         "type": "object",
         "required": [
@@ -183372,36 +183414,65 @@
         "additionalProperties": false
       },
       "Conflict": {
-        "type": "object",
-        "description": "T8-T3: one property an upgrade cannot merge on its own: the package's\nnew version and the customer both changed it, differently.",
-        "required": [
-          "object",
-          "property",
-          "installed",
-          "customer",
-          "package"
-        ],
-        "properties": {
-          "customer": {
+        "oneOf": [
+          {
             "type": "object",
-            "description": "What the deployment has now."
+            "description": "An open opportunity on the same customer account.",
+            "required": [
+              "id",
+              "kind"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "opportunity"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
           },
-          "installed": {
+          {
             "type": "object",
-            "description": "What the installed version set."
-          },
-          "object": {
-            "type": "string",
-            "description": "`entity` or `entity.attribute`."
-          },
-          "package": {
-            "type": "object",
-            "description": "What the new version sets."
-          },
-          "property": {
-            "type": "string"
+            "description": "Another partner's live registration for the same customer.",
+            "required": [
+              "id",
+              "status",
+              "kind"
+            ],
+            "properties": {
+              "customer_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "registration"
+                ]
+              },
+              "status": {
+                "type": "string"
+              }
+            }
           }
-        }
+        ],
+        "description": "What a registration conflicts with."
       },
       "ConflictCount": {
         "type": "object",
@@ -183929,6 +184000,24 @@
             "type": "string",
             "format": "uuid",
             "description": "The `contract_comparison`; its `status` turns `done` when stored."
+          }
+        }
+      },
+      "ContractImportAccepted": {
+        "type": "object",
+        "description": "An accepted import.",
+        "required": [
+          "contract_id",
+          "obligations"
+        ],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "obligations": {
+            "type": "integer",
+            "minimum": 0
           }
         }
       },
@@ -195026,46 +195115,96 @@
       },
       "Evidence": {
         "type": "object",
-        "description": "The governance evidence for an audit.",
+        "description": "One drill's evidence.",
         "required": [
-          "generated_at",
-          "roles",
-          "policies",
-          "exceptions",
-          "approvals"
+          "schema",
+          "kind",
+          "drill_id",
+          "started_at",
+          "finished_at",
+          "platform_version",
+          "checks",
+          "restore_ok",
+          "provenance_ok",
+          "overall_ok"
         ],
         "properties": {
-          "approvals": {
+          "checks": {
             "type": "array",
             "items": {
-              "type": "object"
-            },
-            "description": "Governed-change approval requests: `{id, status, requested_by, requested_at}`."
+              "$ref": "#/components/schemas/Check"
+            }
           },
-          "exceptions": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "`{id, policy_id, target_ref, reason, status, approved_by, expires_at}`."
+          "data_size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
           },
-          "generated_at": {
+          "deployment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "drill_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "extra": {
+            "type": "object",
+            "description": "What a kind records beyond these fields."
+          },
+          "finished_at": {
             "type": "string",
             "format": "date-time"
           },
-          "policies": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "`{id, domain_id, name_en, name_ar, version, enforcements: [{kind, target_ref}]}`."
+          "image_digest": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
-          "roles": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "`{domain_id, domain, user_id, role}`."
+          "kind": {
+            "$ref": "#/components/schemas/EvidenceKind"
+          },
+          "overall_ok": {
+            "type": "boolean"
+          },
+          "platform_version": {
+            "type": "string"
+          },
+          "provenance_ok": {
+            "type": "boolean"
+          },
+          "restore_ok": {
+            "type": "boolean"
+          },
+          "rpo_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Data lost, measured: the recovery point."
+          },
+          "rto_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Time to serve again, measured: the recovery time."
+          },
+          "schema": {
+            "type": "string",
+            "description": "Always [`SCHEMA`]."
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -198861,6 +199000,51 @@
           },
           "name_en": {
             "type": "string"
+          }
+        }
+      },
+      "GovernanceEvidence": {
+        "type": "object",
+        "description": "The governance evidence for an audit.",
+        "required": [
+          "generated_at",
+          "roles",
+          "policies",
+          "exceptions",
+          "approvals"
+        ],
+        "properties": {
+          "approvals": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Governed-change approval requests: `{id, status, requested_by, requested_at}`."
+          },
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{id, policy_id, target_ref, reason, status, approved_by, expires_at}`."
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "policies": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{id, domain_id, name_en, name_ar, version, enforcements: [{kind, target_ref}]}`."
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{domain_id, domain, user_id, role}`."
           }
         }
       },
@@ -202696,6 +202880,44 @@
           }
         }
       },
+      "JourneyEnrolOutcome": {
+        "type": "object",
+        "description": "What one enrolment did.",
+        "required": [
+          "enrolled",
+          "skipped_active",
+          "skipped_re_entry",
+          "skipped_cap",
+          "skipped_invalid"
+        ],
+        "properties": {
+          "enrolled": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_active": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_cap": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_invalid": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_re_entry": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "JourneyEnrolment": {
         "type": "object",
         "required": [
@@ -205474,7 +205696,7 @@
       "ManualEnrolResult": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/EnrolOutcome"
+            "$ref": "#/components/schemas/JourneyEnrolOutcome"
           },
           {
             "type": "object",
@@ -206901,7 +207123,7 @@
           "recordings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Recording"
+              "$ref": "#/components/schemas/VideoRecording"
             }
           }
         }
@@ -209424,6 +209646,44 @@
           }
         }
       },
+      "NbaRecommendation": {
+        "type": "object",
+        "description": "One ranked action on a record.",
+        "required": [
+          "recommendation_id",
+          "action_id",
+          "name",
+          "score",
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "object"
+          },
+          "action_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recommendation_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The logged recommendation, to accept or reject."
+          },
+          "score": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "NewChannel": {
         "type": "object",
         "description": "`POST /api/v1/chat/channels`.",
@@ -210849,6 +211109,76 @@
           }
         }
       },
+      "NurtureHandoff": {
+        "type": "object",
+        "description": "One hand-off.",
+        "required": [
+          "id",
+          "program_id",
+          "person_id",
+          "status",
+          "summary",
+          "created_at"
+        ],
+        "properties": {
+          "assigned_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decided_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "program_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "return_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "status": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "object"
+          }
+        }
+      },
       "NurtureHistory": {
         "type": "object",
         "required": [
@@ -210867,7 +211197,7 @@
           "handoffs": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Handoff"
+              "$ref": "#/components/schemas/NurtureHandoff"
             }
           },
           "person_id": {
@@ -213523,6 +213853,38 @@
         },
         "additionalProperties": false
       },
+      "PackageConflict": {
+        "type": "object",
+        "description": "T8-T3: one property an upgrade cannot merge on its own: the package's\nnew version and the customer both changed it, differently.",
+        "required": [
+          "object",
+          "property",
+          "installed",
+          "customer",
+          "package"
+        ],
+        "properties": {
+          "customer": {
+            "type": "object",
+            "description": "What the deployment has now."
+          },
+          "installed": {
+            "type": "object",
+            "description": "What the installed version set."
+          },
+          "object": {
+            "type": "string",
+            "description": "`entity` or `entity.attribute`."
+          },
+          "package": {
+            "type": "object",
+            "description": "What the new version sets."
+          },
+          "property": {
+            "type": "string"
+          }
+        }
+      },
       "PackageDriftResponse": {
         "type": "object",
         "description": "A package's drift.",
@@ -213682,7 +214044,7 @@
           "conflicts": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Conflict"
+              "$ref": "#/components/schemas/PackageConflict"
             },
             "description": "Properties both the new version and the customer changed."
           },
@@ -228831,6 +229193,110 @@
                 "waiting_count": {
                   "type": "integer",
                   "format": "int64"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_NurtureHandoff": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One hand-off.",
+              "required": [
+                "id",
+                "program_id",
+                "person_id",
+                "status",
+                "summary",
+                "created_at"
+              ],
+              "properties": {
+                "assigned_to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "decided_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "due_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "person_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "program_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "return_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "score": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "object"
                 }
               }
             }
@@ -245606,31 +246072,31 @@
       },
       "Published": {
         "type": "object",
-        "description": "`POST .../publish`'s answer.",
+        "description": "The published schedule.",
         "required": [
-          "workspace",
-          "plan",
-          "apply",
-          "contract_apply_ids"
+          "schedule_id",
+          "bookings",
+          "superseded",
+          "row_version"
         ],
         "properties": {
-          "apply": {
-            "$ref": "#/components/schemas/ApplyChangesetsAccepted",
-            "description": "The queued apply (or the approval it waits on)."
+          "bookings": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           },
-          "contract_apply_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Contract rows (removals), applied with\n`POST /api/v1/admin/metadata/changesets/apply` once the expand rows\nsucceeded; empty when there are none or they were queued here."
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
           },
-          "plan": {
-            "$ref": "#/components/schemas/ChangesetPlan"
+          "schedule_id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "workspace": {
-            "$ref": "#/components/schemas/Workspace"
+          "superseded": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
@@ -251107,19 +251573,25 @@
       },
       "ReviewBody": {
         "type": "object",
-        "description": "Body of `POST /api/v1/admin/packages/catalogue/{id}/review`.",
         "required": [
-          "decision"
+          "product_id",
+          "rating"
         ],
         "properties": {
-          "decision": {
-            "$ref": "#/components/schemas/ReviewDecision"
-          },
-          "note": {
+          "body": {
             "type": [
               "string",
               "null"
             ]
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1 to 5."
           }
         }
       },
@@ -251137,12 +251609,37 @@
         }
       },
       "ReviewDecision": {
-        "type": "string",
-        "description": "A review's decision.",
-        "enum": [
-          "approved",
-          "rejected"
-        ]
+        "type": "object",
+        "description": "Which staged actions a review decision covers: one agent session's, or\nchosen ones (at most [`MAX_REVIEW_IDS`]).",
+        "properties": {
+          "agent_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "undo_window_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Apply only: hold the applied actions this many seconds (30 to 86400)\nbefore they run, cancellable; omit to run them now.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
       },
       "ReviewEntry": {
         "type": "object",
@@ -269414,6 +269911,24 @@
           }
         }
       },
+      "VideoRecording": {
+        "type": "object",
+        "description": "A meeting's recording.",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
       "ViewBody": {
         "type": "object",
         "required": [
@@ -271490,6 +272005,36 @@
           }
         }
       },
+      "WorkspacePublished": {
+        "type": "object",
+        "description": "`POST .../publish`'s answer.",
+        "required": [
+          "workspace",
+          "plan",
+          "apply",
+          "contract_apply_ids"
+        ],
+        "properties": {
+          "apply": {
+            "$ref": "#/components/schemas/ApplyChangesetsAccepted",
+            "description": "The queued apply (or the approval it waits on)."
+          },
+          "contract_apply_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Contract rows (removals), applied with\n`POST /api/v1/admin/metadata/changesets/apply` once the expand rows\nsucceeded; empty when there are none or they were queued here."
+          },
+          "plan": {
+            "$ref": "#/components/schemas/ChangesetPlan"
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/Workspace"
+          }
+        }
+      },
       "WriteOffOutcome": {
         "type": "object",
         "description": "What the write-off did.",
@@ -271683,7 +272228,7 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
-  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -271736,5 +272281,5 @@
       }
     }
   },
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }

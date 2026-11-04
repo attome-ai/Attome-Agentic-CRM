@@ -300,7 +300,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get an agent principal */
+        /**
+         * Get an agent principal
+         * @description One agent principal: its account, lifecycle state, sponsor and keys' summary.
+         */
         get: operations["get_agent_principal"];
         put?: never;
         post?: never;
@@ -361,8 +364,7 @@ export interface paths {
         put?: never;
         /**
          * Pause an agent principal
-         *
-         *     An active agent stops acting until resumed. Takes `If-Match`. Audited.
+         * @description An active agent stops acting until resumed. Takes `If-Match`. Audited.
          */
         post: operations["pause_agent_principal"];
         delete?: never;
@@ -382,8 +384,7 @@ export interface paths {
         put?: never;
         /**
          * Resume an agent principal
-         *
-         *     A paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited.
+         * @description A paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited.
          */
         post: operations["resume_agent_principal"];
         delete?: never;
@@ -403,8 +404,7 @@ export interface paths {
         put?: never;
         /**
          * Revoke an agent principal
-         *
-         *     Final: its keys, sessions and account end. Takes `If-Match`. Audited.
+         * @description Final: its keys, sessions and account end. Takes `If-Match`. Audited.
          */
         post: operations["revoke_agent_principal"];
         delete?: never;
@@ -444,8 +444,7 @@ export interface paths {
         put?: never;
         /**
          * Suspend an agent principal
-         *
-         *     An active or paused agent is held, for review. Takes `If-Match`. Audited.
+         * @description An active or paused agent is held, for review. Takes `If-Match`. Audited.
          */
         post: operations["suspend_agent_principal"];
         delete?: never;
@@ -4931,7 +4930,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List derived entities */
+        /**
+         * List derived entities
+         * @description Every derived entity: its anchor, mode, condition and refresh state.
+         */
         get: operations["list_derived_entities"];
         put?: never;
         post?: never;
@@ -6502,7 +6504,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List extension versions */
+        /**
+         * List extension versions
+         * @description Every extension version: its hook, status and when it was published.
+         */
         get: operations["list_extensions"];
         put?: never;
         /**
@@ -10132,7 +10137,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List next-best actions */
+        /**
+         * List next-best actions
+         * @description Every next-best action rule, by entity. AI administrators only.
+         */
         get: operations["list_nba_actions"];
         put?: never;
         /**
@@ -39873,6 +39881,16 @@ export interface components {
             /** @description F8-T10: the VAT on one at `commerce.vat_rate`, and the price with it. */
             vat: string;
         };
+        /** @description Body of `POST /api/v1/admin/packages/catalogue/{id}/review`. */
+        CatalogueReviewBody: {
+            decision: components["schemas"]["CatalogueReviewDecision"];
+            note?: string | null;
+        };
+        /**
+         * @description A review's decision.
+         * @enum {string}
+         */
+        CatalogueReviewDecision: "approved" | "rejected";
         Certification: {
             asset_kind: string;
             asset_ref: string;
@@ -41427,20 +41445,20 @@ export interface components {
         ConfirmToolCallRequest: {
             arguments_hash: string;
         };
-        /**
-         * @description T8-T3: one property an upgrade cannot merge on its own: the package's
-         *     new version and the customer both changed it, differently.
-         */
+        /** @description What a registration conflicts with. */
         Conflict: {
-            /** @description What the deployment has now. */
-            customer: Record<string, never>;
-            /** @description What the installed version set. */
-            installed: Record<string, never>;
-            /** @description `entity` or `entity.attribute`. */
-            object: string;
-            /** @description What the new version sets. */
-            package: Record<string, never>;
-            property: string;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "opportunity";
+            name?: string | null;
+        } | {
+            customer_name?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "registration";
+            status: string;
         };
         /** @description A16-T7: the conflicts of the last `days` days, by entity and source. */
         ConflictCount: {
@@ -41648,6 +41666,12 @@ export interface components {
              * @description The `contract_comparison`; its `status` turns `done` when stored.
              */
             comparison_id: string;
+        };
+        /** @description An accepted import. */
+        ContractImportAccepted: {
+            /** Format: uuid */
+            contract_id: string;
+            obligations: number;
         };
         /** @description One pair that reads too faintly, or two status colours too alike. */
         ContrastFailure: {
@@ -46110,18 +46134,38 @@ export interface components {
         EventBatch: {
             events: components["schemas"]["IncomingEvent"][];
         };
-        /** @description The governance evidence for an audit. */
+        /** @description One drill's evidence. */
         Evidence: {
-            /** @description Governed-change approval requests: `{id, status, requested_by, requested_at}`. */
-            approvals: Record<string, never>[];
-            /** @description `{id, policy_id, target_ref, reason, status, approved_by, expires_at}`. */
-            exceptions: Record<string, never>[];
+            checks: components["schemas"]["Check"][];
+            /** Format: int64 */
+            data_size_bytes?: number | null;
+            deployment_id?: string | null;
+            /** Format: uuid */
+            drill_id: string;
+            /** @description What a kind records beyond these fields. */
+            extra?: Record<string, never>;
             /** Format: date-time */
-            generated_at: string;
-            /** @description `{id, domain_id, name_en, name_ar, version, enforcements: [{kind, target_ref}]}`. */
-            policies: Record<string, never>[];
-            /** @description `{domain_id, domain, user_id, role}`. */
-            roles: Record<string, never>[];
+            finished_at: string;
+            image_digest?: string | null;
+            kind: components["schemas"]["EvidenceKind"];
+            overall_ok: boolean;
+            platform_version: string;
+            provenance_ok: boolean;
+            restore_ok: boolean;
+            /**
+             * Format: double
+             * @description Data lost, measured: the recovery point.
+             */
+            rpo_seconds?: number | null;
+            /**
+             * Format: double
+             * @description Time to serve again, measured: the recovery time.
+             */
+            rto_seconds?: number | null;
+            /** @description Always [`SCHEMA`]. */
+            schema: string;
+            /** Format: date-time */
+            started_at: string;
         };
         /**
          * @description What a drill exercised.
@@ -47677,6 +47721,19 @@ export interface components {
             name_ar?: string | null;
             name_en: string;
         };
+        /** @description The governance evidence for an audit. */
+        GovernanceEvidence: {
+            /** @description Governed-change approval requests: `{id, status, requested_by, requested_at}`. */
+            approvals: Record<string, never>[];
+            /** @description `{id, policy_id, target_ref, reason, status, approved_by, expires_at}`. */
+            exceptions: Record<string, never>[];
+            /** Format: date-time */
+            generated_at: string;
+            /** @description `{id, domain_id, name_en, name_ar, version, enforcements: [{kind, target_ref}]}`. */
+            policies: Record<string, never>[];
+            /** @description `{domain_id, domain, user_id, role}`. */
+            roles: Record<string, never>[];
+        };
         GovernancePolicy: {
             body_ar?: string | null;
             body_en: string;
@@ -49184,6 +49241,19 @@ export interface components {
             enrolled: number;
             nodes: components["schemas"]["NodeCount"][];
         };
+        /** @description What one enrolment did. */
+        JourneyEnrolOutcome: {
+            /** Format: int64 */
+            enrolled: number;
+            /** Format: int64 */
+            skipped_active: number;
+            /** Format: int64 */
+            skipped_cap: number;
+            /** Format: int64 */
+            skipped_invalid: number;
+            /** Format: int64 */
+            skipped_re_entry: number;
+        };
         JourneyEnrolment: {
             end_reason?: string | null;
             /** Format: date-time */
@@ -50230,7 +50300,7 @@ export interface components {
             /** @description The people, at most 1,000. */
             people: components["schemas"]["PersonRef"][];
         };
-        ManualEnrolResult: components["schemas"]["EnrolOutcome"] & {
+        ManualEnrolResult: components["schemas"]["JourneyEnrolOutcome"] & {
             /**
              * Format: int64
              * @description People left out because the caller may not read them.
@@ -50754,7 +50824,7 @@ export interface components {
         };
         MeetingReport: {
             attendance: components["schemas"]["Attendee"][];
-            recordings: components["schemas"]["Recording"][];
+            recordings: components["schemas"]["VideoRecording"][];
         };
         /** @description What to create. */
         MeetingRequest: {
@@ -51736,6 +51806,21 @@ export interface components {
             /** Format: double */
             weight?: number;
         };
+        /** @description One ranked action on a record. */
+        NbaRecommendation: {
+            action: Record<string, never>;
+            /** Format: uuid */
+            action_id: string;
+            name: string;
+            name_ar?: string | null;
+            /**
+             * Format: uuid
+             * @description The logged recommendation, to accept or reject.
+             */
+            recommendation_id: string;
+            /** Format: double */
+            score: number;
+        };
         /** @description `POST /api/v1/chat/channels`. */
         NewChannel: {
             /** @description A record channel's record. */
@@ -52269,9 +52354,31 @@ export interface components {
             /** @description The caller's stored rows. A (category, channel) with no row is enabled. */
             items: components["schemas"]["NotificationPreference"][];
         };
+        /** @description One hand-off. */
+        NurtureHandoff: {
+            /** Format: uuid */
+            assigned_to?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            decided_at?: string | null;
+            /** Format: date-time */
+            due_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            person_id: string;
+            /** Format: uuid */
+            program_id: string;
+            return_reason?: string | null;
+            /** Format: double */
+            score?: number | null;
+            status: string;
+            summary: Record<string, never>;
+        };
         NurtureHistory: {
             content_seen: components["schemas"]["ContentSeen"][];
-            handoffs: components["schemas"]["Handoff"][];
+            handoffs: components["schemas"]["NurtureHandoff"][];
             /** Format: uuid */
             person_id: string;
             states: components["schemas"]["NurtureStateItem"][];
@@ -53289,6 +53396,21 @@ export interface components {
             /** Format: double */
             width_cm?: number | null;
         };
+        /**
+         * @description T8-T3: one property an upgrade cannot merge on its own: the package's
+         *     new version and the customer both changed it, differently.
+         */
+        PackageConflict: {
+            /** @description What the deployment has now. */
+            customer: Record<string, never>;
+            /** @description What the installed version set. */
+            installed: Record<string, never>;
+            /** @description `entity` or `entity.attribute`. */
+            object: string;
+            /** @description What the new version sets. */
+            package: Record<string, never>;
+            property: string;
+        };
         /** @description A package's drift. */
         PackageDriftResponse: {
             /** @description `items` is empty. */
@@ -53350,7 +53472,7 @@ export interface components {
         /** @description What upgrading would do. */
         PackageUpgradeResponse: {
             /** @description Properties both the new version and the customer changed. */
-            conflicts: components["schemas"]["Conflict"][];
+            conflicts: components["schemas"]["PackageConflict"][];
             /** @description The version installed now. */
             from_version: string;
             /** @description `object.property` changes of the customer's the upgrade keeps. */
@@ -59104,6 +59226,41 @@ export interface components {
                 node_id: string;
                 /** Format: int64 */
                 waiting_count: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_NurtureHandoff: {
+            items: {
+                /** Format: uuid */
+                assigned_to?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: date-time */
+                decided_at?: string | null;
+                /** Format: date-time */
+                due_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                person_id: string;
+                /** Format: uuid */
+                program_id: string;
+                return_reason?: string | null;
+                /** Format: double */
+                score?: number | null;
+                status: string;
+                summary: Record<string, never>;
             }[];
             /** Format: int64 */
             page: number;
@@ -65472,18 +65629,16 @@ export interface components {
              */
             version_number?: number | null;
         };
-        /** @description `POST .../publish`'s answer. */
+        /** @description The published schedule. */
         Published: {
-            /** @description The queued apply (or the approval it waits on). */
-            apply: components["schemas"]["ApplyChangesetsAccepted"];
-            /**
-             * @description Contract rows (removals), applied with
-             *     `POST /api/v1/admin/metadata/changesets/apply` once the expand rows
-             *     succeeded; empty when there are none or they were queued here.
-             */
-            contract_apply_ids: string[];
-            plan: components["schemas"]["ChangesetPlan"];
-            workspace: components["schemas"]["Workspace"];
+            /** Format: int64 */
+            bookings: number;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: uuid */
+            schedule_id: string;
+            /** Format: int64 */
+            superseded: number;
         };
         /** @description D-521 — what a viewer of `dashboard_id` sees. */
         PublishedDashboard: {
@@ -67620,10 +67775,15 @@ export interface components {
              */
             version_id?: string | null;
         };
-        /** @description Body of `POST /api/v1/admin/packages/catalogue/{id}/review`. */
         ReviewBody: {
-            decision: components["schemas"]["ReviewDecision"];
-            note?: string | null;
+            body?: string | null;
+            /** Format: uuid */
+            product_id: string;
+            /**
+             * Format: int32
+             * @description 1 to 5.
+             */
+            rating: number;
         };
         /**
          * @description Full replace, `null` clears — same convention as `SchedulePageBody`
@@ -67635,10 +67795,20 @@ export interface components {
             review_by?: string | null;
         };
         /**
-         * @description A review's decision.
-         * @enum {string}
+         * @description Which staged actions a review decision covers: one agent session's, or
+         *     chosen ones (at most [`MAX_REVIEW_IDS`]).
          */
-        ReviewDecision: "approved" | "rejected";
+        ReviewDecision: {
+            /** Format: uuid */
+            agent_session_id?: string | null;
+            ids?: string[] | null;
+            /**
+             * Format: int32
+             * @description Apply only: hold the applied actions this many seconds (30 to 86400)
+             *     before they run, cancellable; omit to run them now.
+             */
+            undo_window_seconds?: number | null;
+        };
         /** @description Something the counterparty sent through this link. */
         ReviewEntry: {
             body?: string | null;
@@ -74577,6 +74747,11 @@ export interface components {
              */
             to: number;
         };
+        /** @description A meeting's recording. */
+        VideoRecording: {
+            kind?: string | null;
+            url: string;
+        };
         ViewBody: {
             /** Format: uuid */
             entity_logical_name: string;
@@ -75461,6 +75636,19 @@ export interface components {
              */
             team_ref?: string | null;
         };
+        /** @description `POST .../publish`'s answer. */
+        WorkspacePublished: {
+            /** @description The queued apply (or the approval it waits on). */
+            apply: components["schemas"]["ApplyChangesetsAccepted"];
+            /**
+             * @description Contract rows (removals), applied with
+             *     `POST /api/v1/admin/metadata/changesets/apply` once the expand rows
+             *     succeeded; empty when there are none or they were queued here.
+             */
+            contract_apply_ids: string[];
+            plan: components["schemas"]["ChangesetPlan"];
+            workspace: components["schemas"]["Workspace"];
+        };
         /** @description What the write-off did. */
         WriteOffOutcome: {
             /** Format: uuid */
@@ -75888,7 +76076,9 @@ export interface operations {
             query?: {
                 /** @description Only agents in this lifecycle state. */
                 state?: string;
+                /** @description One-based page number; below 1 is page 1. */
                 page?: number;
+                /** @description Rows per page, at most the platform's page-size cap. */
                 page_size?: number;
             };
             header?: never;
@@ -96878,7 +97068,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Evidence"];
+                    "application/json": components["schemas"]["GovernanceEvidence"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -105413,7 +105603,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReviewBody"];
+                "application/json": components["schemas"]["CatalogueReviewBody"];
             };
         };
         responses: {
@@ -121301,7 +121491,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Published"];
+                    "application/json": components["schemas"]["WorkspacePublished"];
                 };
             };
             /** @description Waits for the owner's review */
@@ -135548,7 +135738,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ImportAccepted"];
+                    "application/json": components["schemas"]["ContractImportAccepted"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -142154,7 +142344,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedResponse_Handoff"];
+                    "application/json": components["schemas"]["PaginatedResponse_NurtureHandoff"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -142195,7 +142385,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Handoff"];
+                    "application/json": components["schemas"]["NurtureHandoff"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -151528,7 +151718,9 @@ export interface operations {
     next_actions: {
         parameters: {
             query: {
+                /** @description The record's entity. */
                 regarding_entity: string;
+                /** @description The record. */
                 regarding_id: string;
             };
             header?: never;
@@ -151543,7 +151735,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Recommendation"][];
+                    "application/json": components["schemas"]["NbaRecommendation"][];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -166822,7 +167014,9 @@ export interface operations {
     workforce_group_kpis: {
         parameters: {
             query: {
+                /** @description The first day of the period, inclusive. */
                 from: string;
+                /** @description The last day of the period, inclusive. */
                 to: string;
             };
             header?: never;
@@ -177566,6 +177760,7 @@ export interface operations {
             query: {
                 /** @description ISO 3166-1 alpha-2. */
                 country: string;
+                /** @description The delivery city, for city-specific rates. */
                 city?: string;
                 /** @description The order's total, a decimal (for free-over rates). */
                 total?: string;
