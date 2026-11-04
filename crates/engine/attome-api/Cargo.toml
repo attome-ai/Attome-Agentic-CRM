@@ -57,7 +57,7 @@ attome-service.workspace      = true
 attome-state.workspace        = true
 attome-storage.workspace      = true
 attome-types.workspace        = true
-attome-webcrawl.workspace     = true
+attome-webcrawl               = { workspace = true, optional = true }
 attome-workflow.workspace     = true
 axum.workspace                = true
 base64.workspace              = true
@@ -92,10 +92,14 @@ uuid.workspace                = true
 # AB9-T5: the changeset apply's crash windows (`changeset::apply::crash`),
 # armed only by integration tests. Never on in a release build.
 test-support = []
+# Y4-T3: the web crawler's admin routes (D-365). Off unless a build asks for
+# it: the app's default `webcrawl` feature turns it on, with the crawler's
+# agent actions in attome-ai.
+webcrawl = ["dep:attome-webcrawl", "attome-ai/webcrawl"]
 
 [dev-dependencies]
 # Itself with `test-support`, so integration tests can arm crash windows.
-attome-api                   = { path = ".", features = ["test-support"] }
+attome-api                   = { path = ".", features = ["test-support", "webcrawl"] }
 attome-docgen.workspace      = true
 attome-search.workspace      = true
 attome-testkit               = { workspace = true, features = ["app-config", "examples"] }

@@ -959,11 +959,11 @@ async fn dispatch_platform_job(
             }
         }
         EngineJob::CrawlWebsite { target_id } => {
-            attome_webcrawl::crawl::run(&attome_state, target_id).await?;
+            crate::webcrawl_glue::crawl(&attome_state, target_id).await?;
         }
         // K6-T6: one linked document into the file pipeline.
         EngineJob::CrawlDocument { page_id } => {
-            attome_webcrawl::documents::fetch_document(&attome_state, page_id).await?;
+            crate::webcrawl_glue::fetch_document(&attome_state, page_id).await?;
         }
         // F10-T9: one period's recalculation previews.
         EngineJob::CommissionRecalcPreview { period_id } => {
@@ -1618,8 +1618,7 @@ async fn dispatch_platform_job(
         }
         // K6-T3: scheduled recrawls, hourly.
         EngineJob::WebcrawlRecrawlDue => {
-            let queued =
-                attome_webcrawl::schedule::enqueue_due(&attome_state, chrono::Utc::now()).await?;
+            let queued = crate::webcrawl_glue::recrawl_due(&attome_state).await?;
             if queued > 0 {
                 tracing::info!(queued, "webcrawl: scheduled recrawls queued");
             }

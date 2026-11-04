@@ -20,8 +20,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - `attome supervise` takes `POST /stop` on its control address (the restart token): it drains the server and exits,
   so a script stops one node of a rolling restart gracefully on Windows. `loadtest/scripts/run-drain-exercise.ps1`
   proves a restart drains under load, on one node or rolling over two behind nginx (AB7-T10).
-- The `attome` crate's `predict` feature (on by default) and a `solo-lean` feature set without it (Y4-T3): a lean
-  binary leaves the prediction engine out, and the release gate checks that it compiles.
+- The `attome` crate's `predict` and `webcrawl` features (on by default) and a `solo-lean` feature set without them
+  (Y4-T3): a lean binary leaves the prediction engine and the web crawler out, and the release gate checks that it
+  compiles.
 - A field-security grant can carry a read condition (Q15-T3): `read_condition` on
   `POST /api/v1/admin/security/field-profiles/{id}/fields` takes a rule expression over the record's own fields, and its
   holder sees the field in full on record reads and lists only for the records that meet it (migration 0398;

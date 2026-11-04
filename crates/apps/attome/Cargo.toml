@@ -89,7 +89,7 @@ attome-service.workspace        = true
 attome-state.workspace          = true
 attome-storage.workspace        = true
 attome-types.workspace          = true
-attome-webcrawl.workspace       = true
+attome-webcrawl                 = { workspace = true, optional = true }
 attome-workflow.workspace       = true
 axum.workspace                  = true
 # Q19-T2: wrapped keys arrive in base64; a Google service account signs
@@ -127,10 +127,16 @@ url.workspace                   = true
 # Z1-T12: cloud secret stores read once at boot (`ATTOME_SECRET_SOURCE`).
 # Q19-T2: the same AWS signing and Azure sign-in unwrap customer-held keys
 # (`ATTOME_KMS`); Google Cloud KMS and an HSM over PKCS#11 have their own.
-default = ["aws-secrets", "azure-keyvault", "gcp-kms", "predict"]
-# Y4-T3: an engine a lean binary can leave out. `solo-lean` is the default
-# set without them; AI and web crawling are not separable yet (V2-D1673).
+default = ["aws-secrets", "azure-keyvault", "gcp-kms", "predict", "webcrawl"]
+# Y4-T3: engines a lean binary can leave out. `solo-lean` is the default
+# set without them; AI is not separable yet (V2-D1673).
 predict = ["dep:attome-predict"]
+webcrawl = [
+    "dep:attome-webcrawl",
+    "attome-ai/webcrawl",
+    "attome-api/webcrawl",
+    "attome-sales/webcrawl",
+]
 solo-lean = ["aws-secrets", "azure-keyvault", "gcp-kms"]
 aws-secrets = ["dep:hmac"]
 azure-keyvault = []

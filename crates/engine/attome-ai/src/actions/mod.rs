@@ -167,6 +167,8 @@ pub mod timeline;
 pub mod transition;
 pub mod translate;
 /// K6-T12: webcrawl.propose_scope, webcrawl.summarise_changes (read only).
+/// Y4-T3: only with the `webcrawl` feature.
+#[cfg(feature = "webcrawl")]
 pub mod webcrawl;
 // T2-T5: a page drafted from a description.
 pub mod draft_page;
@@ -273,6 +275,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(commission::descriptors());
     all.extend(partner::descriptors());
     all.extend(contract::descriptors());
+    #[cfg(feature = "webcrawl")]
     all.extend(webcrawl::descriptors());
     all.extend(sales_enrich::descriptors());
     all.extend(sales_lines::descriptors());
@@ -401,6 +404,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(commission::executors());
     all.extend(partner::executors());
     all.extend(contract::executors());
+    #[cfg(feature = "webcrawl")]
     all.extend(webcrawl::executors());
     all.extend(sales_enrich::executors());
     all.extend(sales_lines::executors());

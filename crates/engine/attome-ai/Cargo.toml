@@ -50,7 +50,7 @@ attome-security.workspace     = true
 attome-server.workspace       = true
 attome-service.workspace      = true
 attome-types.workspace        = true
-attome-webcrawl.workspace     = true
+attome-webcrawl               = { workspace = true, optional = true }
 axum.workspace                = true
 chrono.workspace              = true
 chrono-tz.workspace           = true
@@ -68,6 +68,12 @@ tokio.workspace               = true
 tracing.workspace             = true
 utoipa.workspace              = true
 uuid.workspace                = true
+
+[features]
+# Y4-T3: the web crawler's agent actions (K6-T12). Off unless a build asks for
+# it: the app's default `webcrawl` feature turns it on, `solo-lean` leaves it
+# out.
+webcrawl = ["dep:attome-webcrawl"]
 
 [dev-dependencies]
 attome-inference = { workspace = true, features = ["test-support"] }

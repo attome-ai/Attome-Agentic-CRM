@@ -320,6 +320,8 @@ mod tag_seed;
 pub mod validation_simulation;
 pub mod validation_stats;
 pub mod view_admin;
+/// Y4-T3: only with the `webcrawl` feature.
+#[cfg(feature = "webcrawl")]
 mod webcrawl_admin;
 /// T5-T2: Develop workspaces inside the deployment.
 pub mod workspace;

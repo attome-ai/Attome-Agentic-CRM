@@ -474,13 +474,8 @@ impl EngineSystem {
             // A1-T5: the base list reads each entity under the caller's own
             // record security; the rebuild is a data-model admin route.
             .merge(crate::base_index_routes::routes())
-            .merge(
-                // D-365
-                crate::webcrawl_admin::routes().layer(middleware::from_fn_with_state(
-                    self.state.clone(),
-                    attome_security::strict_authz::strict_authz,
-                )),
-            )
+            // D-365; Y4-T3: only with the `webcrawl` feature.
+            .merge(webcrawl_admin_routes(&self.state))
             .merge(
                 attome_s2s::admin::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),
@@ -2474,6 +2469,22 @@ fn insert_once<V>(
     if map.insert(key, value).is_some() {
         panic!("{what} {key:?} is registered twice");
     }
+}
+
+/// Y4-T3: the web crawler's admin routes (D-365), behind the strict re-check
+/// every admin bundle gets.
+#[cfg(feature = "webcrawl")]
+fn webcrawl_admin_routes(state: &EngineState) -> Router<EngineState> {
+    crate::webcrawl_admin::routes().layer(middleware::from_fn_with_state(
+        state.clone(),
+        attome_security::strict_authz::strict_authz,
+    ))
+}
+
+/// Without the `webcrawl` feature: no crawler routes.
+#[cfg(not(feature = "webcrawl"))]
+fn webcrawl_admin_routes(_state: &EngineState) -> Router<EngineState> {
+    Router::new()
 }
 
 #[cfg(test)]

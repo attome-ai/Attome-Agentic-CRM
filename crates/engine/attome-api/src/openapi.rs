@@ -100,7 +100,6 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (attome_document::openapi(), "core"),
         (crate::communication::openapi_fragment(), "core"),
         (attome_notification::admin::openapi_fragment(), "core"),
-        (crate::webcrawl_admin::openapi_fragment(), "core"),
         (crate::base_index_routes::openapi_fragment(), "core"),
         (attome_content::admin::openapi_fragment(), "content"),
         (crate::content_public::openapi_fragment(), "core"),
@@ -183,5 +182,11 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
     ] {
         doc.merge(attome_server::openapi::tag_module(fragment, module));
     }
+    // Y4-T3: the crawler's admin routes, only with the `webcrawl` feature.
+    #[cfg(feature = "webcrawl")]
+    doc.merge(attome_server::openapi::tag_module(
+        crate::webcrawl_admin::openapi_fragment(),
+        "core",
+    ));
     doc
 }

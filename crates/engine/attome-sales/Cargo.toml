@@ -30,7 +30,7 @@ attome-security.workspace = true
 attome-service.workspace = true
 attome-server.workspace  = true
 attome-types.workspace   = true
-attome-webcrawl.workspace = true
+attome-webcrawl = { workspace = true, optional = true }
 axum.workspace           = true
 chrono.workspace         = true
 chrono-tz.workspace      = true
@@ -49,6 +49,9 @@ uuid.workspace           = true
 [features]
 # D21-T6: FakeTelephony for other crates' tests.
 test-support = []
+# Y4-T3: the website enrichment source reads through the crawler's guarded
+# fetch and robots rules; without it the source finds nothing.
+webcrawl = ["dep:attome-webcrawl"]
 
 [dev-dependencies]
 serde_json.workspace = true

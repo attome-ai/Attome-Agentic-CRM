@@ -11,8 +11,8 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
-attome-ai.workspace       = true
-attome-api.workspace      = true
+attome-ai = { workspace = true, features = ["webcrawl"] }
+attome-api = { workspace = true, features = ["webcrawl"] }
 attome-audit.workspace    = true
 attome-auth.workspace     = true
 attome-billing.workspace  = true
@@ -43,7 +43,7 @@ attome-ops.workspace      = true
 attome-partner.workspace  = true
 attome-records.workspace  = true
 attome-search.workspace   = true
-attome-sales = { workspace = true, features = ["test-support"] }
+attome-sales = { workspace = true, features = ["test-support", "webcrawl"] }
 attome-security.workspace = true
 attome-server.workspace   = true
 attome-storage.workspace  = true

@@ -79,6 +79,8 @@ pub mod social;
 pub mod tls;
 /// J6-T1: calls out and in.
 pub mod voice;
+/// Y4-T3: the web crawler's job glue, compiled out without `webcrawl`.
+pub mod webcrawl_glue;
 /// J5-T2: WhatsApp conversations in.
 pub mod whatsapp_inbound;
 /// T5-T3: a Develop workspace served by a process of its own.

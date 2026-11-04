@@ -36,8 +36,10 @@ use serde_json::{Value, json};
 pub const FETCH_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// The most of a website's home page read.
+#[cfg(feature = "webcrawl")]
 const MAX_PAGE_BYTES: usize = 1024 * 1024;
 
+#[cfg(feature = "webcrawl")]
 const USER_AGENT: &str = "AttomeEnrichment/1.0 (+https://attome.ai)";
 
 type Lookup<'a> = Pin<Box<dyn Future<Output = Result<Vec<SourcedValue>, AppError>> + Send + 'a>>;
@@ -423,46 +425,58 @@ impl EnrichmentSource for WebsiteSource {
     }
 
     fn lookup<'a>(&'a self, _entity: &'a str, record: &'a Value) -> Lookup<'a> {
-        Box::pin(async move {
-            let Some(root) = text(record, "website").and_then(site_root) else {
-                return Ok(Vec::new());
-            };
-            // The site's own rules first: a site that keeps robots off its
-            // home page is not read.
-            let mut robots_url = root.clone();
-            robots_url.set_path("/robots.txt");
-            let robots = match bounded("the website", async {
-                Ok(attome_webcrawl::safety::fetch_safely(
-                    &self.client,
-                    &robots_url,
-                    64 * 1024,
-                    USER_AGENT,
-                )
-                .await
-                .ok())
-            })
-            .await?
-            {
-                Some(page) => attome_webcrawl::safety::RobotsRules::parse(&page.body),
-                None => attome_webcrawl::safety::RobotsRules::default(),
-            };
-            if !robots.allows("/") {
-                return Ok(Vec::new());
-            }
-            let page = bounded("the website", async {
-                attome_webcrawl::safety::fetch_safely(
-                    &self.client,
-                    &root,
-                    MAX_PAGE_BYTES,
-                    USER_AGENT,
-                )
-                .await
-                .map_err(|e| AppError::Validation(format!("the website: {e}")))
-            })
-            .await?;
-            Ok(website_values(&page.body))
-        })
+        Box::pin(website_lookup(self, record))
     }
+}
+
+/// [`WebsiteSource`]'s lookup: the site's robots rules, then its home page.
+#[cfg(feature = "webcrawl")]
+async fn website_lookup(
+    source: &WebsiteSource,
+    record: &Value,
+) -> Result<Vec<SourcedValue>, AppError> {
+    let Some(root) = text(record, "website").and_then(site_root) else {
+        return Ok(Vec::new());
+    };
+    // The site's own rules first: a site that keeps robots off its
+    // home page is not read.
+    let mut robots_url = root.clone();
+    robots_url.set_path("/robots.txt");
+    let robots = match bounded("the website", async {
+        Ok(attome_webcrawl::safety::fetch_safely(
+            &source.client,
+            &robots_url,
+            64 * 1024,
+            USER_AGENT,
+        )
+        .await
+        .ok())
+    })
+    .await?
+    {
+        Some(page) => attome_webcrawl::safety::RobotsRules::parse(&page.body),
+        None => attome_webcrawl::safety::RobotsRules::default(),
+    };
+    if !robots.allows("/") {
+        return Ok(Vec::new());
+    }
+    let page = bounded("the website", async {
+        attome_webcrawl::safety::fetch_safely(&source.client, &root, MAX_PAGE_BYTES, USER_AGENT)
+            .await
+            .map_err(|e| AppError::Validation(format!("the website: {e}")))
+    })
+    .await?;
+    Ok(website_values(&page.body))
+}
+
+/// Y4-T3: without the `webcrawl` feature there is no guarded fetch, so the
+/// website source finds nothing.
+#[cfg(not(feature = "webcrawl"))]
+async fn website_lookup(
+    _source: &WebsiteSource,
+    _record: &Value,
+) -> Result<Vec<SourcedValue>, AppError> {
+    Ok(Vec::new())
 }
 
 #[cfg(test)]

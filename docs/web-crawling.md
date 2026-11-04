@@ -93,3 +93,12 @@ crawl or opens an intranet host.
 | `webcrawl.max_pages` | see `config.example.json` | The most pages one crawl records. |
 | `webcrawl.max_page_bytes` | see `config.example.json` | The largest page body read. |
 | `webcrawl.request_timeout_secs` | see `config.example.json` | Each request's timeout. |
+
+## A build without the crawler
+
+The crawler is the `webcrawl` cargo feature of the `attome` crate, on by default; it turns on the
+`webcrawl` features of `attome-ai` (the crawler's agent actions), `attome-api` (its admin routes) and
+`attome-sales` (the website enrichment source, which reads through the crawler's guarded fetch). A lean
+binary (`--no-default-features --features solo-lean`) leaves all of it out: no crawler routes or
+actions, crawl jobs drain as no-ops, and website enrichment finds nothing (Y4-T3). The crawler's tables
+stay, since its platform bundle is applied either way.
