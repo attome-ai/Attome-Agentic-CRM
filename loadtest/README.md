@@ -336,6 +336,15 @@ The API key must be an administrator's: creating the entity and its stored query
 and exits without a call. When the `attome` CLI gains a `bench` subcommand (U1), it calls these
 scripts. `node --test loadtest/scripts/bench-compare.test.mjs` tests the comparison.
 
+## Drain under load (AB7-T10)
+
+`scripts/run-drain-exercise.ps1 -Mode single|rolling` runs `crud_read.js` and `mutating_write.js`
+together while the server is replaced, and fails if k6 counts one failed request. `single` runs one
+node under `attome supervise` and calls `POST /restart` at 30 s and 70 s. `rolling` runs two nodes,
+each under its own supervisor, behind `nginx-loadtest` (compose profile `drain`, port 7990,
+`nginx/drain.conf`), and stops (`POST /stop`), restarts and waits for each node in turn. Both write
+`docs/evidence/drain-<date>-<mode>.md`. `-Plan` prints the steps and exits. Seed first (`seed.ps1`).
+
 ## The production-shape run (TODO-014) — runbook for a dedicated Linux host
 
 Both existing results docs were produced on a Windows dev machine via Docker

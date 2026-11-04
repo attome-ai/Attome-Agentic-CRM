@@ -39,5 +39,17 @@ services:
     ulimits:
       memlock: -1
 
+  # AB7-T10: the rolling drain exercise's load balancer over two host nodes
+  # (scripts/run-drain-exercise.ps1 -Mode rolling); only with --profile drain.
+  nginx-loadtest:
+    image: nginx:1.27-alpine
+    profiles: ["drain"]
+    ports:
+      - "${LOADTEST_LB_PORT:-7990}:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./nginx/drain.conf:/etc/nginx/conf.d/default.conf:ro
+
 volumes:
   pg-loadtest-data:

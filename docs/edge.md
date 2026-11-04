@@ -187,4 +187,5 @@ starts the new server (for example a newly installed binary), waits up to two mi
 `READY`, and only then closes the old server's input so it drains. Both accept on the one socket
 while they overlap, so no request is refused. A new server that never becomes ready is stopped and
 the old one keeps serving; the answer is then 500. Ctrl+C or a service stop drains the server and
-ends the supervisor.
+ends the supervisor, and so does `POST /stop` with the same header (answered 202 before the drain
+starts), which lets a script stop one node of a rolling restart gracefully on Windows.

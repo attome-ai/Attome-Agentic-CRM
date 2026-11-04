@@ -177,3 +177,81 @@ fn supervisor_restart_keeps_serving() {
         "both the old and the new server answered: {pids:?}"
     );
 }
+
+/// AB7-T10: `POST /stop` with the token drains the server and ends the
+/// supervisor, which then answers nothing; a wrong token stops nothing.
+#[test]
+fn supervisor_stop_drains_and_exits() {
+    let dir = std::env::temp_dir().join(format!("supervisor-stop-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let token_file = dir.join("token");
+    std::fs::write(&token_file, TOKEN).unwrap();
+    let (listen, control) = (free_addr(), free_addr());
+    let test_exe = std::env::current_exe().unwrap();
+    let mut supervisor = Command::new(env!("CARGO_BIN_EXE_attome"))
+        .arg("supervise")
+        .args(["--listen", &listen, "--control-addr", &control])
+        .arg("--token-file")
+        .arg(&token_file)
+        .arg("--server-exe")
+        .arg(&test_exe)
+        .args([
+            "--child-arg",
+            "--exact",
+            "--child-arg",
+            "stub_child",
+            "--child-arg",
+            "--ignored",
+            "--child-arg",
+            "--nocapture",
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .spawn()
+        .expect("start the supervisor");
+    let deadline = Instant::now() + Duration::from_secs(60);
+    while TcpStream::connect(&control).is_err() {
+        assert!(Instant::now() < deadline, "the supervisor never came up");
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    let (status, _) = get(&listen);
+    assert!(status.contains(" 200 "), "{status}");
+
+    let (status, _) = exchange(
+        &control,
+        "POST /stop HTTP/1.1\r\nHost: test\r\nx-supervisor-token: wrong\r\n\
+         Content-Length: 0\r\nConnection: close\r\n\r\n",
+    );
+    assert!(status.contains(" 401 "), "{status}");
+    let (status, _) = get(&listen);
+    assert!(
+        status.contains(" 200 "),
+        "a refused stop stops nothing: {status}"
+    );
+
+    let (status, _) = exchange(
+        &control,
+        &format!(
+            "POST /stop HTTP/1.1\r\nHost: test\r\nx-supervisor-token: {TOKEN}\r\n\
+             Content-Length: 0\r\nConnection: close\r\n\r\n"
+        ),
+    );
+    assert!(status.contains(" 202 "), "{status}");
+    let deadline = Instant::now() + Duration::from_secs(60);
+    let exit = loop {
+        if let Some(exit) = supervisor.try_wait().unwrap() {
+            break exit;
+        }
+        if Instant::now() > deadline {
+            let _ = supervisor.kill();
+            panic!("the supervisor did not exit after POST /stop");
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    };
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(exit.success(), "{exit:?}");
+    assert!(
+        TcpStream::connect(&listen).is_err(),
+        "nothing listens after the stop"
+    );
+}

@@ -24,7 +24,10 @@
 //!   new server that is not `READY` within two minutes is stopped and the
 //!   old one keeps serving (the answer is 500).
 //! - Ctrl+C, SIGTERM or a Windows stop closes the server's stdin, waits for
-//!   it to drain, and exits.
+//!   it to drain, and exits. AB7-T10: so does `POST /stop` on the control
+//!   address (the same token), answered 202 before the drain starts: a
+//!   script can stop one node of a rolling restart gracefully on Windows,
+//!   where it has no signal to send.
 
 #![allow(
     clippy::print_stdout,
@@ -193,10 +196,12 @@ async fn supervise(options: Options) -> Result<(), String> {
     let mut current = start(&options, &listener).await?;
 
     let (restart_tx, mut restart_rx) = mpsc::channel::<oneshot::Sender<Result<(), String>>>(1);
+    let (stop_tx, mut stop_rx) = mpsc::channel::<()>(1);
     let control = tokio::net::TcpListener::bind(options.control_addr)
         .await
         .map_err(|e| format!("cannot bind the control address: {e}"))?;
     let token = options.token.clone();
+    let stop_token = options.token.clone();
     let app = axum::Router::new().route(
         "/restart",
         axum::routing::post(move |headers: axum::http::HeaderMap| {
@@ -227,6 +232,24 @@ async fn supervise(options: Options) -> Result<(), String> {
             }
         }),
     );
+    let app = app.route(
+        "/stop",
+        axum::routing::post(move |headers: axum::http::HeaderMap| {
+            let (token, stop_tx) = (stop_token.clone(), stop_tx.clone());
+            async move {
+                let presented = headers
+                    .get(TOKEN_HEADER)
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or_default();
+                if !token_matches(presented, &token) {
+                    return (axum::http::StatusCode::UNAUTHORIZED, "refused");
+                }
+                // A second stop while the first drains finds the channel full.
+                let _ = stop_tx.try_send(());
+                (axum::http::StatusCode::ACCEPTED, "stopping")
+            }
+        }),
+    );
     tokio::spawn(async move {
         if let Err(e) = axum::serve(control, app).await {
             eprintln!("supervise: the control endpoint stopped: {e}");
@@ -250,6 +273,11 @@ async fn supervise(options: Options) -> Result<(), String> {
                 }
             }
             () = crate::boot::wait_for_shutdown_signal() => {
+                stop(current).await;
+                return Ok(());
+            }
+            Some(()) = stop_rx.recv() => {
+                println!("supervise: stopping");
                 stop(current).await;
                 return Ok(());
             }
