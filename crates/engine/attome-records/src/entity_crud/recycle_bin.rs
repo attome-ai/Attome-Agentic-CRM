@@ -86,14 +86,16 @@ pub async fn deleted_records(
         |c| format!("{}::text", quote_ident(c)),
     );
 
-    let count_pred = attome_security::rls_predicate(
-        ctx,
-        entity_id,
-        "",
-        access_level,
-        RecordAction::Read.share_capability(),
-        1,
-    );
+    // D-369/D-371: the read scope a record read takes.
+    let attrs = state
+        .entities
+        .load()
+        .get(&entity)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let count_pred =
+        super::access::read_scope(state, ctx, entity_id, &entity, access_level, &attrs, "", 1)
+            .await?;
     let count_sql = format!(
         "SELECT COUNT(*) FROM {table} WHERE is_active = false {}",
         count_pred.as_ref().map_or("", |p| p.sql.as_str())
@@ -101,30 +103,26 @@ pub async fn deleted_records(
     let count_sql = attome_db::tag_dynamic("entity.recycle_bin", &count_sql);
     let mut count_query = sqlx::query_scalar::<_, i64>(&count_sql);
     if let Some(p) = &count_pred {
-        count_query = count_query
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
+        count_query = super::access::bind_read_scope(count_query, p);
     }
     let total = count_query
         .fetch_one(&state.base.db)
         .await
         .map_err(attome_db::classify)?;
 
-    let pred = attome_security::rls_predicate(
-        ctx,
-        entity_id,
-        "",
-        access_level,
-        RecordAction::Read.share_capability(),
-        3,
-    );
+    let pred =
+        super::access::read_scope(state, ctx, entity_id, &entity, access_level, &attrs, "", 3)
+            .await?;
     // The ledger's open row for each record, joined laterally so its
-    // columns stay qualified next to the record-rule predicate.
-    let entity_param = if pred.is_some() { 9 } else { 3 };
+    // columns stay qualified next to the record-rule predicate; its entity
+    // is bound after the scope's values.
+    let scope_binds = pred.as_ref().map_or(0, |p| {
+        p.tier_binds
+            .as_ref()
+            .map_or(0, |_| attome_security::RLS_BIND_COUNT)
+            + p.condition_binds.len()
+    });
+    let entity_param = 3 + scope_binds;
     let sql = format!(
         "SELECT {table}.id, {name_expr} AS label, {table}.modified_at AS deleted_at, \
                 {table}.modified_by AS deleted_by, \
@@ -142,13 +140,7 @@ pub async fn deleted_records(
         .bind(window.page_size)
         .bind(window.offset);
     if let Some(p) = &pred {
-        rows_query = rows_query
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
+        rows_query = super::access::bind_read_scope_as(rows_query, p);
     }
     rows_query = rows_query.bind(&entity);
     let items = rows_query

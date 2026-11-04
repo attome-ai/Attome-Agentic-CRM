@@ -100,6 +100,7 @@ pub use access::{
 // through `invalidate_privilege_grant_target`.
 /// A26-T4: a record read's access check, for the derived entity explanation.
 pub(crate) use access::require_record_read;
+pub(crate) use access::{bind_read_scope, bind_read_scope_as, read_scope};
 pub(crate) use access::{
     invalidate_audit_user_if_systemuser, invalidate_privilege_grant_target,
     invalidate_privilege_grant_user,

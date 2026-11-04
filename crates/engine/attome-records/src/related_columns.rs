@@ -163,14 +163,24 @@ async fn visible_values(
         RecordAction::Read,
     )
     .await?;
-    let pred = attome_security::rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let attrs = state
+        .entities
+        .load()
+        .get_by_id(hop.target_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let pred = crate::entity_crud::read_scope(
+        state,
         ctx,
         hop.target_id,
-        "",
+        &hop.target_table,
         level,
-        RecordAction::Read.share_capability(),
+        &attrs,
+        "",
         2,
-    );
+    )
+    .await?;
     let predicate = pred.as_ref().map_or("", |p| p.sql.as_str());
     let sql = format!(
         "SELECT id, to_jsonb({}) FROM {} \
@@ -181,13 +191,7 @@ async fn visible_values(
     let sql = attome_db::tag_dynamic("query.related_columns", &sql);
     let mut query = sqlx::query_as::<_, (Uuid, Option<Value>)>(&sql).bind(ids);
     if let Some(p) = &pred {
-        query = query
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
+        query = crate::entity_crud::bind_read_scope_as(query, p);
     }
     let rows = query
         .fetch_all(&state.base.db)

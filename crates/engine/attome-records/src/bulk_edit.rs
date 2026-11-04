@@ -573,15 +573,31 @@ pub async fn plan_bulk_edit(
         RecordAction::Read,
     )
     .await?;
-    let predicate = attome_security::rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let scope_attrs = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let predicate = crate::entity_crud::read_scope(
+        state,
         ctx,
         entity_id,
-        "",
+        &entity_name,
         access_level,
-        RecordAction::Read.share_capability(),
+        &scope_attrs,
+        "",
         next,
-    );
-    let limit_param = next + if predicate.is_some() { 6 } else { 0 };
+    )
+    .await?;
+    let limit_param = next
+        + predicate.as_ref().map_or(0, |p| {
+            p.tier_binds
+                .as_ref()
+                .map_or(0, |_| attome_security::RLS_BIND_COUNT)
+                + p.condition_binds.len()
+        });
     let projection = columns
         .iter()
         .map(|c| quote_ident(c))
@@ -602,13 +618,7 @@ pub async fn plan_bulk_edit(
         query = query.bind(&request.ids);
     }
     if let Some(p) = &predicate {
-        query = query
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
+        query = crate::entity_crud::bind_read_scope(query, p);
     }
     let rows: Vec<Value> = query
         .bind(i64::try_from(MAX_BULK_EDIT_RECORDS + 1).unwrap_or(i64::MAX))

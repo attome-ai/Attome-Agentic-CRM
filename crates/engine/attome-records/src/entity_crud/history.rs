@@ -1155,14 +1155,10 @@ pub async fn search_history(
         RecordAction::Read,
     )
     .await?;
-    let pred = attome_security::rls_predicate(
-        ctx,
-        entity_id,
-        "",
-        access_level,
-        RecordAction::Read.share_capability(),
-        10,
-    );
+    // D-369/D-371: the read scope a record read takes.
+    let pred =
+        super::access::read_scope(state, ctx, entity_id, &entity, access_level, &attrs, "", 10)
+            .await?;
     let table = quote_ident(&entity);
     let live = if append_only {
         ""
@@ -1206,13 +1202,7 @@ pub async fn search_history(
         .bind(cursor.map(|(ts, _)| ts))
         .bind(cursor.map(|(_, id)| id));
     if let Some(p) = &pred {
-        q = q
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
+        q = super::access::bind_read_scope_as(q, p);
     }
     let mut items = q
         .fetch_all(&state.base.db)

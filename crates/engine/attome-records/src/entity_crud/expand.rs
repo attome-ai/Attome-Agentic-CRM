@@ -78,14 +78,17 @@ async fn read_target(
         RecordAction::Read,
     )
     .await?;
-    let pred = attome_security::rls_predicate(
+    let pred = super::access::read_scope(
+        state,
         ctx,
         target_entity_id,
-        "",
+        &table,
         access_level,
-        RecordAction::Read.share_capability(),
+        &attrs,
+        "",
         2,
-    );
+    )
+    .await?;
     let columns = attome_core::select_columns_access(&attrs, |a| {
         attome_security::field_gate::projection(
             ctx,
@@ -104,13 +107,7 @@ async fn read_target(
     let sql = attome_db::tag_dynamic("entity.expand", &sql);
     let mut query = sqlx::query_scalar::<_, Value>(&sql).bind(id);
     if let Some(p) = &pred {
-        query = query
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
+        query = super::access::bind_read_scope(query, p);
     }
     query
         .fetch_optional(&state.base.db)

@@ -128,14 +128,35 @@ pub async fn resolve_visible(
     // `table_alias: ""` — the query below is a bare `FROM {table}`, no
     // alias, so the predicate's `id`/`is_active` references must stay
     // unqualified too (see `rls_predicate`'s doc comment on `table_alias`).
-    let pred = attome_security::rls_predicate(
+    // D-369/D-371: grant conditions and owner visibility too, so a name is
+    // shown only for a record the caller could open.
+    let attrs = state
+        .entities
+        .load()
+        .get_by_id(target_entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let pred = match super::access::read_scope(
+        state,
         ctx,
         target_entity_id,
-        "",
+        &target_table,
         access_level,
-        RecordAction::Read.share_capability(),
+        &attrs,
+        "",
         2,
-    );
+    )
+    .await
+    {
+        Ok(pred) => pred,
+        Err(e) => {
+            tracing::warn!(
+                error = %e, target_entity = %target_table,
+                "lookup-name read scope failed, omitting this target's ids"
+            );
+            return HashMap::new();
+        }
+    };
 
     let target_table_q = quote_ident(&target_table);
     let name_expr = match &name_attr {
@@ -151,13 +172,7 @@ pub async fn resolve_visible(
     let sql = attome_db::tag_dynamic("entity.lookup_names", &sql);
     let mut query = sqlx::query_as::<_, (Uuid, bool, Option<String>)>(&sql).bind(ids);
     if let Some(p) = &pred {
-        query = query
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
+        query = super::access::bind_read_scope_as(query, p);
     }
 
     match query.fetch_all(&state.base.db).await {

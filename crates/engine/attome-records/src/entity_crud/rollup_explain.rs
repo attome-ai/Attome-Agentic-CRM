@@ -172,14 +172,18 @@ pub(super) async fn explain_rollup(
         RecordAction::Read,
     )
     .await?;
-    let pred = attome_security::rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let pred = super::access::read_scope(
+        &state,
         &ctx,
         last.entity_id,
-        &alias,
+        &last.logicalname,
         level,
-        RecordAction::Read.share_capability(),
+        &last.attrs,
+        &alias,
         2 + binds.len(),
-    );
+    )
+    .await?;
     let predicate = pred.as_ref().map_or("", |p| p.sql.as_str());
     // The amount is shown only when the caller may read the field itself.
     let amount = match opts.attribute.as_deref() {
@@ -216,20 +220,8 @@ pub(super) async fn explain_rollup(
         list = list.bind(bind);
     }
     if let Some(p) = &pred {
-        visible = visible
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
-        list = list
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
+        visible = super::access::bind_read_scope(visible, p);
+        list = super::access::bind_read_scope_as(list, p);
     }
     let visible = visible.fetch_one(db).await.map_err(AppError::internal)?;
     out.hidden = (out.counted - visible).max(0);
