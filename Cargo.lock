@@ -2670,6 +2670,7 @@ dependencies = [
  "attome-security",
  "attome-server",
  "attome-service",
+ "attome-state",
  "attome-storage",
  "attome-testkit",
  "attome-types",

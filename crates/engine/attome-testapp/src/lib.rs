@@ -291,6 +291,8 @@ async fn build_on(config: AppConfig, db: attome_db::DbPool) -> TestApp {
         // secured SQL reports (P8) are tested through them.
         .register(attome_workflow::WorkflowModel)
         .register(attome_service::ServiceModel)
+        // M7: state models and `POST /api/v1/{entity}/{id}/transition`.
+        .register(attome_state::StateModel)
         .register(attome_metric::MetricModel)
         .register(attome_report::ReportModel)
         // T7-T1: customer tests simulate published workflows.

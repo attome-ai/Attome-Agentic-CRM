@@ -13,7 +13,17 @@ use attome_testapp::TestApp;
 use serde_json::Value;
 use uuid::Uuid;
 
-const PACKS: [&str; 3] = ["crm", "sales", "ledger"];
+// The roll-forward reads billed amounts from billing's invoices, so billing
+// and the packs it depends on come before the ledger.
+const PACKS: [&str; 7] = [
+    "crm",
+    "sales",
+    "vendor-supplier",
+    "contract-management",
+    "finance",
+    "billing",
+    "ledger",
+];
 
 fn changesets(pack: &str) -> Vec<Value> {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

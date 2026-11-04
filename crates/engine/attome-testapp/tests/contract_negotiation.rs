@@ -210,6 +210,11 @@ fn token_reveals_only_its_contract() {
 // feature: W1
 #[test]
 fn upload_creates_version_and_comparison() {
+    // The tick logs why a version was not compared (a warning).
+    let _ = tracing_subscriber::fmt()
+        .with_max_level(tracing_subscriber::filter::LevelFilter::WARN)
+        .with_test_writer()
+        .try_init();
     attome_testkit::run_shared(async {
         if attome_testkit::s3_or_skip().is_none() {
             return;

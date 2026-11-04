@@ -91,6 +91,19 @@ async fn reader_role(app: &TestApp, entity: &str) -> Uuid {
         let (status, body) = app.request(Method::POST, path, Some(body)).await;
         assert!(status.is_success(), "{path}: {status} {body}");
     }
+    // D-589: a stored query runs on a bulk surface, which shows a role only
+    // the fields it lists.
+    let (status, body) = app
+        .request(
+            Method::PUT,
+            &format!("/api/v1/admin/security/roles/{role}/bulk-fields"),
+            Some(json!({
+                "mode": "listed",
+                "fields": [format!("{entity}.title"), format!("{entity}.level")],
+            })),
+        )
+        .await;
+    assert!(status.is_success(), "bulk fields: {status} {body}");
     role
 }
 

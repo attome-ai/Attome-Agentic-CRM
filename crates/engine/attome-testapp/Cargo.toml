@@ -28,6 +28,7 @@ attome-workflow.workspace = true
 attome-metric.workspace = true
 attome-report.workspace = true
 attome-service.workspace = true
+attome-state.workspace = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-docgen.workspace   = true

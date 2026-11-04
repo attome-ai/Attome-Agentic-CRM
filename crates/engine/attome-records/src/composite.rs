@@ -335,14 +335,32 @@ async fn run_one(
     }
 }
 
-/// The status and error body a single request would have answered with.
+/// The status and error body a single request would have answered with,
+/// with the fields a single request's body names the cause by: the rule a
+/// violation broke, the locked or unwritable field.
 fn error_parts(error: AppError) -> (u16, Value) {
     let (status, code) = error.status_and_code();
     let status = status.as_u16();
-    (
-        status,
-        json!({ "status": status, "code": code, "error": code }),
-    )
+    let mut body = json!({ "status": status, "code": code, "error": code });
+    match &error {
+        AppError::RuleViolation {
+            rule_id, details, ..
+        } => {
+            body["rule_id"] = json!(rule_id);
+            if let Some(details) = details {
+                body["details"] = json!(details);
+            }
+        }
+        AppError::FieldLocked { locks, .. } => {
+            if let Some(first) = locks.first() {
+                body["field"] = json!(first.field);
+                body["rule_id"] = json!(first.rule_id);
+            }
+        }
+        AppError::AttributeNotWritable(field) => body["field"] = json!(field),
+        _ => {}
+    }
+    (status, body)
 }
 
 /// [`error_parts`] with the message of a client error (never of a 5xx).

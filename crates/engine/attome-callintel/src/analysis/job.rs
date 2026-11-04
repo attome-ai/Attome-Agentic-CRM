@@ -145,11 +145,13 @@ pub async fn on_transcript_final(
         )
         .map_err(AppError::internal)?;
     let mut tx = attome_db::tx::begin(db).await?;
-    // One analysis per activity and transcript version.
+    // One analysis per activity and transcript version. Its owner is the
+    // call's: whose list it is in, and whose manager confirms its answers.
     let created: Option<Uuid> = sqlx::query_scalar(
         "INSERT INTO call_analysis (id, activity_id, transcript_version, status, is_active, \
-             row_version, created_at) \
-         SELECT $1, $2, $3, 'queued', true, 0, now() \
+             row_version, created_at, owner_user) \
+         SELECT $1, $2, $3, 'queued', true, 0, now(), \
+                (SELECT a.owner_ref FROM activity a WHERE a.id::text = $2) \
           WHERE NOT EXISTS (SELECT 1 FROM call_analysis \
                              WHERE activity_id = $2 AND transcript_version = $3 \
                                AND (is_active IS NULL OR is_active = true)) \
