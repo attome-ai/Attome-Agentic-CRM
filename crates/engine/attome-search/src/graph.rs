@@ -768,6 +768,8 @@ async fn relationship_candidates(
 async fn filter_visible(
     tx: &mut sqlx::PgConnection,
     visibility: &PolymorphicVisibility<'_>,
+    ctx: &SecurityContext,
+    registry: &EntityMetaRegistry,
     by_entity: &HashMap<String, Vec<Uuid>>,
     mut budget: i64,
 ) -> Result<(HashSet<(String, Uuid)>, bool), AppError> {
@@ -797,10 +799,40 @@ async fn filter_visible(
             .await
             .map_err(AppError::internal)?;
 
-        let found = rows.len() as i64;
-        if found >= budget && (ids.len() as i64) > found {
+        let limited = rows.len() as i64;
+        if limited >= budget && (ids.len() as i64) > limited {
             truncated = true;
         }
+        // D-369: a record a read grant condition hides is neither reached
+        // nor walked through (the visibility fragment above renders none).
+        let key = format!("{entity}.read");
+        let rows = if !ctx.is_admin && ctx.condition_grants.contains_key(&key) {
+            let attrs = registry
+                .get(entity)
+                .map(|meta| meta.attrs.clone())
+                .unwrap_or_default();
+            match attome_security::conditions::condition_predicate(ctx, &key, &attrs, "t", 2) {
+                None => rows,
+                Some(condition) => {
+                    let sql = format!(
+                        "SELECT t.id FROM {} t WHERE t.id = ANY($1) AND ({})",
+                        quote_ident(entity),
+                        condition.sql
+                    );
+                    let mut query = sqlx::query_scalar::<_, Uuid>(&sql).bind(&rows);
+                    for bind in &condition.binds {
+                        query = query.bind(bind);
+                    }
+                    query
+                        .fetch_all(&mut *tx)
+                        .await
+                        .map_err(AppError::internal)?
+                }
+            }
+        } else {
+            rows
+        };
+        let found = rows.len() as i64;
         budget -= found;
         for id in rows {
             visible.insert((entity.clone(), id));
@@ -848,7 +880,8 @@ async fn walk(
     // "exists but I can't see it."
     let mut start_group = HashMap::new();
     start_group.insert(req.start.entity.clone(), vec![req.start.id]);
-    let (start_visible, _) = filter_visible(&mut tx, visibility, &start_group, 1).await?;
+    let (start_visible, _) =
+        filter_visible(&mut tx, visibility, ctx, registry, &start_group, 1).await?;
     if !start_visible.contains(&(req.start.entity.clone(), req.start.id)) {
         return Err(AppError::NotFound);
     }
@@ -1004,8 +1037,15 @@ async fn walk(
             ids.sort_unstable();
             ids.dedup();
         }
-        let (visible, hop_truncated) =
-            filter_visible(&mut tx, visibility, &group, MAX_FANOUT_PER_HOP).await?;
+        let (visible, hop_truncated) = filter_visible(
+            &mut tx,
+            visibility,
+            ctx,
+            registry,
+            &group,
+            MAX_FANOUT_PER_HOP,
+        )
+        .await?;
         if hop_truncated {
             truncated = true;
         }
@@ -1106,31 +1146,10 @@ pub async fn traverse(
     );
 
     let pool = state.base.read_pool(ctx.user_id).await;
-    let mut outcome = walk(pool, &registry, ctx, &visibility, req).await?;
-    // D-369: a record a read grant condition hides is not reached, and no
-    // edge names it; a hidden start record is not found.
-    let nodes = crate::condition_filter::retain_admitted(
-        state,
-        ctx,
-        std::mem::take(&mut outcome.nodes),
-        |node| (node.entity_logicalname.as_str(), node.record_id),
-    )
-    .await;
-    let kept: HashSet<(&str, Uuid)> = nodes
-        .iter()
-        .map(|node| (node.entity_logicalname.as_str(), node.record_id))
-        .collect();
-    // The walk always returns its start node first, so a start left out
-    // here is one a condition hides.
-    if !kept.contains(&(req.start.entity.as_str(), req.start.id)) {
-        return Err(AppError::NotFound);
-    }
-    outcome.edges.retain(|edge| {
-        kept.contains(&(edge.from_entity.as_str(), edge.from_id))
-            && kept.contains(&(edge.to_entity.as_str(), edge.to_id))
-    });
-    outcome.nodes = nodes;
-    Ok(outcome)
+    // D-369: `walk` checks every hop's records against the caller's read
+    // grant conditions too, so a hidden record is neither reached nor
+    // walked through, and a hidden start record is not found.
+    walk(pool, &registry, ctx, &visibility, req).await
 }
 
 // ── HTTP route ───────────────────────────────────────────────────────────────
