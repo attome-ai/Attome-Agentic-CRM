@@ -63,7 +63,12 @@ fn build_tools_create_an_entity_and_a_field_in_a_workspace() {
         // This process now plays the workspace's own (`attome serve
         // --workspace`), on connections that search its schema first.
         assert!(attome_api::workspace::build_tools::serve_workspace(id));
-        let workspace = TestApp::start_in_schema(&format!("{schema},{live_schema},public"))
+        // The build tools are AI-module actions: the AI fields surface on.
+        let workspace =
+            TestApp::start_in_schema_with(&format!("{schema},{live_schema},public"), |config| {
+                config.inference.ai.enabled = true;
+                config.inference.ai.fields = true;
+            })
             .await
             .expect("the workspace app");
 

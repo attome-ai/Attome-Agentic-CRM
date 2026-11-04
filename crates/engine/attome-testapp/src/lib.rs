@@ -394,6 +394,17 @@ impl TestApp {
     /// workspace's schema first, as its own process runs). `None` when no
     /// test database is configured.
     pub async fn start_in_schema(search_path: &str) -> Option<TestApp> {
+        Self::start_in_schema_with(search_path, |_| {}).await
+    }
+
+    /// [`TestApp::start_in_schema`] with `edit` applied to the test
+    /// configuration (a build-tool test turns the AI fields surface on).
+    pub async fn start_in_schema_with(
+        search_path: &str,
+        edit: impl FnOnce(&mut AppConfig),
+    ) -> Option<TestApp> {
+        let mut config = test_config();
+        edit(&mut config);
         let url = attome_testkit::migrated_db_url()?;
         // A later `-c search_path` overrides the one the URL carries.
         let options = sqlx::postgres::PgConnectOptions::from_str(&url)
@@ -404,7 +415,7 @@ impl TestApp {
             .connect_with(options)
             .await
             .expect("connect the test database in the workspace schema");
-        Some(build_on(test_config(), db).await)
+        Some(build_on(config, db).await)
     }
 
     /// The database pool.
