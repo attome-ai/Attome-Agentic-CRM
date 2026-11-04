@@ -381,7 +381,18 @@ pub async fn execute_spec_restricted(
         .into_values()
         .collect()
     };
-    let access = Access::new(levels);
+    // D-371: where the caller's roles let an owner reach their own records.
+    let owner_visible = if ctx.is_admin {
+        Default::default()
+    } else {
+        attome_security::resolve_all_owner_visible(
+            &state.base.db,
+            ctx.user_id,
+            attome_security::RecordAction::Read,
+        )
+        .await?
+    };
+    let access = Access::new(levels).with_owner_visible(owner_visible);
     let tz = state
         .base
         .config

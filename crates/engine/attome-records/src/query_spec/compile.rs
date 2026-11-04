@@ -80,11 +80,32 @@ pub struct Compiled {
 #[derive(Debug, Clone, Default)]
 pub struct Access {
     levels: HashMap<Uuid, AccessLevel>,
+    /// D-371: the entities on which the caller's roles let an owner reach
+    /// their own records (`attome_security::resolve_all_owner_visible`).
+    owner_visible: std::collections::HashSet<Uuid>,
 }
 
 impl Access {
     pub fn new(levels: HashMap<Uuid, AccessLevel>) -> Self {
-        Self { levels }
+        Self {
+            levels,
+            owner_visible: Default::default(),
+        }
+    }
+
+    /// The entities whose owners reach their own records (D-371).
+    #[must_use]
+    pub fn with_owner_visible(mut self, entities: std::collections::HashSet<Uuid>) -> Self {
+        self.owner_visible = entities;
+        self
+    }
+
+    /// Whether the owner arm applies on `entity_id`: its own roles' rule, or
+    /// for a child controlled by its parent (Q14-T3), the parent's.
+    fn owner_visible(&self, entity_id: Uuid) -> bool {
+        let decides = attome_security::parent_access::link_for(entity_id)
+            .map_or(entity_id, |link| link.parent);
+        self.owner_visible.contains(&decides)
     }
 
     /// The same, with one entity at `level`.
@@ -284,7 +305,7 @@ impl<'a> Builder<'a> {
             attome_security::RecordAction::Read.share_capability(),
             &format!("{}.read", entity.logicalname),
             &entity.attrs,
-            false,
+            self.env.access.owner_visible(entity.entity_id),
             first,
         ) {
             sql.push(' ');

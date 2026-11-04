@@ -1161,6 +1161,55 @@ async fn owner_visible(
     Ok(owner_visible.unwrap_or(false))
 }
 
+/// D-371, for many entities at once: the entities on which `user_id`'s held
+/// roles let the owner reach their own records for `action`
+/// (`read_owner_visible` and its siblings) — the rule [`owner_visible`]
+/// answers for one entity, for a caller that compiles one query over several
+/// entities (`query/run`). A child entity controlled by its parent
+/// (Q14-T3) takes its parent's answer; the caller looks the parent up.
+pub async fn resolve_all_owner_visible(
+    db: &DbPool,
+    user_id: Uuid,
+    action: RecordAction,
+) -> Result<HashSet<Uuid>, AppError> {
+    let suffix = format!(".{}", action.privilege_action());
+    let sql = format!(
+        r#"
+            {HELD_ROLES_CTE}
+            SELECT ei.id
+            FROM held_roles hr
+            JOIN role_mm_privilege rp ON rp.role_ref = hr.role_id AND rp.is_deleted = false
+            JOIN privilege p ON p.id = rp.privilege_ref AND p.is_active = true
+            JOIN entity_info ei
+                ON p.key = ei.logicalname || $2::text
+               AND (ei.is_active IS NULL OR ei.is_active = true)
+            JOIN role_mm_entity_access ea
+                ON ea.role_ref = hr.role_id AND ea.entity_ref = ei.id AND ea.is_deleted = false
+            GROUP BY ei.id
+            HAVING bool_or(
+                CASE $3::text
+                    WHEN 'read'   THEN ea.read_owner_visible
+                    WHEN 'update' THEN ea.write_owner_visible
+                    WHEN 'delete' THEN ea.delete_owner_visible
+                    ELSE false
+                END
+            )
+            "#
+    );
+    let ids: Vec<Uuid> = tokio::time::timeout(
+        QUERY_TIMEOUT,
+        sqlx::query_scalar(&sql)
+            .bind(user_id)
+            .bind(&suffix)
+            .bind(action.as_str())
+            .fetch_all(db),
+    )
+    .await
+    .map_err(|_| AppError::internal("owner-visibility resolution query timed out"))?
+    .map_err(AppError::internal)?;
+    Ok(ids.into_iter().collect())
+}
+
 /// D-369: resolves every privilege key `user_id`'s held roles (direct via
 /// `user_account_mm_role`, or team-mediated via
 /// `role_mm_team`/`user_account_mm_team` — the same

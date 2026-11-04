@@ -274,15 +274,37 @@ async fn entity_views(
             RecordAction::Read,
         )
         .await?;
-        let predicate = attome_security::rls_predicate(
+        // D-369/D-371: the rows a list shows the author, grant conditions
+        // and owner visibility included (`query/execute`'s predicate).
+        let owner_visible = !ctx.is_admin
+            && attome_security::resolve_owner_visible(
+                &state.base.db,
+                ctx.user_id,
+                *entity_id,
+                name,
+                RecordAction::Read,
+            )
+            .await?;
+        let predicate = attome_security::rls_predicate_with_conditions(
             ctx,
             *entity_id,
             "t",
             level,
             RecordAction::Read.share_capability(),
+            &format!("{name}.read"),
+            attrs,
+            owner_visible,
             1,
         )
-        .map(|p| inline_binds(&p.sql, 1, &p.binds.to_text_params()))
+        .map(|p| {
+            let mut params = p
+                .tier_binds
+                .as_ref()
+                .map(|tier| tier.to_text_params())
+                .unwrap_or_default();
+            params.extend(p.condition_binds.iter().cloned());
+            inline_binds(&p.sql, 1, &params)
+        })
         .unwrap_or_default();
         let columns =
             attome_security::field_gate::bulk_columns(ctx, name, attrs, primary_name.as_deref());

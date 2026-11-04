@@ -81,8 +81,9 @@ async fn grant_team_read(app: &TestApp, user: &TestUser, entity: &str, entity_id
     .unwrap();
     sqlx::query(
         "INSERT INTO role_mm_entity_access \
-            (id, role_ref, entity_ref, read_access_level, write_access_level, delete_access_level, owner_layer) \
-         VALUES ($1, $2, $3, 1, 0, 0, 'project')",
+            (id, role_ref, entity_ref, read_access_level, write_access_level, delete_access_level, \
+             read_owner_visible, owner_layer) \
+         VALUES ($1, $2, $3, 1, 0, 0, true, 'project')",
     )
     .bind(Uuid::now_v7())
     .bind(role)
