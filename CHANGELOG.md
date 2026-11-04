@@ -769,7 +769,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ### Fixed
 - Security: a record list (`GET /api/v1/{entity}`, `POST /api/v1/query/execute` on one entity,
   `POST /api/v1/query/run` and a SQL report's views) applies every grant condition on
-  `{entity}.read` (D-369) and the role's owner visibility (D-371), as reading one record does. Before, a conditional grant narrowed only single-record reads, so a
+  `{entity}.read` (D-369) and the role's owner visibility (D-371), as reading one record does; so
+  do lookup expansion and names, related columns, the change feed, the recycle bin, field-history
+  search, the rollup explanation and the bulk-edit preview. Before, a conditional grant narrowed only single-record reads, so a
   list showed rows the record itself refused (a confidential contract to a contract viewer, another
   manager's partners to a channel manager).
 - An MCP tool call, a macro run, the meeting follow-up write and an agent's permission test read the
