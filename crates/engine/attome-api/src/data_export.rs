@@ -471,6 +471,20 @@ async fn plan_export(
         conds.push(pred.sql.trim_start_matches("AND ").to_owned());
         params.extend(pred.binds.to_text_params());
     }
+    // D-369: and never a record a grant condition on `{entity}.read` hides
+    // from the caller (the export tier above renders no condition).
+    if !ctx.is_admin
+        && let Some(condition) = attome_security::conditions::condition_predicate(
+            ctx,
+            &format!("{entity_name}.read"),
+            attrs,
+            "t",
+            params.len() + 1,
+        )
+    {
+        conds.push(format!("({})", condition.sql));
+        params.extend(condition.binds);
+    }
 
     let where_sql = if conds.is_empty() {
         String::new()
