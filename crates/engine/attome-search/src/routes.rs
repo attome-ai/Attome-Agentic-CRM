@@ -982,6 +982,12 @@ pub async fn execute_search_with(
     // A25-T6: a document is shown only to a caller who can read the record
     // it is attached to; after the pins, so a pin cannot bring one back.
     let fused = without_hidden_documents(state, ctx, fused).await;
+    // D-369: a hit on an entity whose read grant carries a condition stays
+    // only when its record meets it (the index holds no record fields);
+    // before the count, so the total and facets name no hidden record.
+    let fused =
+        crate::condition_filter::retain_admitted(state, ctx, fused, |row| (row.1.as_str(), row.0))
+            .await;
 
     let found = fused.len() as u64;
     let facets = if options.facets {
@@ -998,12 +1004,6 @@ pub async fn execute_search_with(
         .take(page_size as usize)
         .collect();
     let has_more = found > (offset + page_size) as u64;
-    // D-369: a hit on an entity whose read grant carries a condition stays
-    // only when its record meets it (the index holds no record fields).
-    let page_rows = crate::condition_filter::retain_admitted(state, ctx, page_rows, |row| {
-        (row.1.as_str(), row.0)
-    })
-    .await;
 
     // Display text for the page, in a second read.
     //

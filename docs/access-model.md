@@ -66,8 +66,8 @@ A condition narrows every path that reads records, at every access level: the re
 `query/execute` (a custom multi-entity query through each mapped id column), reports, exports, lookups and
 related columns, the change feed and live stream, and the engines' own lists (`attome_security::read_scope`
 binds the tier, owner visibility and conditions together). Search holds no record fields, so search,
-similar passages, image search and the record graph check each page of hits against the records and leave
-out those a condition hides; the search total and facets are counted before that check.
+similar passages, image search and the record graph check their hits against the records and leave out
+those a condition hides; search does so before it counts, so its total and facets agree with what is shown.
 
 ## Suggested roles
 

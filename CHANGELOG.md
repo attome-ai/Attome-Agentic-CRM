@@ -778,9 +778,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `{entity}.update`), segment insight, follower notifications, the price-list products, competitor
   head-to-head and drafts, marketing list members and journey enrolments, the commission statement,
   the data-quality issue list (`attome_security::read_scope`) and each mapped relation of a custom
-  multi-entity query. Search, similar passages and image search check each page of hits against
-  the records, since the index holds no record fields (`attome_search::condition_filter`); the
-  total and facets are counted before that check.
+  multi-entity query. Search, similar passages, image search and the record graph check their hits
+  against the records, since the index holds no record fields (`attome_search::condition_filter`);
+  search does so before it counts, so the total and facets agree with what is shown.
 - An MCP tool call, a macro run, the meeting follow-up write and an agent's permission test read the
   runtime AI switch before the gate: the switch counts as all-off until read, so the first such call
   after boot (or after the switch's snapshot aged) was refused as an unknown tool.

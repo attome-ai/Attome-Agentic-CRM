@@ -2,10 +2,9 @@
 //! condition on `{entity}.read` cannot narrow a search leg. A page of hits is
 //! checked against the records themselves instead: a hit on an entity whose
 //! read grant carries a condition stays only when its record meets it. A
-//! check that cannot run drops that entity's hits (fails closed).
-//!
-//! The total and the facets are counted before this check, so they may count
-//! a hit the page then leaves out; they name no record.
+//! check that cannot run drops that entity's hits (fails closed). Search
+//! checks its whole candidate list (bounded by the search ceiling) before it
+//! counts, so the total and facets agree with what is shown.
 
 use std::collections::{HashMap, HashSet};
 
