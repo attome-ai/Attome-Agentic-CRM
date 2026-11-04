@@ -128,6 +128,27 @@ async fn role_pool(url: &str, role: &'static str) -> PgPool {
         .unwrap_or_else(|e| panic!("connect to the test database as {role}: {e}"))
 }
 
+/// In production `attome migrate` runs as `attome_migrator`, so it owns
+/// every table and function the migrations create. The test database was
+/// migrated as its superuser instead, so the tables created after 0009's
+/// ownership transfer (`ddl_log`, `metadata_property_layer`, ...) and the
+/// functions are not the migrator's. Granting it what ownership would give
+/// is the production state, on the throwaway database only.
+async fn grant_migrator_what_it_owns(url: &str) {
+    let admin = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(url)
+        .await
+        .expect("connect to the test database as its superuser");
+    sqlx::query(
+        "DO $$ BEGIN            EXECUTE format('GRANT ALL ON ALL TABLES IN SCHEMA %I TO attome_migrator', current_schema());            EXECUTE format('GRANT ALL ON ALL SEQUENCES IN SCHEMA %I TO attome_migrator', current_schema());            EXECUTE format('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA %I TO attome_migrator', current_schema());            GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO attome_migrator;          END $$",
+    )
+    .execute(&admin)
+    .await
+    .expect("grant attome_migrator what it owns in production");
+    admin.close().await;
+}
+
 /// `EngineState` with the split the production roles have: `db` is
 /// `attome_runtime`, `db_migrator` is `attome_migrator`.
 async fn split_role_state(url: &str) -> (EngineState, PgPool, PgPool) {
@@ -135,6 +156,7 @@ async fn split_role_state(url: &str) -> (EngineState, PgPool, PgPool) {
     // is only visible through tracing.
     let _ = tracing_subscriber::fmt().with_test_writer().try_init();
     let config = test_config();
+    grant_migrator_what_it_owns(url).await;
     let runtime = role_pool(url, "attome_runtime").await;
     let migrator = role_pool(url, "attome_migrator").await;
     let redis = attome_cache::create_redis_pool(&config)

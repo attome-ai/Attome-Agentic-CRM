@@ -2746,7 +2746,7 @@ async fn publish_refuses_broken_content_and_names_the_widget() {
     // Clean content publishes, and an unsupported type only warns.
     let good = json!({ "data": { "source": deals, "measures": [{ "aggregation": "count" }] }});
     let dashboard = build_data_dashboard(&db, admin_id, &good).await;
-    sqlx::query("UPDATE dashboard_widget SET widget_type = 'divider' WHERE id = $1")
+    sqlx::query("UPDATE dashboard_widget SET widget_type = 'choropleth_map' WHERE id = $1")
         .bind(dashboard.widget_id)
         .execute(&db)
         .await

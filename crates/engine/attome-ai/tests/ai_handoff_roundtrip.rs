@@ -475,7 +475,22 @@ async fn ai7_roundtrip_agent_person_agent() {
 
     // The ticket's history: handed off, accepted, returned, handed off again.
     let history = t.history().await;
-    assert_eq!(history.len(), 4, "{history:#?}");
+    if history.len() != 4 {
+        // Which tool calls the resumed turn made, and how each ended.
+        let calls: Vec<(String, String)> = sqlx::query_as(
+            "SELECT action_id::text, status::text FROM ai_tool_call               WHERE conversation_id = $1 ORDER BY created_at",
+        )
+        .bind(t.conversation_id)
+        .fetch_all(t.db())
+        .await
+        .expect("tool calls");
+        panic!(
+            "{history:#?}
+tool calls: {calls:?}
+hand-offs: {:?}",
+            t.handoffs().await
+        );
+    }
     assert!(history[0].starts_with("Handed off by agent to user"));
     assert!(history[1].starts_with("Hand-off accepted"));
     assert!(history[2].starts_with("Returned to the agent"));

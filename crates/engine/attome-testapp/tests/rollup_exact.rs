@@ -199,9 +199,9 @@ fn rollup_exact_holds_under_concurrent_writes() {
             )
             .await;
         assert_eq!(status, StatusCode::OK, "{body}");
-        let moved: f64 = second["amount"]
-            .as_f64()
-            .unwrap_or_else(|| second["amount"].as_str().unwrap().parse().unwrap());
+        let moved = column(&app, &invoice, "amount", &second["id"])
+            .await
+            .expect("the moved invoice's amount");
         assert_eq!(
             column(&app, &account, "total", &acme["id"]).await,
             Some(210.0 - moved)

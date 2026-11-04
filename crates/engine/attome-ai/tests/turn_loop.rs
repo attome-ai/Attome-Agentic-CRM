@@ -4504,8 +4504,10 @@ async fn reset_runtime_switch(state: &EngineState) {
 }
 
 /// **Row A-85.** An administrator switches chat off while a turn runs. The
-/// call already dispatched completes and is recorded; the turn ends as
-/// `KillSwitch` at its next step, before another model call — no restart.
+/// model call already dispatched completes; the tool call it proposed is
+/// recorded and refused when dispatch checks the switch again (every action
+/// takes the runtime switch at its one entry, so none runs after it is off);
+/// the turn ends as `KillSwitch` before another model call — no restart.
 /// A new turn is then refused before the model is called at all. Turning the
 /// switch back on restores the configuration.
 #[tokio::test]
@@ -4544,8 +4546,8 @@ async fn the_runtime_switch_stops_a_running_turn_at_its_next_step() {
     let proposals = f.proposals().await;
     assert_eq!(proposals.len(), 1);
     assert_eq!(
-        proposals[0].status, "executed",
-        "the dispatched call completed"
+        proposals[0].status, "invalidated",
+        "the proposed call is refused once chat is off"
     );
 
     let before = f.model.calls();
