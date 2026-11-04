@@ -29,6 +29,7 @@ attome-metric.workspace = true
 attome-report.workspace = true
 attome-service.workspace = true
 attome-state.workspace = true
+attome-ledger.workspace = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-docgen.workspace   = true
@@ -74,7 +75,6 @@ attome-predict.workspace = true
 attome-portal.workspace = true
 # F9-T3: deal registration conflicts, decisions and lapse.
 attome-jobs.workspace = true
-attome-ledger.workspace = true
 attome-metadata.workspace = true
 attome-extension.workspace = true
 # K6-T4: the crawled-item import and update.
