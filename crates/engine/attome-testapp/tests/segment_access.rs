@@ -43,12 +43,20 @@ async fn install(app: &TestApp) {
     app.state.entities.swap(registry);
 }
 
+/// The list's wide-access events: the chained ones, and those captured
+/// past the last chained batch (a chained event stays in `audit_ingest`
+/// until it is pruned, so it is counted once, from the header).
 async fn events(app: &TestApp, list: Uuid) -> Vec<String> {
     sqlx::query_scalar(
         "SELECT name FROM ( \
              SELECT payload::jsonb ->> 'event_name' AS name, \
                     payload::jsonb ->> 'record_id' AS rid \
-             FROM audit_ingest \
+             FROM audit_ingest i \
+             WHERE i.id > COALESCE(( \
+                 SELECT b.last_ingest_id FROM audit_chain_batch b \
+                  WHERE b.organization_ref = i.organization_ref \
+                  ORDER BY b.id DESC LIMIT 1 \
+             ), '00000000-0000-0000-0000-000000000000'::uuid) \
              UNION ALL \
              SELECT event_name, record_id::text FROM audit_header \
          ) e WHERE rid = $1 AND name LIKE 'marketing_list.wide_access%' ORDER BY name",

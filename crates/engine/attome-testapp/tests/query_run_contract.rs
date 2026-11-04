@@ -123,7 +123,7 @@ async fn fixture(app: &TestApp) -> Fx {
         &child,
         &[
             json!({ "logicalname": "note", "name": "note", "field_type": "text",
-                    "is_filterable": true }),
+                    "is_filterable": true, "is_sortable": true }),
             json!({ "logicalname": "parent", "name": "parent", "field_type": "lookup",
                     "lookup_entity_ref": parent_id, "is_filterable": true }),
         ],

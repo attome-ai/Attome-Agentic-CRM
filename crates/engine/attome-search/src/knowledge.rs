@@ -252,11 +252,16 @@ pub async fn readable_collections(
     // knowledge-specific access rule anywhere in this file — that is I-1.
     records.push(&mut qb, &format!("'{collection_entity}'"), "t.id");
 
-    let ids: Vec<Uuid> = qb
-        .build_query_scalar()
-        .fetch_all(db)
-        .await
-        .map_err(attome_types::AppError::internal)?;
+    let ids: Vec<Uuid> = match qb.build_query_scalar().fetch_all(db).await {
+        Ok(ids) => ids,
+        // The collection entity was never provisioned (the knowledge
+        // platform definition is not applied): nothing is readable, and a
+        // turn goes on without passages rather than failing its call.
+        Err(sqlx::Error::Database(e)) if e.code().as_deref() == Some("42P01") => {
+            return Ok(Vec::new());
+        }
+        Err(e) => return Err(attome_types::AppError::internal(e)),
+    };
     collections_meeting_condition(db, ctx, collection_entity, ids).await
 }
 

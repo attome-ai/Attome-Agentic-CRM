@@ -1994,10 +1994,12 @@ static REPEATS: std::sync::LazyLock<Option<attome_cache::tiered::TieredCache<Val
 /// The change-feed position and a hash of the whole request.
 async fn repeat_key(state: &EngineState, body: &ExecuteQueryRequest) -> Result<String, AppError> {
     use sha2::{Digest, Sha256};
-    let position: Option<Uuid> = sqlx::query_scalar("SELECT max(id) FROM entity_change_event")
-        .fetch_one(&state.base.db)
-        .await
-        .map_err(AppError::internal)?;
+    // uuid has an order but no max(); ids are UUIDv7, so the last is newest.
+    let position: Option<Uuid> =
+        sqlx::query_scalar("SELECT id FROM entity_change_event ORDER BY id DESC LIMIT 1")
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
     let request = serde_json::to_string(body).map_err(AppError::internal)?;
     let hash: String = Sha256::digest(request.as_bytes())
         .iter()
