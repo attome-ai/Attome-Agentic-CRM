@@ -29,8 +29,9 @@ use crate::team::{NewMember, TeamAccess};
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct SalesChangeOwnerBody {
     pub new_owner: Uuid,
-    /// Keep the old owner on the team with this team role; absent removes
-    /// them and their share.
+    /// Keep the old owner on the team with this team role (added with read
+    /// access when they were not on it); absent removes them and their
+    /// share.
     #[serde(default)]
     pub old_owner_role: Option<Uuid>,
     /// Move the old owner's splits to the new owner (else they stay).
@@ -230,6 +231,28 @@ pub(crate) async fn post_sales_change_owner(
                     .map_err(AppError::internal)?;
             }
         }
+    }
+    // An old owner who was never on the team joins it with the role asked
+    // for, reading the deal: keeping the old owner means keeping their sight
+    // of it, which their ownership gave them until now.
+    if old_member.is_none()
+        && let (Some(old_owner), Some(role)) = (old, body.old_owner_role)
+        && old_owner != body.new_owner
+    {
+        crate::team::add_member_in_tx(
+            &mut tx,
+            &state,
+            entity,
+            opportunity,
+            NewMember {
+                user: Some(old_owner),
+                partner_contact: None,
+                team_role: Some(role),
+                access: TeamAccess::Read,
+            },
+            ctx.user_id,
+        )
+        .await?;
     }
     crate::split_store::recalculate_in_tx(&mut tx, opportunity).await?;
     attome_db::tx::commit(tx).await?;
