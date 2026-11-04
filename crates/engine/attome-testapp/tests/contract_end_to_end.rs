@@ -130,6 +130,11 @@ async fn approve(app: &TestApp, user: &TestUser, contract: Uuid) {
 // feature: W1
 #[test]
 fn request_draft_negotiate_approve_sign_renew() {
+    // Warnings to the output: a negotiation tick that skips an upload says why.
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter("warn")
+        .with_test_writer()
+        .try_init();
     attome_testkit::run_shared(async {
         if attome_testkit::s3_or_skip().is_none() {
             return;

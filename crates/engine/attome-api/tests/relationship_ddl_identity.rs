@@ -227,7 +227,7 @@ async fn reconcile_relationship_creates_the_join_table_as_the_migrator_role() {
         };
         reconcile_entity(&migrator, &desc, ReconcilePolicy::Seed)
             .await
-            .unwrap_or_else(|e| panic!("provision endpoint entity {logicalname}: {e}"));
+            .unwrap_or_else(|e| panic!("provision endpoint entity {logicalname}: {e:?}"));
     }
 
     let simple = Uuid::now_v7().simple().to_string();
@@ -245,7 +245,7 @@ async fn reconcile_relationship_creates_the_join_table_as_the_migrator_role() {
     let (_detail, outcome) = reconcile_relationship(&state, &desc, ReconcilePolicy::Admin, None)
         .await
         .unwrap_or_else(|e| {
-            panic!("reconcile_relationship must create the join table through db_migrator: {e}")
+            panic!("reconcile_relationship must create the join table through db_migrator: {e:?}")
         });
     assert_eq!(outcome, ReconcileOutcome::Created);
 
