@@ -164,7 +164,8 @@ masked field cannot be changed. A grant in full from any profile wins over a mas
 A grant may also carry a **read condition** (`read_condition`, Q15-T3): a rule expression over the
 record's own fields, in the language and with the fields a record grant condition may use, such as
 `region == "gcc"`. Its holder sees the field in full on a record read or in a list only on the records
-that meet it; on the others the field stays hidden, or masked when another profile masks it. Such a grant
+that meet it (a list's default columns: naming the field in `select`, a filter or a sort is refused as
+for any hidden field); on the others the field stays hidden, or masked when another profile masks it. Such a grant
 reads only (no `can_update`, no `mask_format` on the same row), a grant in full from any profile wins over
 it, and every other surface (export, query, reports, AI context, search) keeps the field hidden. A list
 leaves an encrypted field hidden, since it decrypts nothing. An expression that no longer translates (a
