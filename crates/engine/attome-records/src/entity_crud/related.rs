@@ -895,6 +895,25 @@ pub(super) async fn replace_related(
         )
         .await?;
     }
+    // Every added record must exist on the other side (an administrator
+    // skips the access check above): an unknown id refuses the whole set as
+    // not found rather than failing the join table's foreign key.
+    if !add.is_empty() {
+        let found: i64 = sqlx::query_scalar(&attome_db::tag_dynamic(
+            "entity.related",
+            &format!(
+                "SELECT count(*) FROM {} WHERE id = ANY($1) AND is_active = true",
+                quote_ident(&other_entity_name)
+            ),
+        ))
+        .bind(&add)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        if usize::try_from(found).unwrap_or(0) != add.len() {
+            return Err(AppError::NotFound);
+        }
+    }
 
     let (layer_col, layer_val) =
         if attome_core::changeset::OWNER_LAYER_TABLES.contains(&def.join_table.as_str()) {

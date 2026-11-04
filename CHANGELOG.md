@@ -770,6 +770,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - An MCP tool call, a macro run, the meeting follow-up write and an agent's permission test read the
   runtime AI switch before the gate: the switch counts as all-off until read, so the first such call
   after boot (or after the switch's snapshot aged) was refused as an unknown tool.
+- A failed operation in `POST /api/v1/composite` carries its wire `code` (and `error`), as the
+  same request on its own would; a many-to-many replace naming a record the other side does not
+  have is a 404 for an administrator too, not a 500.
 - Lead assignment and call coaching change a record's owner through the audited reassign path; a
   record body never sets `owner_ref`, and both had stopped assigning.
 - A billing run puts a mid-period proration on the same invoice request as the period's other charges:

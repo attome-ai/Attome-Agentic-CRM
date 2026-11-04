@@ -399,9 +399,12 @@ impl AppError {
     }
 }
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        let (status, code) = match &self {
+impl AppError {
+    /// The HTTP status and wire `code` this error answers with: what
+    /// [`IntoResponse`] sends, for a caller that reports an error inside a
+    /// larger body (a composite request's failed operation).
+    pub fn status_and_code(&self) -> (StatusCode, &'static str) {
+        match self {
             AppError::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "forbidden"),
@@ -465,7 +468,13 @@ impl IntoResponse for AppError {
             }
             AppError::MethodNotAllowed => (StatusCode::METHOD_NOT_ALLOWED, "method_not_allowed"),
             AppError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
-        };
+        }
+    }
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status, code) = self.status_and_code();
 
         // Never expose internal details to the client
         let message = match &self {

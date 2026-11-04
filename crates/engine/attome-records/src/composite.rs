@@ -337,10 +337,12 @@ async fn run_one(
 
 /// The status and error body a single request would have answered with.
 fn error_parts(error: AppError) -> (u16, Value) {
-    use axum::response::IntoResponse;
-    let response = error.into_response();
-    let status = response.status().as_u16();
-    (status, json!({ "status": status }))
+    let (status, code) = error.status_and_code();
+    let status = status.as_u16();
+    (
+        status,
+        json!({ "status": status, "code": code, "error": code }),
+    )
 }
 
 /// [`error_parts`] with the message of a client error (never of a 5xx).
