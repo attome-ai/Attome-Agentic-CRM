@@ -11,6 +11,7 @@ slow-timeout = { period = "60s", terminate-after = 3 }
 # once, so they run one at a time, alongside everything else.
 [test-groups]
 own-migrations = { max-threads = 1 }
+profiler-redis = { max-threads = 1 }
 
 [[profile.default.overrides]]
 filter = '''
@@ -23,3 +24,10 @@ binary(changeset_platform_boot) | binary(concurrent_boot) | binary(fresh_bootstr
 | (package(attome-db) & kind(lib) & test(/^migrate::/))
 '''
 test-group = 'own-migrations'
+
+# The profiler's probe keys are one Redis keyspace every test process shares:
+# a test that seeds a measurement and one that expects none, run at once,
+# see each other's keys. Its tests run one at a time.
+[[profile.default.overrides]]
+filter = 'package(attome-api) & binary(profiler_admin)'
+test-group = 'profiler-redis'
