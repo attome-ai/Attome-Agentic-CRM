@@ -22,10 +22,12 @@ use axum::http::{Method, StatusCode};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
-/// GET one record: the session and the caller's privileges (when not cached),
-/// the entity's read grants and row-level predicate, the row, and its lookup
-/// names.
-const RECORD_GET_BUDGET: usize = 6;
+/// GET one record: the role's IP allowlist, the entity resolved (four reads),
+/// the access depth and owner visibility (D-371) and the record-access check
+/// (held roles, three reads), the row and its projection (two), and its
+/// lookup names. 11, as `crates/apps/attome/tests/request_counts.json` has
+/// for `record_get`; the four entity resolutions are the first to remove.
+const RECORD_GET_BUDGET: usize = 11;
 
 /// One page of a list with three lookups: the stored query, the count, the
 /// page, and one lookup-name read per lookup target (never per row).
