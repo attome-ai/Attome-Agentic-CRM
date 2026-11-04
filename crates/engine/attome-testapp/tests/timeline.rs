@@ -400,13 +400,28 @@ fn first_page_is_fast_on_a_record_with_50000_events() {
         .fetch_all(app.db())
         .await
         .unwrap();
+        // audit_header is partitioned: each partition scans its own copy of
+        // the timeline index (named after the partition), and a Merge Append
+        // keeps their order, so its `Sort Key:` line is no sort.
         let plan = plan.join("\n");
+        let scans: Vec<&str> = plan
+            .lines()
+            .filter(|l| l.contains(" on audit_header"))
+            .collect();
         assert!(
-            plan.contains("audit_header_record_timeline_idx"),
+            !scans.is_empty()
+                && scans.iter().all(|l| {
+                    (l.contains("Index Scan") || l.contains("Index Only Scan"))
+                        && (l.contains("audit_header_record_timeline_idx")
+                            || l.contains("_entity_name_record_id_changed_on"))
+                }),
             "the timeline index serves the audit source:\n{plan}"
         );
         assert!(
-            !plan.contains("Sort"),
+            !plan.lines().any(|l| {
+                let node = l.trim_start().trim_start_matches("->").trim_start();
+                node.starts_with("Sort  (") || node.starts_with("Incremental Sort")
+            }),
             "no sort of the record's rows:\n{plan}"
         );
 
