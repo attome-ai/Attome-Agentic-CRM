@@ -1,0 +1,41 @@
+{
+  "author": "attome-service (release-check repair)",
+  "checksum": "sha256:f03b7c07df82ea6cf8093faad6d85cf6f1857917ffb6b36565b578695eee1e7a",
+  "closed_at": "2026-11-04T00:00:00Z",
+  "description": "The Queue Claim-To-Resolve report averages per queue: 0040 shipped it without its GROUP BY, so PostgreSQL refused it.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a7dd-a786-7c2a-991f-a5fbbed11c69",
+  "layer": "platform",
+  "name": "attome-service-queue-claim-report",
+  "opened_at": "2026-11-04T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "Queue Claim-To-Resolve, Minutes (Last 30 Days)",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT work_queue_ref AS queue_ref, AVG(EXTRACT(EPOCH FROM (resolved_at - claimed_at)) / 60.0) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND work_queue_ref IS NOT NULL AND status IN ('resolved', 'closed') AND resolved_at IS NOT NULL AND claimed_at IS NOT NULL AND resolved_at >= NOW() - INTERVAL '30 days' GROUP BY work_queue_ref"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "service_ticket",
+        "query": "Queue Claim-To-Resolve, Minutes (Last 30 Days)"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 94,
+  "title": "Platform definitions: attome-service-queue-claim-report"
+}

@@ -555,6 +555,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0093-attome-service-resolution-article.json"
         ),
     },
+    PlatformChangeset {
+        file: "0094-attome-service-queue-claim-report.json",
+        name: "attome-service-queue-claim-report",
+        json: include_str!(
+            "../../../../../changesets/platform/0094-attome-service-queue-claim-report.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

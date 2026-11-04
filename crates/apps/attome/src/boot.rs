@@ -1293,6 +1293,9 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-ai-agent-principal",
         // G1-T1: the knowledge article that resolved a ticket.
         "attome-service-resolution-article",
+        // The Queue Claim-To-Resolve report's GROUP BY (0040 shipped it
+        // without one).
+        "attome-service-queue-claim-report",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }
