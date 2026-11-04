@@ -62,6 +62,13 @@ partners the caller manages. Both ends must be filterable, ungated lookups, chec
 resolved from live metadata when the grant loads, and a hop that no longer resolves denies rather than
 opens. A hop compares with `eq`, `ne` or `in`, with an id, a list of ids, `@me` or `@my_teams`.
 
+A condition narrows every path that reads records, at every access level: the record itself, lists and
+`query/execute` (a custom multi-entity query through each mapped id column), reports, exports, lookups and
+related columns, the change feed and live stream, and the engines' own lists (`attome_security::read_scope`
+binds the tier, owner visibility and conditions together). Search holds no record fields, so search,
+similar passages, image search and the record graph check each page of hits against the records and leave
+out those a condition hides; the search total and facets are counted before that check.
+
 ## Suggested roles
 
 Modules suggest roles (`GET /api/v1/admin/security/role-templates`, for the licensed modules): a sales
