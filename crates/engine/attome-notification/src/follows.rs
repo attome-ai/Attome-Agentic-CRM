@@ -11,7 +11,7 @@
 
 use attome_core::EngineState;
 use attome_core::change_feed::ChangeOperation;
-use attome_security::{RecordAction, resolve_entity_access_level, rls_predicate};
+use attome_security::{RecordAction, resolve_entity_access_level};
 use attome_types::AppError;
 use uuid::Uuid;
 
@@ -62,12 +62,22 @@ async fn can_read(
     let level =
         resolve_entity_access_level(&state.base.db, user, entity_id, entity, RecordAction::Read)
             .await?;
-    let pred = rls_predicate(
+    // D-369: the read tier and any grant condition on `{entity}.read`.
+    let attrs = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let pred = attome_security::rls_predicate_with_conditions(
         &ctx,
         entity_id,
         "",
         level,
         RecordAction::Read.share_capability(),
+        &format!("{entity}.read"),
+        &attrs,
+        false,
         2,
     );
     let sql = format!(
@@ -77,7 +87,12 @@ async fn can_read(
     );
     let mut q = sqlx::query_scalar::<_, bool>(&sql).bind(record);
     if let Some(p) = &pred {
-        q = attome_security::bind_rls_predicate(q, &p.binds);
+        if let Some(binds) = &p.tier_binds {
+            q = attome_security::bind_rls_predicate(q, binds);
+        }
+        for bind in &p.condition_binds {
+            q = q.bind(bind.clone());
+        }
     }
     q.fetch_one(&state.base.db)
         .await

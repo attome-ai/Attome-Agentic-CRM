@@ -155,16 +155,26 @@ async fn count_updatable(
         "t.is_active = true".to_string(),
     ];
     let mut params: Vec<String> = Vec::new();
-    if let Some(pred) = attome_security::rls_predicate(
+    // D-369: the update tier and any grant condition on `{entity}.update`.
+    let attrs = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    if let Some(pred) = attome_security::rls_predicate_with_conditions(
         ctx,
         entity_id,
         "t",
         access_level,
         RecordAction::Update.share_capability(),
+        &format!("{entity_name}.update"),
+        &attrs,
+        false,
         2,
     ) {
         conds.push(pred.sql.trim_start_matches("AND ").to_owned());
-        params.extend(pred.binds.to_text_params());
+        params.extend(pred.to_text_params());
     }
     let sql = format!(
         "SELECT COUNT(*) FROM {table} t WHERE {}",

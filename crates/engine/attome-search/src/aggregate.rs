@@ -300,18 +300,28 @@ impl AggregateScope {
             attome_security::RecordAction::Read,
         )
         .await?;
-        if let Some(pred) = attome_security::rls_predicate(
+        // D-369: the read tier and any grant condition on `{entity}.read`.
+        let attrs = state
+            .entities
+            .load()
+            .get(entity_logicalname)
+            .map(|meta| meta.attrs.clone())
+            .unwrap_or_default();
+        if let Some(pred) = attome_security::rls_predicate_with_conditions(
             ctx,
             entity_id,
             "t",
             access_level,
             attome_security::RecordAction::Read.share_capability(),
+            &format!("{entity_logicalname}.read"),
+            &attrs,
+            false,
             scope.params.len() + 1,
         ) {
             scope
                 .conds
                 .push(pred.sql.trim_start_matches("AND ").to_owned());
-            scope.params.extend(pred.binds.to_text_params());
+            scope.params.extend(pred.to_text_params());
         }
         Ok(scope)
     }

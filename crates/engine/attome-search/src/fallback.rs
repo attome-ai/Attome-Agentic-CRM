@@ -137,19 +137,23 @@ pub async fn fallback_search(
             if !meta.is_append_only {
                 sql.push_str(" AND t.is_active = true");
             }
-            let predicate = attome_security::rls_predicate(
+            // D-369: the read tier and any grant condition on `{entity}.read`.
+            let predicate = attome_security::rls_predicate_with_conditions(
                 ctx,
                 entity_id,
                 "t",
                 level,
                 attome_security::RecordAction::Read.share_capability(),
+                &format!("{entity}.read"),
+                &meta.attrs,
+                false,
                 2,
             );
             let mut binds = Vec::new();
             if let Some(predicate) = predicate {
                 sql.push(' ');
                 sql.push_str(&predicate.sql);
-                binds = predicate.binds.to_text_params();
+                binds = predicate.to_text_params();
             }
             sql.push_str(&format!(" ORDER BY t.{column}, t.id LIMIT {PER_ENTITY}"));
             let mut query = sqlx::query_as::<_, (Uuid, Option<String>)>(&sql).bind(&pattern);

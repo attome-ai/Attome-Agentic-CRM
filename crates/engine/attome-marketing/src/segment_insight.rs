@@ -7,9 +7,7 @@
 use std::collections::HashSet;
 
 use attome_core::{EngineState, quote_ident};
-use attome_security::{
-    RecordAction, bind_rls_predicate, resolve_entity_access_level, rls_predicate,
-};
+use attome_security::{RecordAction, resolve_entity_access_level};
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
@@ -71,12 +69,22 @@ pub async fn readable(
         RecordAction::Read,
     )
     .await?;
-    let pred = rls_predicate(
+    // D-369: the read tier and any grant condition on `{entity}.read`.
+    let attrs = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let pred = attome_security::rls_predicate_with_conditions(
         ctx,
         entity_id,
         "",
         level,
         RecordAction::Read.share_capability(),
+        &format!("{entity}.read"),
+        &attrs,
+        false,
         2,
     );
     let sql = format!(
@@ -86,7 +94,12 @@ pub async fn readable(
     );
     let mut q = sqlx::query_scalar::<_, Uuid>(&sql).bind(ids);
     if let Some(p) = &pred {
-        q = bind_rls_predicate(q, &p.binds);
+        if let Some(binds) = &p.tier_binds {
+            q = attome_security::bind_rls_predicate(q, binds);
+        }
+        for bind in &p.condition_binds {
+            q = q.bind(bind.clone());
+        }
     }
     Ok(q.fetch_all(&state.base.db)
         .await

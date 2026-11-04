@@ -288,6 +288,20 @@ pub struct ConditionAwarePredicate {
     pub condition_binds: Vec<String>,
 }
 
+impl ConditionAwarePredicate {
+    /// Every bind in placeholder order, as text: the tier's six (when
+    /// present) then the condition binds, for a flat `Vec<String>` caller.
+    pub fn to_text_params(&self) -> Vec<String> {
+        let mut params = self
+            .tier_binds
+            .as_ref()
+            .map(RlsBinds::to_text_params)
+            .unwrap_or_default();
+        params.extend(self.condition_binds.iter().cloned());
+        params
+    }
+}
+
 impl std::fmt::Debug for ConditionAwarePredicate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ConditionAwarePredicate")
