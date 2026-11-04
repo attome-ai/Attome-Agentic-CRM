@@ -1389,6 +1389,10 @@ mod tests {
         reply: Option<&'static str>,
     ) -> (String, tokio::task::JoinHandle<String>) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        // Q21-T1: the identity-provider client refuses a private host unless
+        // it is listed; without this the request never connects and the
+        // server below waits forever for it.
+        let _ = crate::oidc::configure_identity_providers(["http://127.0.0.1"]);
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let handle = tokio::spawn(async move {
