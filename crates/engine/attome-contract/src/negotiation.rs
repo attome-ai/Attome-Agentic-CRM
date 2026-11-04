@@ -639,7 +639,7 @@ pub async fn tick(state: &EngineState) -> Result<u64, AppError> {
                 }
             }
             Err(e) => {
-                tracing::warn!(%contract, %version, error = %e,
+                tracing::warn!(%contract, %version, error = ?e,
                     "contract review: a counterparty version was not compared; tried again next tick");
             }
         }

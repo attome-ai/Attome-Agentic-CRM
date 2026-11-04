@@ -27,6 +27,13 @@ const PACKS: [&str; 6] = [
 ];
 
 async fn install(app: &TestApp) {
+    // The app registers the comparison job (W1-T7); this binary stands in.
+    let _ = attome_core::jobs::JOB_TYPES.register(
+        attome_jobs::JobType::new(attome_contract::compare::JOB, 1),
+        |_state: attome_core::EngineState, _job: attome_jobs::RegisteredJob| async move {
+            Ok::<(), attome_jobs::registry::BoxError>(())
+        },
+    );
     attome_api::changeset::boot::apply_platform_definition(&app.state, "attome-contract")
         .await
         .expect("apply the contract platform definition");
