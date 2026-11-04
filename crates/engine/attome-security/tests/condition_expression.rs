@@ -156,3 +156,39 @@ async fn untranslatable_condition_rejected() {
     let ctx = ctx_with("deal.read", "removed_field > 1");
     assert!(visible(&db, &table, &ctx).await.is_empty());
 }
+
+/// A path that binds the read scope as flat text (export, search) or counts
+/// its placeholders (a page's LIMIT after it) sees every bind, the tier's six
+/// and the condition's, in order.
+#[test]
+fn a_conditional_scope_counts_and_lists_every_bind() {
+    let ctx = ctx_with("deal.read", "amount > 100 and status == \"open\"");
+    for (level, tier) in [
+        (AccessLevel::Global, 0),
+        (AccessLevel::Team, attome_security::RLS_BIND_COUNT),
+    ] {
+        let pred = rls_predicate_with_conditions(
+            &ctx,
+            Uuid::now_v7(),
+            "t",
+            level,
+            Capability::View,
+            "deal.read",
+            &attrs(),
+            false,
+            1,
+        )
+        .expect("a condition narrows at every level");
+        assert_eq!(pred.tier_binds.is_some(), tier > 0, "{level:?}");
+        assert!(!pred.condition_binds.is_empty(), "{level:?}");
+        assert_eq!(pred.bind_count(), tier + pred.condition_binds.len());
+        let text = pred.to_text_params();
+        assert_eq!(text.len(), pred.bind_count());
+        assert_eq!(text[tier..], pred.condition_binds[..]);
+        assert_eq!(
+            attome_security::scope_bind_count(Some(&pred)),
+            pred.bind_count()
+        );
+    }
+    assert_eq!(attome_security::scope_bind_count(None), 0);
+}
