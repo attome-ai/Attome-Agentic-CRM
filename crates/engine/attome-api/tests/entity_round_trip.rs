@@ -7815,11 +7815,23 @@ fn data_match_sweep_finds_the_true_duplicate_and_ignores_the_unrelated_record() 
         let acme_2 = create("Acme Corp").await;
         let widget = create("Widget Inc").await;
 
-        let stats = attome_api::duplicates_match::run_match_sweep(&state)
+        // The sweep reads the change feed, which shows an event once its
+        // transaction is below the cluster's xmin watermark: a busy shared
+        // cluster can hold the second "Acme Corp" back for a pass or two.
+        let started = std::time::Instant::now();
+        let mut stats = attome_api::duplicates_match::run_match_sweep(&state)
             .await
             .expect("match sweep");
+        let mut written = stats.candidates_written;
+        while written == 0 && started.elapsed() < std::time::Duration::from_secs(60) {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            stats = attome_api::duplicates_match::run_match_sweep(&state)
+                .await
+                .expect("match sweep");
+            written += stats.candidates_written;
+        }
         assert!(
-            stats.candidates_written >= 1,
+            written >= 1,
             "the sweep must find the genuine duplicate pair: {stats:?}"
         );
 
