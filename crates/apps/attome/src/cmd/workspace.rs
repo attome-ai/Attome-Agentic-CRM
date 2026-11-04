@@ -615,14 +615,14 @@ mod tests {
                 if method == "DELETE" {
                     return (StatusCode::NO_CONTENT, Json(Value::Null));
                 }
+                if path.ends_with("/missing/publish") {
+                    return (StatusCode::NOT_FOUND, Json(json!({ "error": "not_found" })));
+                }
                 if path.ends_with("/publish") && method == "POST" {
                     return (
                         StatusCode::OK,
                         Json(json!({ "apply": { "status": "queued", "approval_pending": false } })),
                     );
-                }
-                if path.ends_with("/missing/publish") {
-                    return (StatusCode::NOT_FOUND, Json(json!({ "error": "not_found" })));
                 }
                 (
                     StatusCode::CREATED,
