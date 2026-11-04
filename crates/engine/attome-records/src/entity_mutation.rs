@@ -4465,6 +4465,12 @@ pub(crate) async fn reactivate_dependents_on_restore(
         .map_err(AppError::internal)?;
     }
 
+    // A8-T2: what a polymorphic pair's cascade took is not a lookup
+    // dependent; its ledger rows are what is left for this record, and the
+    // ledger walk compares the polymorphic id as text.
+    cascade_summary
+        .extend(crate::cascade::restore_below(&mut *tx, vec![record_id], user_id).await?);
+
     Ok(cascade_summary)
 }
 
