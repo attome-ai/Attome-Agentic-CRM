@@ -2375,7 +2375,7 @@ pub async fn execute_stored_query_with_definition(
                       AND {own_scope_sql}) OR {poly_sql})"
                 ));
             }
-        } else {
+        } else if !ctx.is_admin {
             // D-369/D-371: the same predicate a single record's read takes
             // (`entity_crud::access`): the tier, the owner arm and every grant
             // condition on `{entity}.read` — a list must never show a row the
@@ -2388,14 +2388,16 @@ pub async fn execute_stored_query_with_definition(
                 .get_by_id(entity_id)
                 .map(|meta| meta.attrs.clone())
                 .unwrap_or_default();
-            let owner_visible = attome_security::resolve_owner_visible(
-                &state.base.db,
-                ctx.user_id,
-                entity_id,
-                &entity_logicalname,
-                attome_security::RecordAction::Read,
-            )
-            .await?;
+            // At Global scope there is no tier, so the owner arm is moot.
+            let owner_visible = access_level != AccessLevel::Global
+                && attome_security::resolve_owner_visible(
+                    &state.base.db,
+                    ctx.user_id,
+                    entity_id,
+                    &entity_logicalname,
+                    attome_security::RecordAction::Read,
+                )
+                .await?;
             if let Some(pred) = attome_security::rls_predicate_with_conditions(
                 ctx,
                 entity_id,
