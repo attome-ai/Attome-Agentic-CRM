@@ -1228,6 +1228,8 @@ const AUTHZ_CALLS: &[&str] = &[
     "require_audit_reader",
     // R4-T1: only a custodian of the hold acknowledges it.
     "require_custodian",
+    // T1-T3: the data-model area, or the `develop.build` privilege.
+    "require_builder",
 ];
 
 fn body_has_direct_check(body: &str) -> bool {

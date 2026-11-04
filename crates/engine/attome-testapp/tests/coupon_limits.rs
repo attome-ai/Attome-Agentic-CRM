@@ -5,7 +5,8 @@
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
-    reason = "test helpers: a failed setup step should panic with its message"
+    clippy::disallowed_methods,
+    reason = "test helpers: a failed setup step should panic with its message, and the race opens raw pool transactions, where 503 mapping is moot"
 )]
 
 use attome_sales::promotion::redeem_coupon;

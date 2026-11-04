@@ -18,6 +18,15 @@ use rust_decimal::Decimal;
 use serde_json::Value;
 use uuid::Uuid;
 
+/// status, source number, contact, account and the VAT check of one order.
+type OrderRow = (
+    Option<String>,
+    Option<String>,
+    Option<Uuid>,
+    Option<Uuid>,
+    Option<bool>,
+);
+
 const PACKS: [&str; 8] = [
     "crm",
     "sales",
@@ -160,13 +169,7 @@ fn a_shop_order_synced_twice_is_one_order() {
             1
         );
         assert_eq!(count(&app, "SELECT count(*) FROM shop_sync_map").await, 3);
-        let (status, source_number, contact, owner, tax): (
-            Option<String>,
-            Option<String>,
-            Option<Uuid>,
-            Option<Uuid>,
-            Option<bool>,
-        ) = sqlx::query_as(
+        let (status, source_number, contact, owner, tax): OrderRow = sqlx::query_as(
             "SELECT status::text, source_order_number, updates_contact_ref, account_ref, tax_total = 15 \
                FROM \"order\" WHERE id = $1",
         )

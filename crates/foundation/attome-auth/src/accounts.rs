@@ -1327,7 +1327,11 @@ mod tests {
 
         let result =
             verify_google_id_token_at(&unconnected_pool(), &issuer, "client-id", &token).await;
-        assert!(matches!(result, Err(AppError::Unauthorized)));
+        assert!(
+            matches!(result, Err(AppError::Unauthorized)),
+            "{:?}",
+            result.err()
+        );
     }
 
     // issue_access_token now reads epoch::current_epoch, which always queries
