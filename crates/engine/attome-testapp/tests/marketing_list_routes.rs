@@ -331,19 +331,20 @@ fn starter_segments_name_their_queries() {
             return;
         };
         install(&app).await;
-        let starters: Vec<(String, Option<String>)> = sqlx::query_as(
-            "SELECT name, query_id FROM marketing_list WHERE description LIKE 'Starter segment.%'",
-        )
-        .fetch_all(app.db())
-        .await
-        .unwrap();
-        assert_eq!(starters.len(), 4, "{starters:?}");
-        for (name, query) in starters {
-            let query = query.unwrap_or_default();
+        // The pack ships the four starter queries (0015); a marketer makes
+        // the lists over them (marketing_list has no business key to write
+        // list rows by).
+        for name in [
+            "Engaged in the last 90 days",
+            "New this month",
+            "Unengaged for 6 months",
+            "Customers",
+        ] {
+            let query = format!("contact/{name}");
             let resolved = attome_marketing::segment::resolve_query(app.db(), &query)
                 .await
                 .unwrap();
-            assert!(resolved.is_some(), "{name}: {query} names no stored query");
+            assert!(resolved.is_some(), "{query} names no stored query");
         }
         // An unused list stops refreshing.
         let list = static_list(&app).await;
