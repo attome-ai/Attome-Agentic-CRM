@@ -31,6 +31,8 @@ pub mod aggregate_cache;
 /// A25-T7: searching in words (`mode=ask`).
 pub mod ask;
 pub mod backfill;
+/// D-369: search hits checked against read grant conditions.
+pub mod condition_filter;
 /// A25-T3: synonyms, stop words, boosts, pins and personal ranking.
 pub mod controls;
 pub mod corpus;

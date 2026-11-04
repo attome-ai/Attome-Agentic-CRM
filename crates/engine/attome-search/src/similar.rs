@@ -343,6 +343,10 @@ async fn neighbours(
         .fetch_all(pool)
         .await
         .map_err(AppError::internal)?;
+    // D-369: a passage of a record a read grant condition hides is left out.
+    let rows =
+        crate::condition_filter::retain_admitted(state, ctx, rows, |row| (row.0.as_str(), row.1))
+            .await;
     Ok(rows
         .into_iter()
         .map(

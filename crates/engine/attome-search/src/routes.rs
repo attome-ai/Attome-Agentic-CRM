@@ -998,6 +998,12 @@ pub async fn execute_search_with(
         .take(page_size as usize)
         .collect();
     let has_more = found > (offset + page_size) as u64;
+    // D-369: a hit on an entity whose read grant carries a condition stays
+    // only when its record meets it (the index holds no record fields).
+    let page_rows = crate::condition_filter::retain_admitted(state, ctx, page_rows, |row| {
+        (row.1.as_str(), row.0)
+    })
+    .await;
 
     // Display text for the page, in a second read.
     //
