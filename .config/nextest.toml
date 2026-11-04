@@ -31,3 +31,10 @@ test-group = 'own-migrations'
 [[profile.default.overrides]]
 filter = 'package(attome-api) & binary(profiler_admin)'
 test-group = 'profiler-redis'
+
+# attome-testapp tests install whole packs on their own database and take
+# 60-180 s each on a CI runner; at the default 3 x 60 s the slowest were
+# killed at random. They get five periods.
+[[profile.default.overrides]]
+filter = 'package(attome-testapp)'
+slow-timeout = { period = "60s", terminate-after = 5 }
