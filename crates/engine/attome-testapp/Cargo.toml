@@ -35,6 +35,8 @@ attome-document.workspace = true
 attome-einvoice.workspace = true
 attome-fulfilment.workspace = true
 attome-hr.workspace       = true
+# The marketing list, nurture and profile routes their tests call.
+attome-marketing.workspace = true
 attome-workforce.workspace = true
 attome-modules.workspace  = true
 attome-ops.workspace      = true
@@ -72,7 +74,6 @@ attome-portal.workspace = true
 # F9-T3: deal registration conflicts, decisions and lapse.
 attome-jobs.workspace = true
 attome-ledger.workspace = true
-attome-marketing.workspace = true
 attome-metadata.workspace = true
 attome-extension.workspace = true
 # K6-T4: the crawled-item import and update.

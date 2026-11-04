@@ -269,6 +269,10 @@ async fn build_on(config: AppConfig, db: attome_db::DbPool) -> TestApp {
         // F9, D6: the partner and sales routes their pack tests call.
         .register(attome_partner::PartnerModel)
         .register(attome_sales::SalesModel)
+        // D22: the call page, recording and coaching routes; E: the
+        // marketing list and nurture routes.
+        .register(attome_callintel::CallintelModel)
+        .register(attome_marketing::MarketingModel)
         .register(attome_docgen::model::DocgenModel)
         // A25: the search settings and facet routes `search_settings` calls.
         .register(attome_search::SearchModel)
