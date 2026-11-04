@@ -513,7 +513,7 @@ async fn lifecycle(
     headers: &HeaderMap,
     id: Uuid,
     body: Option<Json<StateBody>>,
-    action: &str,
+    action: &'static str,
 ) -> Result<Json<AgentPrincipal>, AppError> {
     let expected = if_match(headers)?;
     let reason = body.and_then(|Json(b)| b.reason);

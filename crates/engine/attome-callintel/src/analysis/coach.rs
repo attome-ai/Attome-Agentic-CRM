@@ -111,7 +111,7 @@ pub async fn create_task_from_finding(
     if subject.is_empty() {
         subject = "Next step from a call".to_owned();
     }
-    let mut body = json!({
+    let body = json!({
         "subject": subject,
         "activity_type": "task",
         "description": text,
