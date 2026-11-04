@@ -117,10 +117,13 @@ async fn fixture(app: &TestApp) -> (String, Vec<Uuid>) {
     (child, ids)
 }
 
+/// One list, run for real: `no-cache` skips the five-second repeat cache
+/// (AA4-T9), which would answer a repeat without reading anything.
 async fn list(app: &TestApp, entity: &str, page_size: i64) -> (usize, usize) {
-    let ((status, body), queries) = count_queries(app.request(
+    let ((status, body), queries) = count_queries(app.request_with(
         Method::POST,
         "/api/v1/query/execute",
+        &[("cache-control", "no-cache")],
         Some(json!({ "entity": entity, "page_size": page_size })),
     ))
     .await;
