@@ -313,12 +313,15 @@ jobs:
           df -h . || true
       # No database here: the database suites print SKIP, and everything else
       # runs in parallel (.config/nextest.toml caps the threads for Windows).
+      # attome-testapp is left out: each of its ~200 targets needs the
+      # database (SKIP here) and links a whole server, which together filled
+      # the runner's 143 GB ("no space on device" while linking).
       - name: tests
         if: always()
         shell: bash
         run: |
           set -o pipefail
-          cargo nextest run --workspace --no-fail-fast 2>&1 | tee -a release-check.log
+          cargo nextest run --workspace --exclude attome-testapp --no-fail-fast 2>&1 | tee -a release-check.log
       - name: summarize failures
         if: failure()
         shell: bash
