@@ -278,6 +278,13 @@ async fn every_profiler_key_is_namespaced_and_expires() {
     let stat_key = format!("{STAT_PREFIX}{top}");
     let first: i64 = pool.pttl(stat_key.as_str()).await.expect("pttl");
     tokio::time::sleep(Duration::from_millis(1_100)).await;
+    // Read after the wait: each write resets the TTL to the full retention,
+    // so only a value that has had time to fall shows the slide.
+    let decayed: i64 = pool.pttl(stat_key.as_str()).await.expect("pttl");
+    assert!(
+        decayed < first,
+        "the TTL falls between writes ({first} -> {decayed})"
+    );
     flush(
         &attome_cache::Store::Redis(pool.clone()),
         &top,
@@ -288,8 +295,8 @@ async fn every_profiler_key_is_namespaced_and_expires() {
     .expect("second flush");
     let second: i64 = pool.pttl(stat_key.as_str()).await.expect("pttl");
     assert!(
-        second > first,
-        "the TTL must slide forward on every write (first {first}, second {second})"
+        second > decayed,
+        "the TTL must slide forward on every write (before {decayed}, after {second})"
     );
 }
 
