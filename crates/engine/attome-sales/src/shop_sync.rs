@@ -465,6 +465,17 @@ async fn write_product(
     }
 }
 
+/// The statuses an order passes through on its way from `current` to
+/// `target`, before `target` itself: the sales pack moves an order draft ->
+/// confirmed -> fulfilled. Empty when `target` is one step away or the
+/// order is already there. Pure.
+pub fn status_steps(current: Option<&str>, target: &str) -> Vec<&'static str> {
+    match (current, target) {
+        (Some("draft"), "fulfilled") => vec!["confirmed"],
+        _ => Vec::new(),
+    }
+}
+
 /// The D10 status for a shop's status word; `None` leaves it as it is.
 pub fn order_status(shop_status: &str) -> Option<&'static str> {
     match shop_status.trim().to_lowercase().as_str() {
@@ -528,6 +539,21 @@ async fn sync_order(
     .await?
     {
         Claim::Existing(id) => {
+            // The shop may report a status several steps on (a draft it
+            // has since delivered): walk the order through the steps
+            // between, so each is a configured transition.
+            if let Some(target) = head.get("status").and_then(Value::as_str) {
+                let current: Option<String> =
+                    sqlx::query_scalar("SELECT status::text FROM \"order\" WHERE id = $1")
+                        .bind(id)
+                        .fetch_optional(&state.base.db)
+                        .await
+                        .map_err(AppError::internal)?
+                        .flatten();
+                for step in status_steps(current.as_deref(), target) {
+                    update_target(state, ctx, "order", id, json!({ "status": step })).await?;
+                }
+            }
             update_target(state, ctx, "order", id, head).await?;
             return Ok(Synced {
                 target_entity: "order",
@@ -694,6 +720,14 @@ mod tests {
             line_amounts(&line("1", "20", None), true),
             (dec("20"), Decimal::ZERO, dec("20"))
         );
+    }
+
+    #[test]
+    fn a_delivered_draft_is_confirmed_first() {
+        assert_eq!(status_steps(Some("draft"), "fulfilled"), vec!["confirmed"]);
+        assert!(status_steps(Some("confirmed"), "fulfilled").is_empty());
+        assert!(status_steps(Some("draft"), "cancelled").is_empty());
+        assert!(status_steps(None, "fulfilled").is_empty());
     }
 
     #[test]
