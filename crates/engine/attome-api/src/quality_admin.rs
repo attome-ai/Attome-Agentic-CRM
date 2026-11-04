@@ -319,7 +319,7 @@ async fn list_issues(
     // cannot read. An entity they read in full is one name in $5; each
     // entity they read only in part adds its own record predicate.
     let mut full: Vec<String> = Vec::new();
-    let mut partial: Vec<(String, attome_security::RlsPredicate)> = Vec::new();
+    let mut partial: Vec<(String, attome_security::ConditionAwarePredicate)> = Vec::new();
     let mut parts = String::new();
     let mut next = if readable.is_some() { 6 } else { 5 };
     if let Some(entities) = &readable {
@@ -329,32 +329,44 @@ async fn list_issues(
             attome_security::RecordAction::Read,
         )
         .await?;
-        let registry = state.entities.load();
-        for name in entities {
-            let Some(meta) = registry.get(name) else {
-                continue;
-            };
+        let metas: Vec<(String, Uuid, Vec<attome_core::AttrInfo>)> = {
+            let registry = state.entities.load();
+            entities
+                .iter()
+                .filter_map(|name| {
+                    registry
+                        .get(name)
+                        .map(|meta| (name.clone(), meta.entity_id, meta.attrs.clone()))
+                })
+                .collect()
+        };
+        for (name, entity_id, attrs) in metas {
             let level = levels
-                .get(name)
+                .get(&name)
                 .map_or(attome_server::security::AccessLevel::None, |(_, l)| *l);
-            match attome_security::rls_predicate(
+            // D-369/D-371: the read scope a record read takes.
+            match attome_security::read_scope(
+                &state.base.db,
                 &ctx,
-                meta.entity_id,
-                "",
+                entity_id,
+                &name,
                 level,
-                attome_security::RecordAction::Read.share_capability(),
+                &attrs,
+                "",
                 next + 1,
-            ) {
-                None => full.push(name.clone()),
+            )
+            .await?
+            {
+                None => full.push(name),
                 Some(pred) => {
                     parts.push_str(&format!(
                         " OR (entity_logicalname = ${next} AND record_id IN \
                            (SELECT id FROM {} WHERE true {}))",
-                        attome_core::quote_ident(name),
+                        attome_core::quote_ident(&name),
                         pred.sql
                     ));
-                    next += 1 + attome_security::RLS_BIND_COUNT;
-                    partial.push((name.clone(), pred));
+                    next += 1 + pred.bind_count();
+                    partial.push((name, pred));
                 }
             }
         }
@@ -383,7 +395,7 @@ async fn list_issues(
     if readable.is_some() {
         list = list.bind(&full);
         for (name, pred) in &partial {
-            list = attome_security::bind_rls_predicate_as(list.bind(name), &pred.binds);
+            list = attome_security::bind_read_scope_as(list.bind(name), pred);
         }
     }
     let items: Vec<QualityIssueView> = list
@@ -433,7 +445,7 @@ async fn list_issues(
     if readable.is_some() {
         count = count.bind(&full);
         for (name, pred) in &partial {
-            count = attome_security::bind_rls_predicate(count.bind(name), &pred.binds);
+            count = attome_security::bind_read_scope(count.bind(name), pred);
         }
     }
     let total = count
