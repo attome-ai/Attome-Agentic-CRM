@@ -408,6 +408,38 @@ impl TestApp {
         &self.state.base.db
     }
 
+    /// Applies every changeset of each pack under `packs/`, in order (a
+    /// pack's dependencies first), then rebuilds the metadata registry so the
+    /// installed fields are readable at once. Idempotent.
+    pub async fn install_packs(&self, packs: &[&str]) {
+        for pack in packs {
+            let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../../packs")
+                .join(pack)
+                .join("changesets");
+            let mut files: Vec<_> = std::fs::read_dir(&dir)
+                .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
+                .flatten()
+                .map(|e| e.path())
+                .filter(|p| p.extension().is_some_and(|x| x == "json"))
+                .collect();
+            files.sort();
+            for file in &files {
+                let text = std::fs::read_to_string(file)
+                    .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+                let value: Value = serde_json::from_str(&text)
+                    .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+                attome_api::changeset::boot::apply_pack_document(&self.state, &value)
+                    .await
+                    .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+            }
+        }
+        let registry = attome_core::build_registry(&self.state.base.db)
+            .await
+            .expect("build the metadata registry");
+        self.state.entities.swap(registry);
+    }
+
     /// Sends one request as the administrator; returns the status and the
     /// JSON body (`Null` when the body is empty or not JSON).
     pub async fn request(

@@ -83,6 +83,7 @@ fn hooks_change_reject_and_follow_the_save() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        app.install_packs(&["crm"]).await;
         let saves = Arc::new(AtomicUsize::new(0));
         let mut state = app.state.clone();
         state.record_hooks = Arc::new(vec![
@@ -187,6 +188,7 @@ fn recursive_hooks_stop_at_depth_eight() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        app.install_packs(&["crm"]).await;
         let calls = Arc::new(AtomicUsize::new(0));
         let mut state = app.state.clone();
         state.record_hooks = Arc::new(vec![
@@ -249,6 +251,7 @@ fn after_commit_hooks_run_as_a_job_once_the_write_commits() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        app.install_packs(&["crm"]).await;
         let runs = Arc::new(AtomicUsize::new(0));
         let mut state = app.state.clone();
         state.record_hooks = Arc::new(vec![
@@ -358,6 +361,7 @@ fn bulk_writes_reach_after_commit_hooks_in_one_batch() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        app.install_packs(&["crm"]).await;
         sqlx::query("DELETE FROM record_hook_outbox")
             .execute(app.db())
             .await

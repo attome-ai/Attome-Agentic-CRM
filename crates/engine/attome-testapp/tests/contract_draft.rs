@@ -23,7 +23,7 @@ const PACKS: [&str; 6] = [
 ];
 
 const BODY: &str = "<h1>{{ title }}</h1><p>Value: {{ contract_value }}</p>\
-    {% for c in contract_clause limit 20 %}<p>{{ c.title }}</p>{% endfor %}";
+    {% for c in contract_clause limit 20 %}<p>{{ c.title }}</p>{% end %}";
 
 async fn install(app: &TestApp) {
     for pack in PACKS {

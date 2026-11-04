@@ -228,7 +228,7 @@ fn money_path_create_amend_run_cancel() {
 // feature: F3
 // negative: GET /api/v1/billing/subscriptions/{id}
 #[test]
-fn unlicensed_billing_routes_are_404() {
+fn unlicensed_billing_routes_are_hidden() {
     attome_testkit::run_shared(async {
         let Some(app) = TestApp::start().await else {
             return;
@@ -246,7 +246,9 @@ fn unlicensed_billing_routes_are_404() {
             )
             .await;
         app.state.modules.store(before);
-        assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+        // The licence gate's answer for a module the licence leaves out.
+        assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+        assert_eq!(body["code"], "feature_hidden", "{body}");
     });
 }
 

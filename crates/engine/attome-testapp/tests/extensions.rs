@@ -33,6 +33,7 @@ fn extensions_version_publish_roll_back_and_switch_off() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        app.install_packs(&["crm"]).await;
         let name = format!("ext_{}", &Uuid::now_v7().simple().to_string()[24..]);
         let manifest =
             json!({ "entities": { "account": { "read": true } }, "hosts": ["api.erp.example"] });
@@ -198,6 +199,7 @@ fn published_extensions_run_at_their_hook_stage() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        app.install_packs(&["crm"]).await;
         let name = format!("hook_{}", &Uuid::now_v7().simple().to_string()[24..]);
         let manifest = json!({
             "entities": { "account": { "read": true, "write": true, "attributes": ["name"] } },
@@ -336,6 +338,7 @@ fn a_job_extension_writes_what_it_answers_as_the_caller() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        app.install_packs(&["crm"]).await;
         let name = format!("job_{}", &Uuid::now_v7().simple().to_string()[24..]);
         let upload = |manifest: serde_json::Value| {
             let app = &app;
@@ -433,6 +436,7 @@ fn a_scheduled_job_extension_is_claimed_through_the_schedule_ledger() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        app.install_packs(&["crm"]).await;
         let name = format!("sched_{}", &Uuid::now_v7().simple().to_string()[24..]);
         let manifest = |cron: &str| {
             json!({
