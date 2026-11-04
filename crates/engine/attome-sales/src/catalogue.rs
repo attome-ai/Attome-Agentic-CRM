@@ -5,9 +5,7 @@
 //! search terms are bound, never written into the SQL.
 
 use attome_core::EngineState;
-use attome_security::{
-    RecordAction, bind_rls_predicate, resolve_entity_access_level, rls_predicate,
-};
+use attome_security::{RecordAction, resolve_entity_access_level};
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
@@ -123,20 +121,26 @@ pub(crate) async fn get_sales_price_list_products(
     )
     .await?;
     // $1 list, $2 date, $3 name pattern, $4 sku; record rules from $5.
-    let predicate = rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let scope_attrs = state
+        .entities
+        .load()
+        .get_by_id(product_entity)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let predicate = attome_security::read_scope(
+        &state.base.db,
         &ctx,
         product_entity,
-        "p",
+        "product",
         level,
-        RecordAction::Read.share_capability(),
+        &scope_attrs,
+        "p",
         5,
-    );
+    )
+    .await?;
     let rls = predicate.as_ref().map_or("", |p| p.sql.as_str());
-    let next = 5 + if predicate.is_some() {
-        attome_security::RLS_BIND_COUNT
-    } else {
-        0
-    };
+    let next = 5 + attome_security::scope_bind_count(predicate.as_ref());
     let from = format!(
         "FROM price_list_item i \
          JOIN price_list l ON l.id = i.price_list_ref \
@@ -184,8 +188,8 @@ pub(crate) async fn get_sales_price_list_products(
         .bind(&pattern)
         .bind(&sku);
     if let Some(p) = &predicate {
-        count = bind_rls_predicate(count, &p.binds);
-        rows = bind_rls_predicate(rows, &p.binds);
+        count = attome_security::bind_read_scope(count, p);
+        rows = attome_security::bind_read_scope(rows, p);
     }
     let total = count
         .fetch_one(&state.base.db)

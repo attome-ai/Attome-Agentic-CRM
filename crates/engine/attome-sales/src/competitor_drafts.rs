@@ -15,10 +15,7 @@
 
 use attome_core::EngineState;
 use attome_records::entity_crud::read_record_bulk;
-use attome_security::{
-    RecordAction, SecurityContextExt, bind_rls_predicate_as, resolve_entity_access_level,
-    rls_predicate,
-};
+use attome_security::{RecordAction, SecurityContextExt, resolve_entity_access_level};
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
 use serde::Serialize;
@@ -191,19 +188,29 @@ async fn readable_ids(
     let db = &state.base.db;
     let level =
         resolve_entity_access_level(db, ctx.user_id, entity_id, entity, RecordAction::Read).await?;
-    let predicate = rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let scope_attrs = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let predicate = attome_security::read_scope(
+        &state.base.db,
         ctx,
         entity_id,
-        alias,
+        entity,
         level,
-        RecordAction::Read.share_capability(),
+        &scope_attrs,
+        alias,
         2,
-    );
+    )
+    .await?;
     let rls = predicate.as_ref().map_or("", |p| p.sql.as_str());
     let sql = format!("{base} {rls} ORDER BY {order} LIMIT {DRAFT_SOURCES}");
     let mut query = sqlx::query_as::<_, (Uuid,)>(&sql).bind(deal.to_string());
     if let Some(p) = &predicate {
-        query = bind_rls_predicate_as(query, &p.binds);
+        query = attome_security::bind_read_scope_as(query, p);
     }
     Ok(query
         .fetch_all(db)
@@ -387,14 +394,24 @@ pub async fn battlecard_update_draft(
     )
     .await?;
     // $1 the competitor; record rules from $2.
-    let predicate = rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let scope_attrs = state
+        .entities
+        .load()
+        .get_by_id(review_entity)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let predicate = attome_security::read_scope(
+        &state.base.db,
         ctx,
         review_entity,
-        "r",
+        "win_loss_review",
         level,
-        RecordAction::Read.share_capability(),
+        &scope_attrs,
+        "r",
         2,
-    );
+    )
+    .await?;
     let rls = predicate.as_ref().map_or("", |p| p.sql.as_str());
     let sql = format!(
         "SELECT r.id FROM win_loss_review r JOIN opportunity o ON o.id = r.opportunity_ref \
@@ -409,7 +426,7 @@ pub async fn battlecard_update_draft(
     );
     let mut query = sqlx::query_as::<_, (Uuid,)>(&sql).bind(competitor);
     if let Some(p) = &predicate {
-        query = bind_rls_predicate_as(query, &p.binds);
+        query = attome_security::bind_read_scope_as(query, p);
     }
     let ids = query.fetch_all(db).await.map_err(AppError::internal)?;
     let mut losses = 0;

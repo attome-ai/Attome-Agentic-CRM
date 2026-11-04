@@ -13,9 +13,7 @@
 //! nothing.
 
 use attome_core::EngineState;
-use attome_security::{
-    RecordAction, bind_rls_predicate, field_gate, resolve_entity_access_level, rls_predicate,
-};
+use attome_security::{RecordAction, field_gate, resolve_entity_access_level};
 use attome_server::{
     authz::{Authorized, Privilege, PrivilegeKey},
     security::SecurityContext,
@@ -112,7 +110,7 @@ const SOURCES: [(&str, &str); 3] = [
 /// The caller's view of one source: its entity id, the record-rule
 /// predicate (none for a global reader), and whether amounts show.
 struct Scope {
-    predicate: Option<attome_security::RlsPredicate>,
+    predicate: Option<attome_security::ConditionAwarePredicate>,
     amounts: bool,
 }
 
@@ -144,14 +142,24 @@ async fn scope(
         RecordAction::Read,
     )
     .await?;
-    let predicate = rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let scope_attrs = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let predicate = attome_security::read_scope(
+        &state.base.db,
         ctx,
         entity_id,
-        "s",
+        entity,
         level,
-        RecordAction::Read.share_capability(),
+        &scope_attrs,
+        "s",
         first_placeholder,
-    );
+    )
+    .await?;
     let amounts = amount_attr.is_some_and(|attr| {
         field_gate::readable(
             ctx,
@@ -198,9 +206,7 @@ async fn statement(
             "{select} AND ($2::uuid IS NULL OR s.owner_ref = $2) \
              AND ($3::uuid IS NULL OR s.participant_ref = $3) {rls}"
         ));
-        if scope.predicate.is_some() {
-            next += attome_security::RLS_BIND_COUNT;
-        }
+        next += attome_security::scope_bind_count(scope.predicate.as_ref());
         scopes.push((entity, scope));
     }
     if parts.is_empty() {
@@ -228,8 +234,8 @@ async fn statement(
         .bind(participant);
     for (_, scope) in &scopes {
         if let Some(p) = &scope.predicate {
-            count = bind_rls_predicate(count, &p.binds);
-            rows = bind_rls_predicate(rows, &p.binds);
+            count = attome_security::bind_read_scope(count, p);
+            rows = attome_security::bind_read_scope(rows, p);
         }
     }
     let total = count

@@ -14,9 +14,7 @@
 //! - Head-to-head counts and sums only the deals the caller may read.
 
 use attome_core::EngineState;
-use attome_security::{
-    RecordAction, bind_rls_predicate_as, resolve_entity_access_level, rls_predicate,
-};
+use attome_security::{RecordAction, resolve_entity_access_level};
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{
@@ -389,14 +387,24 @@ pub async fn head_to_head(
         resolve_entity_access_level(db, ctx.user_id, entity, "opportunity", RecordAction::Read)
             .await?;
     // $1 the competitor; record rules from $2.
-    let predicate = rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let scope_attrs = state
+        .entities
+        .load()
+        .get_by_id(entity)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let predicate = attome_security::read_scope(
+        &state.base.db,
         ctx,
         entity,
-        "o",
+        "opportunity",
         level,
-        RecordAction::Read.share_capability(),
+        &scope_attrs,
+        "o",
         2,
-    );
+    )
+    .await?;
     let rls = predicate.as_ref().map_or("", |p| p.sql.as_str());
     let deals = format!(
         "WITH deals AS (SELECT o.id, o.stage, o.amount FROM opportunity o \
@@ -436,9 +444,9 @@ pub async fn head_to_head(
     let mut mentions =
         sqlx::query_as::<_, (Uuid, Uuid, Option<String>)>(&mentions_sql).bind(competitor);
     if let Some(p) = &predicate {
-        totals = bind_rls_predicate_as(totals, &p.binds);
-        reasons = bind_rls_predicate_as(reasons, &p.binds);
-        mentions = bind_rls_predicate_as(mentions, &p.binds);
+        totals = attome_security::bind_read_scope_as(totals, p);
+        reasons = attome_security::bind_read_scope_as(reasons, p);
+        mentions = attome_security::bind_read_scope_as(mentions, p);
     }
     let (won, lost, open, won_amount, lost_amount, open_amount) =
         totals.fetch_one(db).await.map_err(AppError::internal)?;

@@ -37,6 +37,7 @@ pub mod otp_sender;
 pub mod ownership;
 pub mod parent_access;
 pub mod permission_sets;
+pub mod read_scope;
 pub mod reconcile;
 pub mod resolver;
 pub mod revalidation;
@@ -63,6 +64,7 @@ pub use db::{
     resolve_all_entity_access_levels, resolve_all_owner_visible, resolve_default_share_entities,
     resolve_entity_access_level, resolve_owner_visible,
 };
+pub use read_scope::{bind_read_scope, bind_read_scope_as, read_scope, scope_bind_count};
 pub use resolver::{EngineSecurityResolver, resolve_uncached};
 pub use rls::{
     Capability, ConditionAwarePredicate, FastTierColumns, PolymorphicAuditPredicate, RlsPredicate,

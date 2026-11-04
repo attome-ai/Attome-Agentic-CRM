@@ -1108,55 +1108,17 @@ pub(crate) async fn read_scope(
     alias: &str,
     first: usize,
 ) -> Result<Option<attome_security::ConditionAwarePredicate>, AppError> {
-    if ctx.is_admin {
-        return Ok(None);
-    }
-    let owner_visible = access_level != AccessLevel::Global
-        && resolve_owner_visible(
-            &state.base.db,
-            ctx.user_id,
-            entity_id,
-            entity_name,
-            RecordAction::Read,
-        )
-        .await?;
-    Ok(rls_predicate_with_conditions(
+    attome_security::read_scope(
+        &state.base.db,
         ctx,
         entity_id,
-        alias,
+        entity_name,
         access_level,
-        RecordAction::Read.share_capability(),
-        &format!("{entity_name}.read"),
         attrs,
-        owner_visible,
+        alias,
         first,
-    ))
+    )
+    .await
 }
 
-/// Binds a [`read_scope`] predicate's values onto a scalar query, in order.
-pub(crate) fn bind_read_scope<'q, O>(
-    mut q: sqlx::query::QueryScalar<'q, sqlx::Postgres, O, sqlx::postgres::PgArguments>,
-    scope: &'q attome_security::ConditionAwarePredicate,
-) -> sqlx::query::QueryScalar<'q, sqlx::Postgres, O, sqlx::postgres::PgArguments> {
-    if let Some(tier) = &scope.tier_binds {
-        q = bind_rls_predicate(q, tier);
-    }
-    for bind in &scope.condition_binds {
-        q = q.bind(bind);
-    }
-    q
-}
-
-/// [`bind_read_scope`] for a row query.
-pub(crate) fn bind_read_scope_as<'q, O>(
-    mut q: sqlx::query::QueryAs<'q, sqlx::Postgres, O, sqlx::postgres::PgArguments>,
-    scope: &'q attome_security::ConditionAwarePredicate,
-) -> sqlx::query::QueryAs<'q, sqlx::Postgres, O, sqlx::postgres::PgArguments> {
-    if let Some(tier) = &scope.tier_binds {
-        q = attome_security::bind_rls_predicate_as(q, tier);
-    }
-    for bind in &scope.condition_binds {
-        q = q.bind(bind);
-    }
-    q
-}
+pub(crate) use attome_security::{bind_read_scope, bind_read_scope_as};

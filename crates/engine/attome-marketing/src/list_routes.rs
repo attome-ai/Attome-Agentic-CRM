@@ -21,10 +21,7 @@
 
 use attome_core::record_check::{RecordCheck, RecordCheckFuture, RecordSave};
 use attome_core::{EngineState, quote_ident};
-use attome_security::{
-    RLS_BIND_COUNT, RecordAction, bind_rls_predicate, bind_rls_predicate_as,
-    resolve_entity_access_level, rls_predicate,
-};
+use attome_security::{RecordAction, resolve_entity_access_level};
 use attome_server::authz::{Authorized, Privilege};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
@@ -234,26 +231,36 @@ pub async fn members(
     )
     .await?;
     // $1 the list; the predicate's binds from $2.
-    let pred = rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let scope_attrs = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let pred = attome_security::read_scope(
+        &state.base.db,
         ctx,
         entity_id,
-        "p",
+        &entity,
         level,
-        RecordAction::Read.share_capability(),
+        &scope_attrs,
+        "p",
         2,
-    );
+    )
+    .await?;
     let from = format!(
         "FROM marketing_list_member m JOIN {} p ON p.id = m.person_id \
          WHERE m.list_id = $1 AND p.is_active IS NOT FALSE {}",
         quote_ident(&entity),
         pred.as_ref().map_or("", |p| p.sql.as_str())
     );
-    let next = 2 + if pred.is_some() { RLS_BIND_COUNT } else { 0 };
+    let next = 2 + attome_security::scope_bind_count(pred.as_ref());
 
     let count_sql = format!("SELECT COUNT(*) {from}");
     let mut count = sqlx::query_scalar::<_, i64>(&count_sql).bind(list);
     if let Some(p) = &pred {
-        count = bind_rls_predicate(count, &p.binds);
+        count = attome_security::bind_read_scope(count, p);
     }
     let total = count
         .fetch_one(&state.base.db)
@@ -267,7 +274,7 @@ pub async fn members(
     );
     let mut rows = sqlx::query_as::<_, MarketingListMember>(&page_sql).bind(list);
     if let Some(p) = &pred {
-        rows = bind_rls_predicate_as(rows, &p.binds);
+        rows = attome_security::bind_read_scope_as(rows, p);
     }
     let items = rows
         .bind(window.page_size)

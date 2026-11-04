@@ -405,31 +405,37 @@ async fn get_enrolments(
     )
     .await?;
     // $1 the definition, $2 the entity name; the predicate's binds from $3.
-    let pred = attome_security::rls_predicate(
+    // D-369/D-371: the read scope a record read takes.
+    let scope_attrs = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    let pred = attome_security::read_scope(
+        &state.base.db,
         &ctx,
         entity_id,
-        "p",
+        &entity,
         level,
-        attome_security::RecordAction::Read.share_capability(),
+        &scope_attrs,
+        "p",
         3,
-    );
+    )
+    .await?;
     let from = format!(
         "FROM marketing_journey_enrolment e JOIN {} p ON p.id = e.person_id \
          WHERE e.definition_id = $1 AND e.person_entity = $2 {}",
         attome_core::quote_ident(&entity),
         pred.as_ref().map_or("", |p| p.sql.as_str())
     );
-    let next = 3 + if pred.is_some() {
-        attome_security::RLS_BIND_COUNT
-    } else {
-        0
-    };
+    let next = 3 + attome_security::scope_bind_count(pred.as_ref());
     let count_sql = format!("SELECT COUNT(*) {from}");
     let mut count = sqlx::query_scalar::<_, i64>(&count_sql)
         .bind(definition)
         .bind(&entity);
     if let Some(p) = &pred {
-        count = attome_security::bind_rls_predicate(count, &p.binds);
+        count = attome_security::bind_read_scope(count, p);
     }
     let total = count
         .fetch_one(&state.base.db)
@@ -445,7 +451,7 @@ async fn get_enrolments(
         .bind(definition)
         .bind(&entity);
     if let Some(p) = &pred {
-        rows = attome_security::bind_rls_predicate_as(rows, &p.binds);
+        rows = attome_security::bind_read_scope_as(rows, p);
     }
     let items = rows
         .bind(window.page_size)
