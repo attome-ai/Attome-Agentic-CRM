@@ -625,7 +625,19 @@ async fn apply_multi_entity_record_scope(
             .get(&logicalname)
             .map(|(_, level)| *level)
             .unwrap_or(AccessLevel::None);
-        if access_level == AccessLevel::Global {
+        // D-369: a grant condition on `{entity}.read` narrows at every
+        // level, Global included: each mapped id column must name a record
+        // the condition admits.
+        let condition_key = format!("{logicalname}.read");
+        let condition_attrs = ctx.condition_grants.contains_key(&condition_key).then(|| {
+            state
+                .entities
+                .load()
+                .get_by_id(entity_id)
+                .map(|meta| meta.attrs.clone())
+                .unwrap_or_default()
+        });
+        if access_level == AccessLevel::Global && condition_attrs.is_none() {
             continue;
         }
 
@@ -679,6 +691,22 @@ async fn apply_multi_entity_record_scope(
             ) {
                 conds.push(pred.sql.trim_start_matches("AND ").to_owned());
                 params.extend(pred.binds.to_text_params());
+            }
+            if let Some(attrs) = &condition_attrs
+                && let Some(condition) = attome_security::conditions::condition_predicate(
+                    ctx,
+                    &condition_key,
+                    attrs,
+                    "c",
+                    params.len() + 1,
+                )
+            {
+                conds.push(format!(
+                    "t.{id_column} IN (SELECT c.id FROM {} c WHERE {})",
+                    quote_ident(&logicalname),
+                    condition.sql
+                ));
+                params.extend(condition.binds);
             }
         }
     }

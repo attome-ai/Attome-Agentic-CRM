@@ -776,8 +776,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   manager's partners to a channel manager). The same scope now also covers data export, search
   aggregation and the name fallback, the live record stream, the bulk-transform count (on
   `{entity}.update`), segment insight, follower notifications, the price-list products, competitor
-  head-to-head and drafts, marketing list members and journey enrolments, the commission statement
-  and the data-quality issue list (`attome_security::read_scope`).
+  head-to-head and drafts, marketing list members and journey enrolments, the commission statement,
+  the data-quality issue list (`attome_security::read_scope`) and each mapped relation of a custom
+  multi-entity query.
 - An MCP tool call, a macro run, the meeting follow-up write and an agent's permission test read the
   runtime AI switch before the gate: the switch counts as all-off until read, so the first such call
   after boot (or after the switch's snapshot aged) was refused as an unknown tool.
