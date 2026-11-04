@@ -44,6 +44,53 @@ async fn create(app: &TestApp, entity: &str, body: Value) -> Uuid {
     Uuid::parse_str(record["id"].as_str().unwrap()).unwrap()
 }
 
+/// A role, held by `user`, that reads `entity` at level None with owner
+/// visibility: its holder sees only the records they own (D-371).
+async fn own_invoices_role(app: &TestApp, user: Uuid, entity: &str) {
+    let role: Uuid = sqlx::query_scalar(
+        "INSERT INTO role (id, name, description, owner_layer) \
+         VALUES (uuidv7(), $1, 'rollup explain', 'project') RETURNING id",
+    )
+    .bind(format!("own-{}", Uuid::now_v7().simple()))
+    .fetch_one(app.db())
+    .await
+    .unwrap();
+    let key = format!("{entity}.read");
+    attome_security::db::ensure_privilege(
+        app.db(),
+        &key,
+        &key,
+        "test grant",
+        attome_core::changeset::Layer::Project,
+    )
+    .await
+    .unwrap();
+    for (path, body) in [
+        (
+            "/api/v1/admin/security/role-grants",
+            json!({ "role_id": role, "privilege_key": key }),
+        ),
+        (
+            "/api/v1/admin/security/role-entity-access",
+            json!({
+                "role_id": role, "entity": entity,
+                "read_access_level": 0, "write_access_level": 0, "delete_access_level": 0,
+                "read_owner_visible": true,
+            }),
+        ),
+    ] {
+        let (status, body) = app.request(Method::POST, path, Some(body)).await;
+        assert!(status.is_success(), "{path}: {status} {body}");
+    }
+    sqlx::query("INSERT INTO user_account_mm_role (id, user_ref, role_ref) VALUES ($1, $2, $3)")
+        .bind(Uuid::now_v7())
+        .bind(user)
+        .bind(role)
+        .execute(app.db())
+        .await
+        .unwrap();
+}
+
 async fn grant(app: &TestApp, user: Uuid, key: &str) {
     attome_security::db::ensure_privilege(
         app.db(),
@@ -141,7 +188,9 @@ fn rollup_explain_lists_readable_records_and_counts_the_rest() {
         // A reader who sees only their own invoices, and the account.
         let reader = attome_testapp::seed_user(app.db(), "rollup-reader").await;
         grant(&app, reader.id, &format!("{account}.read")).await;
-        grant(&app, reader.id, &format!("{invoice}.read")).await;
+        // Invoices through a role that reads only what its holder owns: a
+        // direct grant alone reads at Global (no access row narrows it).
+        own_invoices_role(&app, reader.id, &invoice).await;
         for (table, id) in [(&account, acme), (&invoice, invoices[0])] {
             sqlx::query(&format!(
                 "UPDATE \"{table}\" SET owner_ref = $1 WHERE id = $2"
