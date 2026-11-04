@@ -450,7 +450,11 @@ async fn read_rows(
         };
         rows.extend(page.items.into_iter().map(|row| row.0));
         match page.next_cursor {
-            Some(cursor) if rows.len() < MAX_ROWS => spec.cursor = Some(cursor),
+            // A page's cursor is sealed only when it is serialized; a
+            // spec takes it back sealed.
+            Some(cursor) if rows.len() < MAX_ROWS => {
+                spec.cursor = Some(attome_types::cursor::seal(&cursor));
+            }
             _ => break,
         }
     }
