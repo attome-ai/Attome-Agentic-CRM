@@ -7,6 +7,7 @@
 
 #![recursion_limit = "512"]
 #![allow(
+    clippy::disallowed_methods,
     clippy::expect_used,
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"

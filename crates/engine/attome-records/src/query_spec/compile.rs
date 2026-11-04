@@ -1494,13 +1494,12 @@ mod tests {
         // Q15-T3: sorting on it is refused the same way (D-607: hidden means
         // absent, so the refusal never confirms the field). Grouping compiles
         // on the aggregate path, which refuses it there.
-        for doc in [json!({"entity": "account", "sort": [{"field": "tax_id"}]})] {
-            let message = validation(run(doc.clone(), &reader(), &global()));
-            assert!(
-                message.contains("unknown") && message.contains("tax_id"),
-                "{doc}: {message}"
-            );
-        }
+        let doc = json!({"entity": "account", "sort": [{"field": "tax_id"}]});
+        let message = validation(run(doc.clone(), &reader(), &global()));
+        assert!(
+            message.contains("unknown") && message.contains("tax_id"),
+            "{doc}: {message}"
+        );
         let mut granted = reader();
         granted.field_grants.insert("account.tax_id".into());
         assert!(

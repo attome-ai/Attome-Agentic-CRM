@@ -55,6 +55,17 @@ pub struct CallPage {
     pub transcript: Vec<Value>,
 }
 
+/// One `call_finding` row: id, kind, text, start, task.
+type FindingRow = (
+    Uuid,
+    Option<String>,
+    Option<String>,
+    Option<f64>,
+    Option<String>,
+);
+/// One `call_scorecard_answer` row: id, key, proposed, confirmed, version.
+type AnswerRow = (Uuid, Option<String>, Option<String>, Option<String>, i64);
+
 type AnalysisRow = (
     Uuid,
     Option<String>,
@@ -129,13 +140,7 @@ async fn call_page(
             "staff_words_per_minute": wpm,
         })
     });
-    let findings: Vec<(
-        Uuid,
-        Option<String>,
-        Option<String>,
-        Option<f64>,
-        Option<String>,
-    )> = sqlx::query_as(
+    let findings: Vec<FindingRow> = sqlx::query_as(
         "SELECT id, kind::text, text, start_ms::float8, task_ref FROM call_finding \
               WHERE analysis_ref = $1 AND (is_active IS NULL OR is_active = true) \
               ORDER BY start_ms NULLS LAST, id",
@@ -144,7 +149,7 @@ async fn call_page(
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    let answers: Vec<(Uuid, Option<String>, Option<String>, Option<String>, i64)> = sqlx::query_as(
+    let answers: Vec<AnswerRow> = sqlx::query_as(
         "SELECT id, question_key, proposed_value::text, confirmed_value::text, row_version \
                FROM call_scorecard_answer \
               WHERE analysis_ref = $1 AND (is_active IS NULL OR is_active = true) \

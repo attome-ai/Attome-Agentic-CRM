@@ -1507,7 +1507,13 @@ async fn agent_object(fx: &Fx) -> Uuid {
     // Publishing judges the agent under this policy as the publisher (the
     // admin): the admin reads it as a record first, so a failure here names
     // the read rather than the publish.
-    admin(fx, "GET", &format!("/api/v1/ai_agent_policy/{policy}"), None).await;
+    admin(
+        fx,
+        "GET",
+        &format!("/api/v1/ai_agent_policy/{policy}"),
+        None,
+    )
+    .await;
     let id = Uuid::now_v7();
     let t = Some(fx.admin_token.as_str());
     call(

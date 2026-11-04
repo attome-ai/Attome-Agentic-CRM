@@ -18,6 +18,9 @@ use attome_core::change_feed;
 use attome_types::AppError;
 use uuid::Uuid;
 
+/// A competitor's name, Arabic name, live flag and tracked flag.
+type CompetitorRow = (String, Option<String>, Option<bool>, Option<bool>);
+
 /// The named event an analysis writes when it is done.
 pub const ANALYSIS_DONE_EVENT: &str = "callintel.analysis_done";
 /// The change-feed consumer that follows competitors.
@@ -52,7 +55,7 @@ async fn installed(state: &EngineState) -> Result<bool, AppError> {
 /// written.
 pub async fn sync_competitor(state: &EngineState, competitor: Uuid) -> Result<bool, AppError> {
     let db = &state.base.db;
-    let row: Option<(String, Option<String>, Option<bool>, Option<bool>)> =
+    let row: Option<CompetitorRow> =
         sqlx::query_as("SELECT name, name_ar, is_active, is_tracked FROM competitor WHERE id = $1")
             .bind(competitor)
             .fetch_optional(db)

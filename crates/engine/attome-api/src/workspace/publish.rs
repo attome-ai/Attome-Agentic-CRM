@@ -587,22 +587,22 @@ pub(crate) async fn publish_core(
     id: Uuid,
     backup_ref: Option<String>,
 ) -> Result<Published, AppError> {
-    let (workspace, schema_name, changeset) = publishing_parts(&state, id).await?;
+    let (workspace, schema_name, changeset) = publishing_parts(state, id).await?;
     let row = store::get(&state.base.db, changeset)
         .await?
         .ok_or_else(|| AppError::internal(format!("workspace {id}: its changeset is gone")))?;
 
     let document = match (workspace.status.as_str(), row.status) {
         (from @ ("open" | "in_review"), ChangesetStatus::Open) => {
-            if !set_status(&state, id, from, "publishing").await? {
+            if !set_status(state, id, from, "publishing").await? {
                 return Err(AppError::Conflict(
                     "the workspace is already being published",
                 ));
             }
-            match close_checked(&state, ctx.user_id, &workspace, &schema_name, &row).await {
+            match close_checked(state, ctx.user_id, &workspace, &schema_name, &row).await {
                 Ok(document) => document,
                 Err(error) => {
-                    if let Err(revert) = set_status(&state, id, "publishing", from).await {
+                    if let Err(revert) = set_status(state, id, "publishing", from).await {
                         tracing::warn!(workspace = %id, error = %revert, "workspace: not returned to open after a refused publish");
                     }
                     return Err(error);
@@ -623,7 +623,7 @@ pub(crate) async fn publish_core(
     };
 
     let plan_ctx = plan_context(ctx.user_id);
-    let mut planned = plan::plan(&state, &[document], plan_ctx).await?;
+    let mut planned = plan::plan(state, &[document], plan_ctx).await?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     plan::persist(&mut tx, &mut planned, plan_ctx).await?;
     attome_db::tx::commit(tx).await?;
@@ -654,7 +654,7 @@ pub(crate) async fn publish_core(
         ));
     }
     let apply = gated_apply(
-        &state,
+        state,
         ctx,
         ApplyChangesetsBody {
             apply_ids,
@@ -681,7 +681,7 @@ pub(crate) async fn publish_core(
     };
     write_security_event(
         &mut tx,
-        &audit_service(&state),
+        &audit_service(state),
         SecurityEvent::new(
             MandatoryCategory::Configuration,
             AuditOperation::Update,
