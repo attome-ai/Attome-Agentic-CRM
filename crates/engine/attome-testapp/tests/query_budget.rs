@@ -140,11 +140,15 @@ fn record_get_and_list_within_budget() {
         // Warm the caches a first request fills (session, privileges).
         let (status, body) = app.request(Method::GET, &path, None).await;
         assert_eq!(status, StatusCode::OK, "{body}");
-        let ((status, body), queries) = count_queries(app.request(Method::GET, &path, None)).await;
+        let ((status, body), statements) =
+            attome_testkit::query_counter::record_queries(app.request(Method::GET, &path, None))
+                .await;
         assert_eq!(status, StatusCode::OK, "{body}");
+        let queries = statements.len();
         assert!(
             queries <= RECORD_GET_BUDGET,
-            "GET one record ran {queries} statements, over its budget of {RECORD_GET_BUDGET}"
+            "GET one record ran {queries} statements, over its budget of {RECORD_GET_BUDGET}: \
+             {statements:#?}"
         );
 
         list(&app, &child, 50).await;
