@@ -119,7 +119,7 @@ fn recompute_sets_line_and_invoice_totals() {
             .await
             .expect("recompute");
         assert_eq!(totals.lines, 2);
-        assert_eq!(totals.net_total, "240");
+        assert_eq!(totals.net_total, "240.00");
         assert_eq!(totals.vat_total, "28.50");
         assert_eq!(totals.grand_total, "268.50");
 

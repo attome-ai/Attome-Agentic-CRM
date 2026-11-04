@@ -133,7 +133,7 @@ pub async fn for_account(
         .await
         .map_err(AppError::internal)?;
         let charges: Vec<ChargeRow> = sqlx::query_as(
-            "SELECT period_start, period_end, amount::text, kind::text \
+            "SELECT period_start::timestamptz, period_end::timestamptz, amount::text, kind::text \
                FROM subscription_charge \
               WHERE subscription_ref = $1 AND status::text = 'planned' \
                 AND (is_active IS NULL OR is_active = true) \
