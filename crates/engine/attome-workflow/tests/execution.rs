@@ -160,6 +160,11 @@ async fn seed_platform(db: &attome_db::DbPool) {
             attome_audit::seed(db)
                 .await
                 .expect("seed audit entity metadata");
+            // `system.admin`, which `seed_user` grants: a flow acts as its
+            // starter (M1-T3), so the engine tests start as an administrator.
+            attome_security::seed::seed_for_tests(db)
+                .await
+                .expect("seed the security privileges");
             attome_metadata::autovalue::seed_for_tests(db)
                 .await
                 .expect("seed autovalue entity + table");

@@ -180,9 +180,13 @@ fn checked(body: NewWorkspace) -> Result<(String, Option<String>, data::DataPlan
 async fn create(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
-    Json(body): Json<NewWorkspace>,
+    raw: axum::body::Bytes,
 ) -> Result<(StatusCode, Json<CreatedWorkspace>), AppError> {
+    // Refused before the body is read: a caller who builds nowhere learns
+    // nothing from a body error.
     require_builder(&ctx)?;
+    let body: NewWorkspace = serde_json::from_slice(&raw)
+        .map_err(|e| AppError::Validation(format!("invalid workspace body: {e}")))?;
     let team = body.team;
     if let Some(team) = team
         && !(AdminArea::DataModel.held_by(&ctx) || ctx.team_ids.contains(&team))

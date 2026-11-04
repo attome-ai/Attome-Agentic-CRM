@@ -259,7 +259,8 @@ fn amount_locked_with_lines() {
             .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
 
-        // A hand edit of the amount holds only until the next line change.
+        // While the deal has lines its amount is theirs (the pack's lock rule,
+        // D6-T4): a hand edit is refused, and the next line moves it.
         let v = version(&app, f.deal).await;
         let (status, body) = app
             .request_with(
@@ -269,8 +270,9 @@ fn amount_locked_with_lines() {
                 Some(json!({ "amount": 999 })),
             )
             .await;
-        assert_eq!(status, StatusCode::OK, "{body}");
-        assert_eq!(deal_column(&app, f.deal, "amount").await, Some(999.0));
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert_eq!(body["code"], "field_locked", "{body}");
+        assert_eq!(deal_column(&app, f.deal, "amount").await, Some(200.0));
         line(&app, f.deal, f.other_product, "1").await;
         assert_eq!(deal_column(&app, f.deal, "amount").await, Some(450.0));
     });
