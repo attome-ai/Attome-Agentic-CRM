@@ -254213,7 +254213,7 @@
               "null"
             ],
             "format": "uuid",
-            "description": "Keep the old owner on the team with this team role; absent removes\nthem and their share."
+            "description": "Keep the old owner on the team with this team role (added with read\naccess when they were not on it); absent removes them and their\nshare."
           }
         }
       },
@@ -272249,6 +272249,8 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -272300,7 +272302,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  }
 }

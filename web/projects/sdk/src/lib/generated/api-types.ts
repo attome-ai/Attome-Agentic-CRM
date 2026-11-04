@@ -68849,8 +68849,9 @@ export interface components {
             new_owner: string;
             /**
              * Format: uuid
-             * @description Keep the old owner on the team with this team role; absent removes
-             *     them and their share.
+             * @description Keep the old owner on the team with this team role (added with read
+             *     access when they were not on it); absent removes them and their
+             *     share.
              */
             old_owner_role?: string | null;
         };
