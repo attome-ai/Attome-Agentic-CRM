@@ -110,7 +110,7 @@ async fn approve(app: &TestApp, user: &TestUser, contract: Uuid) {
     let (id, row_version): (Uuid, i64) = sqlx::query_as(
         "SELECT id, row_version FROM approval_request \
           WHERE regarding_entity = 'contract' AND regarding_id = $1 AND status = 'pending' \
-          ORDER BY created_at DESC LIMIT 1",
+          ORDER BY requested_at DESC, id DESC LIMIT 1",
     )
     .bind(contract)
     .fetch_one(app.db())
