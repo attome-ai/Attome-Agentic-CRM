@@ -132,12 +132,22 @@ const READONLY_PASSWORD: &str = "test-only-readonly-password";
 /// Gives `attome_readonly` a login with [`READONLY_PASSWORD`] (the role
 /// exists from the migrations; only its password is per test database).
 async fn synchronize_readonly_login(db: &attome_db::DbPool) {
-    sqlx::query(&format!(
-        "ALTER ROLE attome_readonly WITH LOGIN PASSWORD '{READONLY_PASSWORD}'"
-    ))
-    .execute(db)
-    .await
-    .expect("give attome_readonly a test login");
+    // A role is cluster-wide: test processes running at once alter the same
+    // row, and Postgres answers the loser "tuple concurrently updated".
+    for attempt in 0..10 {
+        let altered = sqlx::query(&format!(
+            "ALTER ROLE attome_readonly WITH LOGIN PASSWORD '{READONLY_PASSWORD}'"
+        ))
+        .execute(db)
+        .await;
+        match altered {
+            Ok(_) => return,
+            Err(e) if attempt < 9 && e.to_string().contains("tuple concurrently updated") => {
+                tokio::time::sleep(std::time::Duration::from_millis(50 * (attempt + 1))).await;
+            }
+            Err(e) => panic!("give attome_readonly a test login: {e}"),
+        }
+    }
 }
 
 async fn test_system() -> Option<EngineSystem> {
