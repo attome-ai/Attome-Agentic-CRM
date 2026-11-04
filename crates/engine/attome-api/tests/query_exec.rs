@@ -3458,6 +3458,52 @@ async fn changes(
     send_json(app, "POST", "/api/v1/query/changes", cookie, body).await
 }
 
+/// AA7-T4: reads the feed from `cursor` until `done` holds for what came
+/// back, for up to 60 s, merging the pages (an upsert replaces the same id's
+/// earlier one; a removal drops it). An event shows only once every older
+/// transaction has finished (`pg_snapshot_xmin`), which another test's open
+/// transaction holds back on a shared database, so one read can come back
+/// short.
+async fn changes_until(
+    app: &axum::Router,
+    cookie: &str,
+    entity: &str,
+    cursor: &str,
+    done: impl Fn(&serde_json::Value) -> bool,
+) -> serde_json::Value {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    let mut cursor = cursor.to_owned();
+    let mut upserted: Vec<serde_json::Value> = Vec::new();
+    let mut removed: Vec<serde_json::Value> = Vec::new();
+    loop {
+        let (status, page) = changes(app, cookie, entity, Some(&cursor)).await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        for record in page["upserted"].as_array().expect("upserted") {
+            upserted.retain(|r| r["id"] != record["id"]);
+            upserted.push(record.clone());
+        }
+        for id in page["removed"].as_array().expect("removed") {
+            upserted.retain(|r| &r["id"] != id);
+            if !removed.contains(id) {
+                removed.push(id.clone());
+            }
+        }
+        cursor = page["next_cursor"]
+            .as_str()
+            .expect("next_cursor")
+            .to_owned();
+        let merged = serde_json::json!({
+            "upserted": upserted,
+            "removed": removed,
+            "next_cursor": cursor,
+        });
+        if done(&merged) || std::time::Instant::now() > deadline {
+            return merged;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    }
+}
+
 fn upserted_ids(body: &serde_json::Value) -> Vec<String> {
     body["upserted"]
         .as_array()
@@ -3517,8 +3563,16 @@ fn changes_since_add_update_delete() {
         let res = app.clone().oneshot(req).await.expect("patch");
         assert_eq!(res.status(), StatusCode::OK);
 
-        let (status, page) = changes(&app, &cookie, &logicalname, Some(&cursor)).await;
-        assert_eq!(status, StatusCode::OK, "{page}");
+        let page = changes_until(&app, &cookie, &logicalname, &cursor, |page| {
+            let ids = upserted_ids(page);
+            ids.contains(&second.to_string())
+                && page["upserted"].as_array().is_some_and(|rows| {
+                    rows.iter().any(|r| {
+                        r["id"] == first.to_string() && r["data"]["title"] == "first, edited"
+                    })
+                })
+        })
+        .await;
         let ids = upserted_ids(&page);
         assert!(ids.contains(&first.to_string()), "{page}");
         assert!(ids.contains(&second.to_string()), "{page}");
@@ -3541,7 +3595,10 @@ fn changes_since_add_update_delete() {
         )
         .await;
         assert!(status.is_success(), "{status}");
-        let (_, page) = changes(&app, &cookie, &logicalname, Some(&cursor)).await;
+        let page = changes_until(&app, &cookie, &logicalname, &cursor, |page| {
+            removed_ids(page).contains(&second.to_string())
+        })
+        .await;
         assert_eq!(removed_ids(&page), vec![second.to_string()], "{page}");
         assert!(upserted_ids(&page).is_empty());
 

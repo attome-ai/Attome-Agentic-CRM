@@ -2001,15 +2001,25 @@ async fn widget_types_hide_unsupported_types_by_default() {
     let palette = palette.as_array().unwrap();
     assert!(palette.iter().all(|d| d["render_kind"] != "unsupported"));
     assert!(palette.iter().any(|d| d["type_id"] == "bar_chart"));
-    // Every chart renders now (P6-T1); the divider still has no renderer.
-    assert!(!palette.iter().any(|d| d["type_id"] == "divider"));
     let everything = list("/api/v1/attome-dashboard/widget-types?include_unsupported=true").await;
+    let everything = everything.as_array().unwrap();
+    assert!(everything.len() >= palette.len());
+    // Whatever the registry cannot render yet is listed only when asked for.
+    for unsupported in everything
+        .iter()
+        .filter(|d| d["render_kind"] == "unsupported")
+    {
+        assert!(
+            !palette
+                .iter()
+                .any(|d| d["type_id"] == unsupported["type_id"]),
+            "{unsupported}"
+        );
+    }
+    assert!(everything.iter().any(|d| d["type_id"] == "divider"));
     assert!(
-        everything
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|d| d["type_id"] == "divider")
+        palette.iter().any(|d| d["type_id"] == "divider"),
+        "the divider renders"
     );
 }
 

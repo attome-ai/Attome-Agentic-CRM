@@ -258,6 +258,8 @@ async fn build_on(config: AppConfig, db: attome_db::DbPool) -> TestApp {
     let system = EngineSystem::builder(EngineState::new(base))
         .register(attome_security::model::SecurityModel)
         .register(attome_billing::BillingModel)
+        // F11: the revenue recognition routes (`/api/v1/ledger/revrec/*`).
+        .register(attome_ledger::LedgerModel)
         .register(attome_einvoice::EinvoiceModel)
         // F6-T11: delivery proof routes.
         .register(attome_fulfilment::FulfilmentModel)
