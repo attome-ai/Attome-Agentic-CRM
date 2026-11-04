@@ -1106,7 +1106,31 @@ pub async fn traverse(
     );
 
     let pool = state.base.read_pool(ctx.user_id).await;
-    walk(pool, &registry, ctx, &visibility, req).await
+    let mut outcome = walk(pool, &registry, ctx, &visibility, req).await?;
+    // D-369: a record a read grant condition hides is not reached, and no
+    // edge names it; a hidden start record is not found.
+    let nodes = crate::condition_filter::retain_admitted(
+        state,
+        ctx,
+        std::mem::take(&mut outcome.nodes),
+        |node| (node.entity_logicalname.as_str(), node.record_id),
+    )
+    .await;
+    let kept: HashSet<(&str, Uuid)> = nodes
+        .iter()
+        .map(|node| (node.entity_logicalname.as_str(), node.record_id))
+        .collect();
+    // The walk always returns its start node first, so a start left out
+    // here is one a condition hides.
+    if !kept.contains(&(req.start.entity.as_str(), req.start.id)) {
+        return Err(AppError::NotFound);
+    }
+    outcome.edges.retain(|edge| {
+        kept.contains(&(edge.from_entity.as_str(), edge.from_id))
+            && kept.contains(&(edge.to_entity.as_str(), edge.to_id))
+    });
+    outcome.nodes = nodes;
+    Ok(outcome)
 }
 
 // ── HTTP route ───────────────────────────────────────────────────────────────
