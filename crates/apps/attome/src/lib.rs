@@ -55,6 +55,8 @@ pub mod openapi_filter;
 /// S2-T7 — policy extensions on every operation.
 pub mod openapi_policy;
 pub mod platform_seed_lock;
+/// Y4-T3: the Predict engine's glue, compiled out without `predict`.
+pub mod predict_glue;
 /// D9-T3: quote acceptance by guest link.
 pub mod quote_accept;
 pub mod readonly_role_seed;

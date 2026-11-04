@@ -140,11 +140,8 @@ fn build() -> utoipa::openapi::OpenApi {
         "docgen",
     ));
     // M36 Phase 0+1 (Predictive Intelligence, D-473) — same reasoning as
-    // attome-process/attome-docgen above.
-    doc.merge(attome_server::openapi::tag_module(
-        attome_predict::openapi(),
-        "predict",
-    ));
+    // attome-process/attome-docgen above; Y4-T3: only with `predict`.
+    crate::predict_glue::merge_openapi(&mut doc);
     // Trading Platform Phase 1 (document/TRADING-PLATFORM-PLAN.md) — same
     // reasoning as attome-process/attome-docgen/attome-predict above:
     // `.register(trd_engine::TrdModel)` happens in `boot.rs` (this crate),

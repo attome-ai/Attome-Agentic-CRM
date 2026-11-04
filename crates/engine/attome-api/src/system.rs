@@ -930,6 +930,12 @@ impl EngineSystemBuilder {
         self
     }
 
+    /// Y4-T3: runs `step` on the builder, so a chain can call a step the
+    /// binary compiles in or out by cargo feature (`.apply(glue::register)`).
+    pub fn apply(self, step: impl FnOnce(Self) -> Self) -> Self {
+        step(self)
+    }
+
     /// Dashboard 10/10 Phase 6 — register a `MyWorkProvider` so its items are
     /// listed by `GET /api/v1/my-work/*`. Unlike `register` above this has no
     /// license gate of its own: each provider consults whatever license/

@@ -74,7 +74,7 @@ attome-model.workspace          = true
 attome-modules.workspace        = true
 attome-notification.workspace   = true
 attome-portal.workspace         = true
-attome-predict.workspace        = true
+attome-predict                  = { workspace = true, optional = true }
 attome-process.workspace        = true
 attome-profiler.workspace       = true
 attome-project.workspace        = true
@@ -127,7 +127,11 @@ url.workspace                   = true
 # Z1-T12: cloud secret stores read once at boot (`ATTOME_SECRET_SOURCE`).
 # Q19-T2: the same AWS signing and Azure sign-in unwrap customer-held keys
 # (`ATTOME_KMS`); Google Cloud KMS and an HSM over PKCS#11 have their own.
-default = ["aws-secrets", "azure-keyvault", "gcp-kms"]
+default = ["aws-secrets", "azure-keyvault", "gcp-kms", "predict"]
+# Y4-T3: an engine a lean binary can leave out. `solo-lean` is the default
+# set without them; AI and web crawling are not separable yet (V2-D1673).
+predict = ["dep:attome-predict"]
+solo-lean = ["aws-secrets", "azure-keyvault", "gcp-kms"]
 aws-secrets = ["dep:hmac"]
 azure-keyvault = []
 gcp-kms = ["dep:jsonwebtoken"]

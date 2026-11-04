@@ -2095,43 +2095,17 @@ async fn dispatch_platform_job(
         // (guidelines §10).
         EngineJob::PredictTrainModel { model_id } => {
             // O1-T3: a definition model trains through the generic path.
-            attome_predict::generic::run(&attome_state, model_id).await?;
+            crate::predict_glue::train(&attome_state, model_id).await?;
         }
         // M36 Phase 1 — see this variant's doc comment.
         EngineJob::PredictScoringSweep => {
-            let stats = attome_predict::score::run_scoring_sweep(&db).await?;
-            // O1-T3: the definition models score their entities' rows.
-            let defined = attome_predict::generic::score_all(&attome_state).await?;
-            if defined > 0 {
-                tracing::info!(scored = defined, "predict: definition models scored");
-            }
-            if stats.scored > 0 {
-                tracing::info!(
-                    models_considered = stats.models_considered,
-                    scored = stats.scored,
-                    "predict scoring sweep: run complete"
-                );
-            }
+            crate::predict_glue::scoring_sweep(&attome_state).await?;
         }
         // M36 Phase 1 — see this variant's doc comment. `fill_outcomes` lives
         // in `score.rs` alongside the scoring sweep (both read/write the
         // same `prediction` rows), not a separate `outcome_fill` module.
         EngineJob::PredictOutcomeFillSweep => {
-            let stats = attome_predict::score::fill_outcomes(&db).await?;
-            // O1-T3: the outcomes of definition models' predictions.
-            let defined = attome_predict::generic::fill_outcomes(&attome_state).await?;
-            if defined > 0 {
-                tracing::info!(
-                    filled = defined,
-                    "predict: definition model outcomes recorded"
-                );
-            }
-            if stats.filled > 0 {
-                tracing::info!(
-                    filled = stats.filled,
-                    "predict outcome-fill sweep: run complete"
-                );
-            }
+            crate::predict_glue::outcome_fill_sweep(&attome_state).await?;
         }
         // M25 Phase 1 (Report, D-440) — see this variant's doc comment.
         // AH6-T3 / AH8-T9 — compare trial decisions, then propose raises.
@@ -3902,7 +3876,7 @@ pub const WEB_VISIT_SUMMARY: attome_jobs::JobType =
 
 /// O1-T2: active prediction models checked for feature drift.
 pub const PREDICT_DRIFT: attome_jobs::JobType =
-    attome_jobs::JobType::new(attome_predict::train::DRIFT_JOB, 1);
+    attome_jobs::JobType::new(crate::predict_glue::DRIFT_JOB, 1);
 
 /// F6-T14: late and stuck fulfilment orders raised as exceptions.
 pub const FULFILMENT_EXCEPTIONS: attome_jobs::JobType =
@@ -3942,7 +3916,7 @@ pub const EXIT_DELETE: attome_jobs::JobType =
 
 /// O1-T3: changed records rescored by definition models.
 pub const PREDICT_DEFINITION_RESCORE: attome_jobs::JobType =
-    attome_jobs::JobType::new(attome_predict::generic::RESCORE_JOB, 1);
+    attome_jobs::JobType::new(crate::predict_glue::RESCORE_JOB, 1);
 
 /// D22-T9: yesterday's call trend aggregates.
 pub const CALLINTEL_AGGREGATE: attome_jobs::JobType =
@@ -5444,7 +5418,7 @@ pub fn register_job_types() {
                 {
                     return Ok::<(), attome_jobs::registry::BoxError>(());
                 }
-                let drifted = attome_predict::train::drift_check(&state.base.db)
+                let drifted = crate::predict_glue::drift_check(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if drifted > 0 {
@@ -5597,7 +5571,7 @@ pub fn register_job_types() {
                 if !state.modules.load().has(attome_modules::MODULE_PREDICT) {
                     return Ok::<(), attome_jobs::registry::BoxError>(());
                 }
-                let written = attome_predict::generic::drain_changes(&state)
+                let written = crate::predict_glue::drain_changes(&state)
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if written > 0 {

@@ -148,6 +148,14 @@ jobs:
         run: |
           set -o pipefail
           cargo test --workspace --doc --no-fail-fast 2>&1 | tee -a release-check.log
+      # Y4-T3: the lean binary (engines behind cargo features left out)
+      # still compiles.
+      - name: lean build
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo check -p attome --no-default-features --features solo-lean 2>&1 | tee -a release-check.log
       # GitHub shows at most 10 error annotations per step, so the full list of
       # failures goes into one annotation: errors, their locations, and failed
       # tests, readable through the public checks API.

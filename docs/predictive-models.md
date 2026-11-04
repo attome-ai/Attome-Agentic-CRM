@@ -89,3 +89,10 @@ Each shown action is logged as an outcome of kind `recommendation`; `POST
 /api/v1/predict/recommendations/{id}/accept` or `/reject` records the decision of the person it was shown
 to, once. The outcome reports read them like any other proposal.
 
+
+## A build without predictions
+
+The engine is the `predict` cargo feature of the `attome` crate, on by default. A lean binary leaves it
+out: `cargo build -p attome --no-default-features --features solo-lean` mounts no prediction routes,
+documents none, and its prediction jobs do nothing when they run (Y4-T3). The release gate checks that
+this build compiles.

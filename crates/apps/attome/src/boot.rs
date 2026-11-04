@@ -1886,13 +1886,9 @@ pub fn register_engines(
         // tables (0296/0297/0298), not runtime-provisioned entities, so
         // there is no seed to call before `.build()`.
         .register(attome_process::ProcessModel)
-        // M36 Phase 0+1 (Predictive Intelligence, D-473) — route-mounting/
-        // license-gating only, same shape as `attome_state::StateModel`/
-        // `attome_process::ProcessModel` above: `prediction_model`/
-        // `prediction` are migration-owned infrastructure tables
-        // (0420/0421), not runtime-provisioned entities, so there is no
-        // seed to call before `.build()`.
-        .register(attome_predict::PredictModel)
+        // M36 Phase 0+1 (Predictive Intelligence, D-473); Y4-T3: compiled
+        // out of a build without the `predict` feature.
+        .apply(crate::predict_glue::register)
         // Dashboard 10/10 Phase 6 — the Approvals `MyWorkProvider`, listed by
         // `GET /api/v1/my-work/*`. Project/Decisions providers the plan also
         // names are follow-up work, not yet implemented.

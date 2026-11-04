@@ -144,7 +144,7 @@ fn narrow_read_conditions(
         .iter()
         .filter(|(key, _)| ctx.field_grants.contains(*key));
     own.chain(sponsors)
-        .filter(|(key, _)| in_scope(key))
+        .filter(|(key, _)| in_scope(key.as_str()))
         .map(|(key, expressions)| (key.clone(), expressions.clone()))
         .collect()
 }
