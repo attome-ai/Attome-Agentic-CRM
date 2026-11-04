@@ -329,7 +329,7 @@ async fn list_issues(
             attome_security::RecordAction::Read,
         )
         .await?;
-        let metas: Vec<(String, Uuid, Vec<attome_core::AttrInfo>)> = {
+        let metas = {
             let registry = state.entities.load();
             entities
                 .iter()
@@ -338,7 +338,7 @@ async fn list_issues(
                         .get(name)
                         .map(|meta| (name.clone(), meta.entity_id, meta.attrs.clone()))
                 })
-                .collect()
+                .collect::<Vec<_>>()
         };
         for (name, entity_id, attrs) in metas {
             let level = levels
