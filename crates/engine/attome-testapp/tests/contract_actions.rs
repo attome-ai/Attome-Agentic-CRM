@@ -122,18 +122,29 @@ fn answer_excludes_confidential_contract_for_viewer() {
         install(&app).await;
         let open = contract(&app, "Open supply", false, "twelve months of fees").await;
         let secret = contract(&app, "Secret merger", true, "unlimited").await;
+        // The pack's Contract Manager reads clause text (the "Contract terms"
+        // field profile) but no confidential contract; the Contract Viewer
+        // reads neither the terms nor a confidential contract.
+        let manager = user_with_role(&app, "answer-manager", "Contract Manager").await;
         let viewer = user_with_role(&app, "answer-viewer", "Contract Viewer").await;
         let legal = user_with_role(&app, "answer-legal", "Legal").await;
 
-        let seen = evidence_for(&app, viewer.id).await;
+        let seen = evidence_for(&app, manager.id).await;
         assert!(
             seen.iter().any(|e| e.contract_id == open),
-            "the viewer's evidence holds the open contract: {seen:?}"
+            "the manager's evidence holds the open contract: {seen:?}"
         );
         assert!(
             seen.iter()
                 .all(|e| e.contract_id != secret && !e.passage.contains("unlimited")),
-            "a confidential contract is never evidence for a viewer: {seen:?}"
+            "a confidential contract is never evidence for a manager: {seen:?}"
+        );
+
+        let seen = evidence_for(&app, viewer.id).await;
+        assert!(
+            seen.iter()
+                .all(|e| !e.passage.contains("unlimited") && !e.passage.contains("twelve months")),
+            "a viewer, who may not read the terms, gets no clause text: {seen:?}"
         );
 
         let seen = evidence_for(&app, legal.id).await;
