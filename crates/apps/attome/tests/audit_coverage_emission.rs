@@ -1484,6 +1484,23 @@ fn agent_commands(model: Uuid, policy: Uuid) -> Value {
 /// A published agent object with a live model and an open agent policy,
 /// built through the admin model API.
 async fn agent_object(fx: &Fx) -> Uuid {
+    let id = agent_draft(fx, "emission agent").await;
+    call(
+        fx,
+        request(
+            "POST",
+            &format!("/api/v1/admin/model/agent/{id}/publish"),
+            Some(fx.admin_token.as_str()),
+            None,
+        ),
+    )
+    .await;
+    id
+}
+
+/// A drafted agent over a model and a policy that exist, so its publish
+/// passes the permission test (AH7-T3): the publisher reads the policy.
+async fn agent_draft(fx: &Fx, label: &str) -> Uuid {
     let db = &fx.base.db;
     let model = Uuid::now_v7();
     sqlx::query(
@@ -1524,19 +1541,9 @@ async fn agent_object(fx: &Fx) -> Uuid {
             t,
             Some(json!({
                 "base_hash": "",
-                "name": format!("emission agent {id}"),
+                "name": format!("{label} {id}"),
                 "commands": agent_commands(model, policy),
             })),
-        ),
-    )
-    .await;
-    call(
-        fx,
-        request(
-            "POST",
-            &format!("/api/v1/admin/model/agent/{id}/publish"),
-            t,
-            None,
         ),
     )
     .await;
@@ -2102,21 +2109,7 @@ async fn enrolled_user_with_codes(fx: &Fx, label: &str) -> (Uuid, Totp, Vec<Stri
 /// Y8-T4: publishes a new agent, which records a new metadata version.
 async fn publish_agent(fx: &Fx) {
     let t = Some(fx.admin_token.as_str());
-    let id = Uuid::now_v7();
-    call(
-        fx,
-        request(
-            "POST",
-            &format!("/api/v1/admin/model/agent/{id}/commands"),
-            t,
-            Some(json!({
-                "base_hash": "",
-                "name": format!("emission version {id}"),
-                "commands": agent_commands(Uuid::now_v7(), Uuid::now_v7()),
-            })),
-        ),
-    )
-    .await;
+    let id = agent_draft(fx, "emission version").await;
     call(
         fx,
         request(
@@ -5940,21 +5933,7 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
         }
         "POST /api/v1/admin/model/{kind}/{id}/publish" => {
-            let id = Uuid::now_v7();
-            call(
-                fx,
-                request(
-                    "POST",
-                    &format!("/api/v1/admin/model/agent/{id}/commands"),
-                    t,
-                    Some(json!({
-                        "base_hash": "",
-                        "name": format!("emission publish {id}"),
-                        "commands": agent_commands(Uuid::now_v7(), Uuid::now_v7()),
-                    })),
-                ),
-            )
-            .await;
+            let id = agent_draft(fx, "emission publish").await;
             request(
                 "POST",
                 &format!("/api/v1/admin/model/agent/{id}/publish"),
