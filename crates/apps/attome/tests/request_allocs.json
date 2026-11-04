@@ -1,6 +1,6 @@
 {
   "record_get": { "bytes": 605869, "peak": 395709 },
-  "record_list_50": { "bytes": 1305779, "peak": 820463 },
+  "record_list_50": { "bytes": 1935732, "peak": 1030845 },
   "record_update": { "bytes": 1133185, "peak": 846634 },
   "global_search": { "bytes": 530410, "peak": 357264 },
   "sign_in": { "bytes": 485225, "peak": 310214 }
