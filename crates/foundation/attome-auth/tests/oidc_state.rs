@@ -51,6 +51,13 @@ async fn redis_pool() -> Option<attome_cache::Store> {
     Some(attome_cache::Store::Redis(pool))
 }
 
+/// The mock identity provider listens on this machine; the client for the
+/// configured identity providers reaches a private host only when it is one
+/// of theirs (Q21-T1), as a boot names them. Once per process.
+fn allow_local_idp() {
+    let _ = oidc::configure_identity_providers(["http://127.0.0.1"]);
+}
+
 /// A pool that can never be reached: nothing listens on port 1.
 fn unreachable_pool() -> attome_cache::Store {
     let config = RedisConfig::from_url("redis://127.0.0.1:1/0").unwrap();
@@ -150,6 +157,7 @@ async fn seed_state(redis: &attome_cache::Store, state_id: &str) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn concurrent_callbacks_on_one_state_admit_at_most_one() {
     let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
+    allow_local_idp();
     let provider_key = unique_provider();
     let (token_endpoint, exchanges) = counting_token_endpoint().await;
     prime_discovery(&redis, &provider_key, &token_endpoint).await;
@@ -203,6 +211,7 @@ async fn concurrent_callbacks_on_one_state_admit_at_most_one() {
 #[tokio::test]
 async fn a_replayed_state_reaches_no_exchange() {
     let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
+    allow_local_idp();
     let provider_key = unique_provider();
     let (token_endpoint, exchanges) = counting_token_endpoint().await;
     prime_discovery(&redis, &provider_key, &token_endpoint).await;
