@@ -2375,16 +2375,44 @@ pub async fn execute_stored_query_with_definition(
                       AND {own_scope_sql}) OR {poly_sql})"
                 ));
             }
-        } else if let Some(pred) = attome_security::rls_predicate(
-            ctx,
-            entity_id,
-            "t",
-            access_level,
-            attome_security::RecordAction::Read.share_capability(),
-            params.len() + 1,
-        ) {
-            conds.push(pred.sql.trim_start_matches("AND ").to_owned());
-            params.extend(pred.binds.to_text_params());
+        } else {
+            // D-369/D-371: the same predicate a single record's read takes
+            // (`entity_crud::access`): the tier, the owner arm and every grant
+            // condition on `{entity}.read` — a list must never show a row the
+            // record itself would refuse. Attributes come from the registry; a
+            // condition whose field it does not know renders as FALSE (fail
+            // closed).
+            let attrs = state
+                .entities
+                .load()
+                .get_by_id(entity_id)
+                .map(|meta| meta.attrs.clone())
+                .unwrap_or_default();
+            let owner_visible = attome_security::resolve_owner_visible(
+                &state.base.db,
+                ctx.user_id,
+                entity_id,
+                &entity_logicalname,
+                attome_security::RecordAction::Read,
+            )
+            .await?;
+            if let Some(pred) = attome_security::rls_predicate_with_conditions(
+                ctx,
+                entity_id,
+                "t",
+                access_level,
+                attome_security::RecordAction::Read.share_capability(),
+                &format!("{entity_logicalname}.read"),
+                &attrs,
+                owner_visible,
+                params.len() + 1,
+            ) {
+                conds.push(pred.sql.trim_start_matches("AND ").to_owned());
+                if let Some(tier) = &pred.tier_binds {
+                    params.extend(tier.to_text_params());
+                }
+                params.extend(pred.condition_binds.iter().cloned());
+            }
         }
 
         // U1 (basic-units plan B-R1): a polymorphic child row (note,

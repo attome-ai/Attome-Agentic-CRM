@@ -337,6 +337,16 @@ fn non_owner_cannot_decide_access_request() {
             .await;
         assert!(status.is_success(), "{role}");
         let role_id = Uuid::parse_str(role["id"].as_str().unwrap()).unwrap();
+        // The role carries a privilege no steward holds, so granting it is
+        // above a steward's own ceiling (throwaway database).
+        sqlx::query(
+            "INSERT INTO role_mm_privilege (role_ref, privilege_ref, owner_layer) \
+             SELECT $1, id, 'customer' FROM privilege WHERE key = 'system.admin'",
+        )
+        .bind(role_id)
+        .execute(app.db())
+        .await
+        .unwrap();
         let decide = format!("/api/v1/catalog/access-requests/{request_id}/decide");
         let state = |app: TestApp| async move {
             sqlx::query_as::<_, (String, Option<Uuid>)>(

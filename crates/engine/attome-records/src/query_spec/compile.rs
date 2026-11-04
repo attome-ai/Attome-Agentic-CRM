@@ -269,23 +269,31 @@ impl<'a> Builder<'a> {
         }
         let ctx = self.env.ctx;
         let level = self.env.access.level(entity.entity_id);
-        if ctx.is_admin || level == AccessLevel::Global {
+        if ctx.is_admin {
             return sql;
         }
+        // D-369: the tier and every grant condition on `{entity}.read` — a
+        // Global grant with a condition still narrows (the tier is then
+        // absent and only the condition renders).
         let first = self.binds.borrow().len() + 1;
-        if let Some(predicate) = attome_security::rls_predicate(
+        if let Some(predicate) = attome_security::rls_predicate_with_conditions(
             ctx,
             entity.entity_id,
             alias,
             level,
             attome_security::RecordAction::Read.share_capability(),
+            &format!("{}.read", entity.logicalname),
+            &entity.attrs,
+            false,
             first,
         ) {
             sql.push(' ');
             sql.push_str(&predicate.sql);
-            self.binds
-                .borrow_mut()
-                .extend(predicate.binds.to_text_params());
+            let mut binds = self.binds.borrow_mut();
+            if let Some(tier) = &predicate.tier_binds {
+                binds.extend(tier.to_text_params());
+            }
+            binds.extend(predicate.condition_binds.iter().cloned());
         }
         sql
     }
