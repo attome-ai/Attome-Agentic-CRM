@@ -145,12 +145,19 @@ async fn readable_contacts(
     ctx: &SecurityContext,
     ids: &[Uuid],
 ) -> Result<HashSet<Uuid>, AppError> {
+    // Live contacts first: an administrator's visibility check admits any id,
+    // so existence is checked on its own.
+    let live: Vec<Uuid> =
+        sqlx::query_scalar("SELECT id FROM contact WHERE id = ANY($1) AND is_active = true")
+            .bind(ids)
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
     let mut out = HashSet::new();
-    for id in ids {
-        if attome_records::entity_crud::referenced_record_visible(state, ctx, "contact", *id)
-            .await?
+    for id in live {
+        if attome_records::entity_crud::referenced_record_visible(state, ctx, "contact", id).await?
         {
-            out.insert(*id);
+            out.insert(id);
         }
     }
     Ok(out)

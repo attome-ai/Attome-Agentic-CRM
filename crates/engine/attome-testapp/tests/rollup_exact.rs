@@ -147,9 +147,9 @@ fn rollup_exact_holds_under_concurrent_writes() {
         // A delete takes the invoice back out; a restore puts it back.
         let first = &created[0];
         let id = first["id"].as_str().unwrap();
-        let amount = first["amount"]
-            .as_f64()
-            .unwrap_or_else(|| first["amount"].as_str().unwrap().parse().unwrap());
+        let amount = column(&app, &invoice, "amount", &first["id"])
+            .await
+            .expect("the invoice's amount");
         let (status, body) = app
             .request(Method::DELETE, &format!("/api/v1/{invoice}/{id}"), None)
             .await;

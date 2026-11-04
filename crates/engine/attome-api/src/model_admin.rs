@@ -1056,12 +1056,18 @@ async fn publish(
     }
     // Z15-T14, T7-T2: with the guard on, the blocking customer tests this
     // object can affect (by the L5 reference graph) pass first.
-    let object = attome_model::store::read(&state.base.db, id, None).await?;
+    // The guard runs before the draft is looked up for the publish itself:
+    // an object with no draft names nothing here, and is a 404 below.
+    let object_name = match attome_model::store::read(&state.base.db, id, None).await {
+        Ok(object) => Some(object.name),
+        Err(AppError::NotFound) => None,
+        Err(e) => return Err(e),
+    };
     let impact = attome_records::customer_tests::publish_impact(
         &state.base.db,
         kind.name().as_str(),
         id,
-        Some(object.name.as_str()),
+        object_name.as_deref(),
     )
     .await?;
     attome_records::customer_tests::publish_guard_for(&state, &ctx, &impact).await?;
