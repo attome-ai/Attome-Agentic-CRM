@@ -473,24 +473,45 @@ async fn ai7_roundtrip_agent_person_agent() {
     .expect("retried hand-back");
     assert!(matches!(again, HandBackOutcome::Skipped(_)));
 
+    // I-10 across turns: the first hand-off's tool output is in the
+    // conversation, so the resumed turn's hand-off waits for the owner to
+    // confirm it rather than running on the agent's word.
+    let (call_id, hash, status): (String, String, String) = sqlx::query_as(
+        "SELECT tool_call_id, arguments_hash, status::text FROM ai_tool_call \
+          WHERE conversation_id = $1 AND tool_call_id = 'call-2'",
+    )
+    .bind(t.conversation_id)
+    .fetch_one(t.db())
+    .await
+    .expect("the resumed turn proposed its hand-off");
+    assert_eq!(
+        status, "proposed",
+        "a tainted turn's write is confirm-first"
+    );
+    let confirmed = attome_ai::confirm::confirm_tool_call(
+        &t.state,
+        &ActionRegistry::new(),
+        &Executors::new(),
+        attome_ai::confirm::ConfirmRequest {
+            caller: t.owner,
+            conversation_id: t.conversation_id,
+            tool_call_id: &call_id,
+            displayed_hash: &hash,
+        },
+    )
+    .await
+    .expect("confirm");
+    assert!(
+        matches!(
+            confirmed,
+            attome_ai::confirm::ConfirmOutcome::Executed { .. }
+        ),
+        "{confirmed:?}"
+    );
+
     // The ticket's history: handed off, accepted, returned, handed off again.
     let history = t.history().await;
-    if history.len() != 4 {
-        // Which tool calls the resumed turn made, and how each ended.
-        let calls: Vec<(String, String)> = sqlx::query_as(
-            "SELECT action_id::text, status::text FROM ai_tool_call               WHERE conversation_id = $1 ORDER BY created_at",
-        )
-        .bind(t.conversation_id)
-        .fetch_all(t.db())
-        .await
-        .expect("tool calls");
-        panic!(
-            "{history:#?}
-tool calls: {calls:?}
-hand-offs: {:?}",
-            t.handoffs().await
-        );
-    }
+    assert_eq!(history.len(), 4, "{history:#?}");
     assert!(history[0].starts_with("Handed off by agent to user"));
     assert!(history[1].starts_with("Hand-off accepted"));
     assert!(history[2].starts_with("Returned to the agent"));
