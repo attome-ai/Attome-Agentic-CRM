@@ -773,7 +773,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   do lookup expansion and names, related columns, the change feed, the recycle bin, field-history
   search, the rollup explanation and the bulk-edit preview. Before, a conditional grant narrowed only single-record reads, so a
   list showed rows the record itself refused (a confidential contract to a contract viewer, another
-  manager's partners to a channel manager).
+  manager's partners to a channel manager). The same scope now also covers data export, search
+  aggregation and the name fallback, the live record stream, the bulk-transform count (on
+  `{entity}.update`), segment insight, follower notifications, the price-list products, competitor
+  head-to-head and drafts, marketing list members and journey enrolments, the commission statement
+  and the data-quality issue list (`attome_security::read_scope`).
 - An MCP tool call, a macro run, the meeting follow-up write and an agent's permission test read the
   runtime AI switch before the gate: the switch counts as all-off until read, so the first such call
   after boot (or after the switch's snapshot aged) was refused as an unknown tool.
