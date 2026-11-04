@@ -99,7 +99,10 @@ async fn reader_role(app: &TestApp, entity: &str) -> Uuid {
             &format!("/api/v1/admin/security/roles/{role}/bulk-fields"),
             Some(json!({
                 "mode": "listed",
-                "fields": [format!("{entity}.title"), format!("{entity}.level")],
+                "fields": [
+                    { "entity": entity, "attribute": "title" },
+                    { "entity": entity, "attribute": "level" },
+                ],
             })),
         )
         .await;
