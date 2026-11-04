@@ -241,21 +241,35 @@ fn publish_blocked_when_blocking_test_fails() {
             return;
         };
         let name = format!("ct-guard-{}", Uuid::now_v7().simple());
+        // T7-T2: the guard runs only the tests a publish can affect, read
+        // from the object's L5 references; this test touches `entity`.
+        let entity = format!("ct_guard_{}", Uuid::now_v7().simple());
         // Expects an error no step can meet: always fails.
         let (status, created) = app
             .request(
                 Method::POST,
                 BASE,
                 Some(json!({ "name": name, "blocking": true,
-                             "definition": { "expect": [{ "error": "conflict" }] } })),
+                             "definition": {
+                                 "when": [{ "op": "create", "entity": entity }],
+                                 "expect": [{ "error": "conflict" }]
+                             } })),
             )
             .await;
         assert_eq!(status, StatusCode::CREATED, "{created}");
         // No draft under this id: past the guard, the publish answers 404.
-        let publish = format!(
-            "/api/v1/admin/model/environment_variable/{}/publish",
-            Uuid::now_v7()
-        );
+        // Its reference graph names `entity`, so the guard runs the test.
+        let object = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO metadata_reference (from_kind, from_ref, from_label, to_entity) \
+             VALUES ('environment_variable', $1, 'guard probe', $2)",
+        )
+        .bind(object)
+        .bind(&entity)
+        .execute(app.db())
+        .await
+        .unwrap();
+        let publish = format!("/api/v1/admin/model/environment_variable/{object}/publish");
 
         let (status, _) = app.request(Method::POST, &publish, None).await;
         assert_eq!(status, StatusCode::NOT_FOUND, "guard off: nothing changes");
