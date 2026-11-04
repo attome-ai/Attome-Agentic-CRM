@@ -465,6 +465,11 @@ async fn run_one_row(state: &EngineState, apply_id: Uuid) -> Result<RunOutcome, 
             if !failure.lost_claim {
                 ledger::mark_failed(&state.base.db, apply_id, &failure.message).await?;
             }
+            // A boot-time apply never reaches the response sink that logs a
+            // masked error's detail (BTY-5), so it is logged here, once.
+            if let AppError::Internal(detail) = &failure.error {
+                tracing::error!(apply_id = %apply_id, detail = %detail, "changeset apply: internal error");
+            }
             tracing::warn!(
                 apply_id = %apply_id,
                 changeset = %row.changeset_ref,
