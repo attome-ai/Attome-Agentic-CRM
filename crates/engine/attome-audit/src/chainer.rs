@@ -143,10 +143,23 @@ pub async fn run_until_caught_up(
     org: Option<Uuid>,
     deadline: std::time::Duration,
 ) -> Result<Vec<ChainBatchSummary>, AppError> {
+    run_until_caught_up_with(db, signer, batch_size, org, deadline, None).await
+}
+
+/// [`run_until_caught_up`], anchoring each batch in `storage` as
+/// [`run_once`] does.
+pub async fn run_until_caught_up_with(
+    db: &DbPool,
+    signer: Option<&AuditSigner>,
+    batch_size: i64,
+    org: Option<Uuid>,
+    deadline: std::time::Duration,
+    storage: Option<&StorageClient>,
+) -> Result<Vec<ChainBatchSummary>, AppError> {
     let started = std::time::Instant::now();
     let mut written = Vec::new();
     loop {
-        written.extend(run_once(db, signer, batch_size, None).await?);
+        written.extend(run_once(db, signer, batch_size, storage).await?);
         let pending = match org {
             Some(org) => crate::verify::lag(db, org).await?.0,
             None => aggregate_lag(db).await?.total_pending_ingest,

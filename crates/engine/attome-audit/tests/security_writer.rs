@@ -159,9 +159,16 @@ async fn chainer_path_carries_extras_into_the_header() {
         "chainer path: no header yet"
     );
 
-    chainer::run_once(&db, None, 1000, None)
-        .await
-        .expect("chainer run");
+    // One pass chains only rows below the cluster's xmin watermark.
+    chainer::run_until_caught_up(
+        &db,
+        None,
+        1000,
+        Some(org),
+        std::time::Duration::from_secs(60),
+    )
+    .await
+    .expect("chainer run");
     let rows = headers(&db, org).await;
     assert_eq!(rows.len(), 1);
     assert_row(&rows[0].1);

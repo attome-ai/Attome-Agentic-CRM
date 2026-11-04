@@ -293,6 +293,29 @@ async fn two_concurrent_chainer_polls_never_double_process_the_same_batch() {
         insert_ingest_row_on(&db, &make_event(org, i)).await;
     }
 
+    // Both polls must see every row: wait until the rows' transactions are
+    // below the cluster's xmin watermark, which a busy shared cluster holds
+    // back, or a poll leaves them for later and fewer than N land.
+    let started = std::time::Instant::now();
+    loop {
+        let resolved: bool = sqlx::query_scalar(
+            "SELECT bool_and(xact_id::text::bigint \
+                             < pg_snapshot_xmin(pg_current_snapshot())::text::bigint) \
+               FROM audit_ingest WHERE organization_ref = $1",
+        )
+        .bind(org)
+        .fetch_one(&db)
+        .await
+        .expect("watermark");
+        if resolved {
+            break;
+        }
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(60),
+            "rows never resolved"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
     let (r1, r2) = tokio::join!(
         attome_audit::chainer::run_once(&db, Some(&signer), 100, None),
         attome_audit::chainer::run_once(&db, Some(&signer), 100, None),

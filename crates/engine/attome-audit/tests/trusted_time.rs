@@ -225,9 +225,17 @@ async fn event_after_anchor_bound_is_reported() {
             .await
             .expect("audit write (chainer path)");
     }
-    let batches = chainer::run_once(&db, None, 1000, Some(&store))
-        .await
-        .expect("chainer run with anchoring");
+    // One pass chains only rows below the cluster's xmin watermark.
+    let batches = chainer::run_until_caught_up_with(
+        &db,
+        None,
+        1000,
+        Some(org),
+        std::time::Duration::from_secs(60),
+        Some(&store),
+    )
+    .await
+    .expect("chainer run with anchoring");
     let batch = batches
         .iter()
         .find(|b| b.organization_ref == org)

@@ -186,15 +186,30 @@ async fn chained(
     for i in 0..3 {
         insert_ingest_row(db, &make_event(org, i)).await;
     }
-    chainer::run_once(db, signer, 100, anchor)
-        .await
-        .expect("chainer run_once (v1)");
+    // One pass chains only rows below the cluster's xmin watermark.
+    chainer::run_until_caught_up_with(
+        db,
+        signer,
+        100,
+        Some(org),
+        std::time::Duration::from_secs(60),
+        anchor,
+    )
+    .await
+    .expect("chainer run (v1)");
     for i in 3..5 {
         write_v2(db, make_event(org, i)).await;
     }
-    chainer::run_once(db, signer, 100, anchor)
-        .await
-        .expect("chainer run_once (v2)");
+    chainer::run_until_caught_up_with(
+        db,
+        signer,
+        100,
+        Some(org),
+        std::time::Duration::from_secs(60),
+        anchor,
+    )
+    .await
+    .expect("chainer run (v2)");
 }
 
 #[tokio::test]
