@@ -120,6 +120,18 @@ fn viewer_cannot_read_confidential() {
             .await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert!(!body.to_string().contains(&secret.to_string()), "{body}");
+        // D-369: the query surface takes the viewer's condition too.
+        let (status, body) = app
+            .request_as(
+                &viewer.cookie,
+                Method::POST,
+                "/api/v1/query/execute",
+                Some(serde_json::json!({ "entity": "contract", "page_size": 50 })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert!(body.to_string().contains(&open.to_string()), "{body}");
+        assert!(!body.to_string().contains(&secret.to_string()), "{body}");
 
         let (status, body) = get(&app, &legal, secret).await;
         assert_eq!(status, StatusCode::OK, "{body}");
