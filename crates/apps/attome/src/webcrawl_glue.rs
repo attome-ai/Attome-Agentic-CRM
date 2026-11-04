@@ -26,7 +26,7 @@ pub async fn fetch_document(state: &EngineState, page_id: Uuid) -> Result<(), Ap
 }
 
 /// Queues the recrawls that are due (K6-T3); how many.
-pub async fn recrawl_due(state: &EngineState) -> Result<usize, AppError> {
+pub async fn recrawl_due(state: &EngineState) -> Result<u64, AppError> {
     #[cfg(feature = "webcrawl")]
     let queued = attome_webcrawl::schedule::enqueue_due(state, chrono::Utc::now()).await?;
     #[cfg(not(feature = "webcrawl"))]
