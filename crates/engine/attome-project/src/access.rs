@@ -125,6 +125,17 @@ pub(crate) async fn authorize_project_access(
     if let Some(pred) = &rls {
         sql.push_str(&pred.sql);
     }
+    let condition = read_condition(
+        state,
+        ctx,
+        entity_id,
+        "attome_project",
+        "p",
+        2 + rls.as_ref().map_or(0, |_| attome_security::RLS_BIND_COUNT),
+    );
+    if let Some(condition) = &condition {
+        sql.push_str(&format!(" AND ({})", condition.sql));
+    }
 
     let mut q = sqlx::query_scalar::<_, i32>(&sql).bind(project_id);
     if let Some(pred) = &rls {
@@ -135,6 +146,11 @@ pub(crate) async fn authorize_project_access(
             .bind(pred.binds.capability)
             .bind(&pred.binds.accessible_org_ids)
             .bind(&pred.binds.subordinate_user_ids);
+    }
+    if let Some(condition) = &condition {
+        for bind in &condition.binds {
+            q = q.bind(bind);
+        }
     }
 
     let found = q
@@ -182,6 +198,17 @@ pub(crate) async fn authorize_program_access(
     if let Some(pred) = &rls {
         sql.push_str(&pred.sql);
     }
+    let condition = read_condition(
+        state,
+        ctx,
+        entity_id,
+        "project_program",
+        "p",
+        2 + rls.as_ref().map_or(0, |_| attome_security::RLS_BIND_COUNT),
+    );
+    if let Some(condition) = &condition {
+        sql.push_str(&format!(" AND ({})", condition.sql));
+    }
 
     let mut q = sqlx::query_scalar::<_, i32>(&sql).bind(program_id);
     if let Some(pred) = &rls {
@@ -192,6 +219,11 @@ pub(crate) async fn authorize_program_access(
             .bind(pred.binds.capability)
             .bind(&pred.binds.accessible_org_ids)
             .bind(&pred.binds.subordinate_user_ids);
+    }
+    if let Some(condition) = &condition {
+        for bind in &condition.binds {
+            q = q.bind(bind);
+        }
     }
 
     let found = q
@@ -236,6 +268,17 @@ pub(crate) async fn authorize_portfolio_access(
     if let Some(pred) = &rls {
         sql.push_str(&pred.sql);
     }
+    let condition = read_condition(
+        state,
+        ctx,
+        entity_id,
+        "project_portfolio",
+        "p",
+        2 + rls.as_ref().map_or(0, |_| attome_security::RLS_BIND_COUNT),
+    );
+    if let Some(condition) = &condition {
+        sql.push_str(&format!(" AND ({})", condition.sql));
+    }
 
     let mut q = sqlx::query_scalar::<_, i32>(&sql).bind(portfolio_id);
     if let Some(pred) = &rls {
@@ -246,6 +289,11 @@ pub(crate) async fn authorize_portfolio_access(
             .bind(pred.binds.capability)
             .bind(&pred.binds.accessible_org_ids)
             .bind(&pred.binds.subordinate_user_ids);
+    }
+    if let Some(condition) = &condition {
+        for bind in &condition.binds {
+            q = q.bind(bind);
+        }
     }
 
     let found = q
@@ -306,6 +354,17 @@ async fn authorize_record_access(
     if let Some(pred) = &rls {
         sql.push_str(&pred.sql);
     }
+    let condition = read_condition(
+        state,
+        ctx,
+        entity_id,
+        logicalname,
+        "r",
+        2 + rls.as_ref().map_or(0, |_| attome_security::RLS_BIND_COUNT),
+    );
+    if let Some(condition) = &condition {
+        sql.push_str(&format!(" AND ({})", condition.sql));
+    }
 
     let mut q = sqlx::query_scalar::<_, i32>(&sql).bind(record_id);
     if let Some(pred) = &rls {
@@ -316,6 +375,11 @@ async fn authorize_record_access(
             .bind(pred.binds.capability)
             .bind(&pred.binds.accessible_org_ids)
             .bind(&pred.binds.subordinate_user_ids);
+    }
+    if let Some(condition) = &condition {
+        for bind in &condition.binds {
+            q = q.bind(bind);
+        }
     }
 
     let found = q
@@ -363,4 +427,28 @@ pub(crate) async fn authorize_timesheet_access(
         timesheet_id,
     )
     .await
+}
+
+/// D-369: the caller's grant condition on `{entity}.read` over `alias`, its
+/// placeholders from `first`. `None` for an administrator or when no grant
+/// carries a condition. Each access check below ANDs it beside the tier.
+pub(crate) fn read_condition(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    entity: &str,
+    alias: &str,
+    first: usize,
+) -> Option<attome_security::conditions::ConditionPredicate> {
+    let key = format!("{entity}.read");
+    if ctx.is_admin || !ctx.condition_grants.contains_key(&key) {
+        return None;
+    }
+    let attrs = state
+        .entities
+        .load()
+        .get_by_id(entity_id)
+        .map(|meta| meta.attrs.clone())
+        .unwrap_or_default();
+    attome_security::conditions::condition_predicate(ctx, &key, &attrs, alias, first)
 }

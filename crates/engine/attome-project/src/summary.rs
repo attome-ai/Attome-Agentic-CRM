@@ -71,6 +71,17 @@ async fn load_project_row(
     if let Some(pred) = &rls {
         sql.push_str(&pred.sql);
     }
+    let condition = crate::access::read_condition(
+        state,
+        ctx,
+        entity_id,
+        "attome_project",
+        "p",
+        2 + rls.as_ref().map_or(0, |_| attome_security::RLS_BIND_COUNT),
+    );
+    if let Some(condition) = &condition {
+        sql.push_str(&format!(" AND ({})", condition.sql));
+    }
 
     let mut q = sqlx::query_as::<
         _,
@@ -90,6 +101,11 @@ async fn load_project_row(
             .bind(pred.binds.capability)
             .bind(&pred.binds.accessible_org_ids)
             .bind(&pred.binds.subordinate_user_ids);
+    }
+    if let Some(condition) = &condition {
+        for bind in &condition.binds {
+            q = q.bind(bind);
+        }
     }
 
     q.fetch_optional(&state.base.db)
