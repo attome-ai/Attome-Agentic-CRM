@@ -17,9 +17,31 @@ use std::io::Read;
 use attome_testapp::{TestApp, seed_admin};
 use axum::http::{Method, StatusCode};
 use object_store::{ObjectStoreExt, path::Path as ObjectPath};
-use serde_json::json;
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
+
+/// The CRM pack, whose accounts the export carries.
+async fn install_crm(app: &TestApp) {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../packs")
+        .join("crm")
+        .join("changesets");
+    let mut files: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .collect();
+    files.sort();
+    for file in &files {
+        let value: Value = serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+        attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+            .await
+            .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+    }
+    let registry = attome_core::build_registry(app.db()).await.unwrap();
+    app.state.entities.swap(registry);
+}
 
 // feature: Y5
 #[test]
@@ -35,6 +57,7 @@ fn export_then_delete_request() {
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         );
+        install_crm(&app).await;
         sqlx::query("INSERT INTO account (name, owner_ref) VALUES ('Exit Co', $1)")
             .bind(app.admin.id)
             .execute(app.db())

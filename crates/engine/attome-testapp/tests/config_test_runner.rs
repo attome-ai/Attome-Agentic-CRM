@@ -40,6 +40,8 @@ async fn entity(app: &TestApp) -> String {
         )
         .await;
     assert_eq!(code, StatusCode::CREATED, "{body}");
+    let registry = attome_core::build_registry(app.db()).await.unwrap();
+    app.state.entities.swap(registry);
     logicalname
 }
 

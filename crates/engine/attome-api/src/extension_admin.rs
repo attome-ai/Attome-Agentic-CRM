@@ -118,6 +118,8 @@ async fn audit(
 }
 
 /// List extension versions
+///
+/// Every extension version: its hook, status and when it was published.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/extensions",

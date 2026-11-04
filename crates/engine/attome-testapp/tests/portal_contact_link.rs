@@ -62,11 +62,11 @@ fn a_verified_signup_links_to_its_contact_or_one_pending_review() {
             return;
         };
         install_crm(&app).await;
-        let team: Uuid =
-            sqlx::query_scalar("SELECT id FROM team WHERE is_deleted = false ORDER BY id LIMIT 1")
-                .fetch_one(app.db())
-                .await
-                .expect("a team to own portal records");
+        let team: Uuid = sqlx::query_scalar("INSERT INTO team (name) VALUES ($1) RETURNING id")
+            .bind(format!("portal owners {}", Uuid::now_v7().simple()))
+            .fetch_one(app.db())
+            .await
+            .expect("a team to own portal records");
 
         let mut tx = app.db().begin().await.unwrap();
         let portal = provision::create_portal(

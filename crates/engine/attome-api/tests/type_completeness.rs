@@ -58,8 +58,13 @@ fn every_field_type_has_every_capability() {
         if ft.pg_type(false).trim().is_empty() {
             lack("column type");
         }
-        if ft.sql_cast(false).trim().is_empty() {
+        // A TEXT column binds a text value as it is; every other column type
+        // needs its cast.
+        if ft.pg_type(false) != "TEXT" && ft.sql_cast(false).trim().is_empty() {
             lack("cast");
+        }
+        if ft.pg_type(false) == "TEXT" && !ft.sql_cast(false).trim().is_empty() {
+            lack("no cast for a TEXT column");
         }
         if FieldType::from_int(ft.to_int()) != Some(ft.clone()) {
             lack("stored code that reads back");

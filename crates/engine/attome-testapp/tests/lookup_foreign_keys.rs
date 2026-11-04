@@ -202,7 +202,7 @@ async fn keyed_pair(app: &TestApp, rule: &str) -> (String, Uuid, String) {
 /// A record of `source` (through the record API), then its lookup pointed
 /// at a record that never existed (by hand, on the throwaway database).
 async fn orphan_row(app: &TestApp, source: &str) -> Result<(), sqlx::Error> {
-    let id = create_record(app, source, json!({})).await;
+    let id = create_record(app, source, json!({ "target_ref": null })).await;
     sqlx::query(&format!(
         "UPDATE \"{source}\" SET target_ref = $1 WHERE id = $2"
     ))

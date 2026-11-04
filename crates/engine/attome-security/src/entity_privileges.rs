@@ -153,8 +153,14 @@ pub async fn deactivate_entity_privileges(db: &DbPool, logicalname: &str) -> Res
 /// [`ensure_entity_privileges`] is given on the admin and apply paths. An
 /// existing row keeps its layer (`ON CONFLICT DO NOTHING`).
 pub async fn seed_all(db: &DbPool) -> Result<(), AppError> {
+    // Each action with how it is described: the CRUD four by name, the
+    // extra ones by their wording, exactly as `ensure_entity_privileges`.
     let mut actions: Vec<&str> = ENTITY_ACTIONS.to_vec();
-    actions.extend(EXTRA_ACTIONS.iter().map(|(action, _)| *action));
+    let mut described: Vec<&str> = ENTITY_ACTIONS.to_vec();
+    for (action, what) in EXTRA_ACTIONS {
+        actions.push(action);
+        described.push(what);
+    }
 
     // `privilege.id` has no column default (legacy table), so the id
     // is generated here rather than by the column — `uuidv7()` is the same
@@ -168,22 +174,16 @@ pub async fn seed_all(db: &DbPool) -> Result<(), AppError> {
          SELECT uuidv7(), \
                 e.logicalname || '.' || a.action, \
                 e.logicalname || '.' || a.action, \
-                CASE WHEN a.action = $2 \
-                     THEN 'Per-entity privilege: bulk mutations on ' || e.logicalname \
-                     WHEN a.action = $3 \
-                     THEN 'Per-entity privilege: permanent deletes on ' || e.logicalname \
-                     ELSE 'Per-entity privilege: ' || a.action || ' on ' || e.logicalname \
-                END, \
+                'Per-entity privilege: ' || a.what || ' on ' || e.logicalname, \
                 true, NOW(), e.owner_layer \
            FROM entity_info e \
-           CROSS JOIN unnest($1::text[]) AS a(action) \
+           CROSS JOIN unnest($1::text[], $2::text[]) AS a(action, what) \
           WHERE (e.is_active IS NULL OR e.is_active = true) \
             AND e.logicalname IS NOT NULL \
          ON CONFLICT (key) DO NOTHING",
     )
     .bind(&actions)
-    .bind(BULK_ACTION)
-    .bind(HARD_DELETE_ACTION)
+    .bind(&described)
     .execute(db)
     .await
     .map_err(AppError::internal)?;

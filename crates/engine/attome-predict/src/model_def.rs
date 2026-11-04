@@ -342,10 +342,9 @@ pub fn training_spec(def: &ModelDef) -> attome_records::query_spec::QuerySpec {
         entity: def.entity.clone(),
         select,
         r#where: Some(training_condition(def)),
-        sort: vec![attome_records::query_spec::SortKey {
-            field: "id".into(),
-            desc: false,
-        }],
+        // Rows come in id order: the compiler's keyset tiebreak (an explicit
+        // `id` sort is refused, it is not a sortable field).
+        sort: Vec::new(),
         page_size: Some(attome_records::query_spec::compile::MAX_PAGE_SIZE),
         cursor: None,
         group_by: Vec::new(),

@@ -18,7 +18,7 @@ use rust_decimal::Decimal;
 use serde_json::Value;
 use uuid::Uuid;
 
-const PACKS: [&str; 7] = [
+const PACKS: [&str; 8] = [
     "crm",
     "sales",
     "finance",
@@ -26,6 +26,7 @@ const PACKS: [&str; 7] = [
     "vendor-supplier",
     "contract-management",
     "billing",
+    "fulfilment",
 ];
 
 async fn install(app: &TestApp) {

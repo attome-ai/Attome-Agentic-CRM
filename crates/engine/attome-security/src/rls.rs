@@ -2503,7 +2503,18 @@ mod tests {
 
         let default =
             rls_predicate(&c, plain, "t", AccessLevel::Team, Capability::View, 2).unwrap();
-        assert!(default.sql.contains("t.owner_ref ="), "{}", default.sql);
+        // Unchanged: the same filter as an entity no model names (the entity
+        // is a bind, so the text is the same).
+        let unnamed = rls_predicate(
+            &c,
+            Uuid::now_v7(),
+            "t",
+            AccessLevel::Team,
+            Capability::View,
+            2,
+        )
+        .unwrap();
+        assert_eq!(default.sql, unnamed.sql);
         assert!(
             !default.sql.contains("t.organization_ref = ANY"),
             "{}",

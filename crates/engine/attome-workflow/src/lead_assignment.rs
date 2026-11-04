@@ -335,12 +335,22 @@ pub async fn assign_lead(state: &EngineState, id: Uuid) -> Result<bool, AppError
         id,
         version,
         json!({
-            "owner_ref": owner.to_string(),
             "assignment_reason": reason.as_str(),
             "assignment_rule_ref": rule.map(|r| r.to_string()),
         }),
     )
     .await?;
+    // The owner moves through the one reassign path (an audited owner change
+    // and the new owner's share); a body may never set `owner_ref`.
+    let email: Option<String> = sqlx::query_scalar("SELECT email FROM user_account WHERE id = $1")
+        .bind(owner)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .flatten();
+    let email = email.ok_or(AppError::NotFound)?;
+    attome_security::admin::reassign_owner_for(state, acting, "lead", id, Some(&email), None)
+        .await?;
     tracing::info!(lead = %id, %owner, reason = reason.as_str(), "lead assigned");
     Ok(true)
 }

@@ -16,6 +16,7 @@ use uuid::Uuid;
 /// order.
 async fn definitions(app: &TestApp) {
     for name in [
+        "attome-ai-tone",
         "xrm-core-authentication-type",
         "xrm-core-authentication-type-data",
         "attome-ai-provider",
@@ -23,6 +24,7 @@ async fn definitions(app: &TestApp) {
         "attome-ai-model-catalog",
         "attome-ai-model-catalog-data",
         "attome-ai-agent",
+        "attome-ai-agent-principal",
         "attome-ai-capability-pack",
         "attome-ai-agent-data",
         "attome-ai-service-agent",

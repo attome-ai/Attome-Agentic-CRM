@@ -118,12 +118,20 @@ pub async fn create_task_from_finding(
         "entity_name": entity,
         "record_id": record,
     });
-    if let Some(owner) = owner {
-        body["owner_ref"] = json!(owner);
-    }
-    match attome_records::entity_crud::create_record_for(state, ctx, ctx.user_id, "activity", body)
-        .await
-    {
+    let created =
+        attome_records::entity_crud::create_record_for(state, ctx, ctx.user_id, "activity", body)
+            .await;
+    // The owner moves through the one reassign path; a body may never set
+    // `owner_ref`.
+    let created = match (created, owner) {
+        (Ok((task, extra)), Some(owner)) if owner != ctx.user_id => {
+            reassign_task(state, ctx.user_id, task, owner)
+                .await
+                .map(|()| (task, extra))
+        }
+        (created, _) => created,
+    };
+    match created {
         Ok((task, _)) => {
             sqlx::query("UPDATE call_finding SET task_ref = $2 WHERE id = $1")
                 .bind(finding)
@@ -143,6 +151,25 @@ pub async fn create_task_from_finding(
             Err(error)
         }
     }
+}
+
+/// Gives the task to `owner` (a user) through the audited reassign path.
+async fn reassign_task(
+    state: &EngineState,
+    actor: Uuid,
+    task: Uuid,
+    owner: Uuid,
+) -> Result<(), AppError> {
+    let email: Option<String> = sqlx::query_scalar("SELECT email FROM user_account WHERE id = $1")
+        .bind(owner)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .flatten();
+    let email = email.ok_or(AppError::NotFound)?;
+    attome_security::admin::reassign_owner_for(state, actor, "activity", task, Some(&email), None)
+        .await?;
+    Ok(())
 }
 
 /// The owner of `analysis`.

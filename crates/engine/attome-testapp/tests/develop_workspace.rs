@@ -24,6 +24,16 @@ async fn create_entity(app: &TestApp, name: &str) {
         )
         .await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
+    // One field, so a record has something to write.
+    let id = body["id"].as_str().unwrap();
+    let (status, body) = app
+        .request(
+            Method::POST,
+            &format!("/api/v1/admin/entities/{id}/fields"),
+            Some(json!({ "logicalname": "title", "name": "Title", "field_type": "text" })),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
     let registry = attome_core::build_registry(app.db()).await.unwrap();
     app.state.entities.swap(registry);
 }
@@ -68,7 +78,11 @@ fn a_workspace_copies_the_structure_and_not_the_records() {
         let entity = format!("ws_probe_{}", &Uuid::now_v7().simple().to_string()[..12]);
         create_entity(&app, &entity).await;
         let (status, record) = app
-            .request(Method::POST, &format!("/api/v1/{entity}"), Some(json!({})))
+            .request(
+                Method::POST,
+                &format!("/api/v1/{entity}"),
+                Some(json!({ "title": "probe" })),
+            )
             .await;
         assert_eq!(status, StatusCode::CREATED, "{record}");
 

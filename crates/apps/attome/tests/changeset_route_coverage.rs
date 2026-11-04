@@ -418,11 +418,13 @@ const RECORDED: &[(&str, &[&str])] = &[
 const EXCLUDED: &[(&str, &str)] = &[
     (
         "POST /api/v1/admin/entities/{entity_id}/fields/{field_id}/foreign-key",
-        "adds the database foreign key behind an existing lookup online, on this          deployment's table; a fresh install gets the key with the field",
+        "adds the database foreign key behind an existing lookup online, on this \
+         deployment's table; a fresh install gets the key with the field",
     ),
     (
         "POST /api/v1/admin/entities/{entity_id}/partition",
-        "Y2-T12: moves one deployment's large table into partitions online, by its          size there; storage, not promoted metadata",
+        "Y2-T12: moves one deployment's large table into partitions online, by its \
+         size there; storage, not promoted metadata",
     ),
     (
         "POST /api/v1/admin/themes/preview-check",

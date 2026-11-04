@@ -93,7 +93,10 @@ pub struct SponsorBody {
 pub struct AgentListQuery {
     /// Only agents in this lifecycle state.
     pub state: Option<String>,
+    /// One-based page number; below 1 is page 1.
+    #[param(minimum = 1)]
     pub page: Option<i64>,
+    /// Rows per page, at most the platform's page-size cap.
     pub page_size: Option<i64>,
 }
 
@@ -399,6 +402,8 @@ async fn list_agents(
 }
 
 /// Get an agent principal
+///
+/// One agent principal: its account, lifecycle state, sponsor and keys' summary.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/agents/{id}",

@@ -254,12 +254,13 @@ fn other_domain_steward_forbidden() {
         // Account belongs to one domain; the other user stewards another.
         let mut domains = Vec::new();
         for name in ["Customers", "Suppliers"] {
-            let id: Uuid =
-                sqlx::query_scalar("INSERT INTO data_domain (name) VALUES ($1) RETURNING id")
-                    .bind(format!("{name} {tag}"))
-                    .fetch_one(app.db())
-                    .await
-                    .unwrap();
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO data_domain (name, owner_layer) VALUES ($1, 'customer') RETURNING id",
+            )
+            .bind(format!("{name} {tag}"))
+            .fetch_one(app.db())
+            .await
+            .unwrap();
             domains.push(id);
         }
         sqlx::query(

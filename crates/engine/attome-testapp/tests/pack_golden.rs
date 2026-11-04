@@ -98,6 +98,11 @@ fn pack_golden_workflows_pass() {
             for needed in doc["packs"].as_array().into_iter().flatten() {
                 install(&app, needed.as_str().expect("a pack name")).await;
             }
+            // The tests read the installed fields through the registry.
+            let registry = attome_core::build_registry(&app.state.base.db)
+                .await
+                .expect("build the metadata registry");
+            app.state.entities.swap(registry);
             for test in doc["tests"].as_array().into_iter().flatten() {
                 let name = test["name"].as_str().unwrap_or("(unnamed)");
                 let definition = validate(name, &test["definition"]).expect("a golden test reads");

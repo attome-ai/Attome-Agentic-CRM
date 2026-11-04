@@ -202,6 +202,8 @@ pub async fn request_feedback(
                 json!({
                     "subject": "Buyer interview for a win-loss review",
                     "activity_type": "task",
+                    "entity_name": REVIEW,
+                    "record_id": review.to_string(),
                     "regarding_entity": REVIEW,
                     "regarding_id": review.to_string(),
                     "notes": format!("Interview the buyer's contacts: {names}"),

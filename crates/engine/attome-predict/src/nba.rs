@@ -95,7 +95,9 @@ pub struct Recommendation {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct RecordQuery {
+    /// The record's entity.
     pub regarding_entity: String,
+    /// The record.
     pub regarding_id: Uuid,
 }
 
@@ -439,6 +441,8 @@ async fn write_decision_event(
 }
 
 /// List next-best actions
+///
+/// Every next-best action rule, by entity. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/predict/next-actions",

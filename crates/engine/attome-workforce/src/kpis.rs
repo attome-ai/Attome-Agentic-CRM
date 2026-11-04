@@ -42,7 +42,9 @@ pub const MAX_DAYS: i64 = 31;
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct KpiQuery {
+    /// The first day of the period, inclusive.
     pub from: NaiveDate,
+    /// The last day of the period, inclusive.
     pub to: NaiveDate,
 }
 

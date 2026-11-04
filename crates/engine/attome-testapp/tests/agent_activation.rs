@@ -17,10 +17,12 @@ use uuid::Uuid;
 /// The AI definitions the server's boot applies, in its order.
 async fn definitions(app: &TestApp) {
     for name in [
+        "attome-ai-tone",
         "xrm-core-authentication-type",
         "attome-ai-provider",
         "attome-ai-model-catalog",
         "attome-ai-agent",
+        "attome-ai-agent-principal",
         "attome-ai-capability-pack",
     ] {
         attome_api::changeset::boot::apply_platform_definition(&app.state, name)

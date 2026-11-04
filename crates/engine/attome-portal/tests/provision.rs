@@ -36,6 +36,9 @@ use uuid::Uuid;
 
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../../apps/attome/migrations");
 const BUNDLE: &str = include_str!("../../../../platform-bundles/attome-portal.json");
+/// `webportal.service_user_ref`, added by a later platform bundle.
+const SERVICE_USER_PATCH: &str =
+    include_str!("../../../../platform-bundles/attome-portal-service-user.json");
 
 /// URL of this binary's migrated and seeded database, created once.
 static DB_URL: OnceCell<Option<String>> = OnceCell::const_new();
@@ -222,10 +225,19 @@ fn the_model_claims_exactly_the_bundle_entities() {
             .unwrap();
         let mut required_and_protected = 0;
         for f in fields {
+            // A field a later platform bundle adds (attribute_patches) counts.
+            let patches: serde_json::Value = serde_json::from_str(SERVICE_USER_PATCH).unwrap();
+            let patched = patches["attribute_patches"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|p| p["entity"] == entity)
+                .map(|p| &p["attribute"]);
             let attr = e["attributes"]
                 .as_array()
                 .unwrap()
                 .iter()
+                .chain(patched)
                 .find(|a| a["logicalname"] == *f)
                 .unwrap_or_else(|| panic!("{entity}.{f} missing from the bundle"));
             if attr["is_required"] == true {

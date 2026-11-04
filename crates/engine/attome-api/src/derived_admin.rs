@@ -64,6 +64,8 @@ pub struct DerivedEntityBody {
 }
 
 /// List derived entities
+///
+/// Every derived entity: its anchor, mode, condition and refresh state.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/derived-entities",

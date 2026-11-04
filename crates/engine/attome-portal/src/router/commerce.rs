@@ -454,6 +454,7 @@ async fn guest_catalogue(
 pub struct ShippingQuery {
     /// ISO 3166-1 alpha-2.
     pub country: String,
+    /// The delivery city, for city-specific rates.
     pub city: Option<String>,
     /// The order's total, a decimal (for free-over rates).
     pub total: Option<String>,
