@@ -203,7 +203,8 @@ pub async fn trial_sweep(
         return Ok(out);
     }
     let trials: Vec<TrialRow> = sqlx::query_as(
-        "SELECT id, owner_ref, trial_end_date, trial_reminded_on, name FROM subscription \
+        "SELECT id, owner_ref, trial_end_date::date, trial_reminded_on::date, name \
+           FROM subscription \
           WHERE status = 'trial' AND trial_end_date IS NOT NULL AND trial_end_date <= $1 \
             AND (is_active IS NULL OR is_active = true) \
           ORDER BY trial_end_date, id LIMIT $2",

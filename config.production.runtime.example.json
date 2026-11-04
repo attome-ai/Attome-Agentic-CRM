@@ -272,5 +272,7 @@
     "_comment": "Solution 7 (D-785) — changeset recording; mode null = the profile default (auto on production). See config.example.json.",
     "changesets": { "mode": null, "auto_layer": "project" }
   },
-  "_shed_comment": "AB5-T7: load shedding keeps its defaults (see config.example.json); size the slots to the server."
+  "_shed_comment": "AB5-T7: load shedding keeps its defaults (see config.example.json); size the slots to the server.",
+  "_esign_comment": "K4-T2: esign keeps its defaults (see config.example.json); set seal_certificate_file and seal_key_file to seal completed envelopes.",
+  "_extensions_comment": "Y10-T1: extensions keep their default limits (fuel, memory_mib, timeout_ms; see config.example.json)."
 }

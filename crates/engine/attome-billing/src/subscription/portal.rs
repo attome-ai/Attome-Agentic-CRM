@@ -105,8 +105,9 @@ pub async fn for_account(
 ) -> Result<Vec<PortalSubscription>, AppError> {
     let db = &state.base.db;
     let rows: Vec<SubscriptionRow> = sqlx::query_as(
-        "SELECT id, name, status::text, currency, start_date, end_date, \
-                billing_frequency::text, renewal_mode::text, cancel_effective \
+        "SELECT id, name, status::text, currency, start_date::timestamptz, \
+                end_date::timestamptz, billing_frequency::text, renewal_mode::text, \
+                cancel_effective::timestamptz \
            FROM subscription \
           WHERE account_ref = $1 AND (is_active IS NULL OR is_active = true) \
           ORDER BY start_date DESC NULLS LAST, id LIMIT $2",

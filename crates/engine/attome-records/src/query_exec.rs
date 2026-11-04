@@ -2677,6 +2677,33 @@ pub async fn execute_stored_query_with_definition(
         }
     };
 
+    // A system column the SQL selects is always a valid filter and sort
+    // identifier: the high-volume date window filters on `created_at` and a
+    // delta read restricts on `id`, even when the table definition lists
+    // only attributes. The SQL is described only when one is asked for.
+    let wants_system_column = body
+        .filters
+        .iter()
+        .map(|f| f.field.as_str())
+        .chain(std::iter::once(body.order_by.as_str()))
+        .any(|field| {
+            attome_core::ALL_SYSTEM_COLS.contains(&field) && !whitelist.iter().any(|w| w == field)
+        });
+    if td_names.is_some() && wants_system_column {
+        let discovery_sql = format!("SELECT * FROM ({base_sql}) AS t LIMIT 0");
+        let described = (&mut *tx)
+            .describe(&discovery_sql)
+            .await
+            .map_err(AppError::internal)?;
+        for column in described.columns() {
+            let name = column.name();
+            if attome_core::ALL_SYSTEM_COLS.contains(&name) && !whitelist.iter().any(|w| w == name)
+            {
+                whitelist.push(name.to_owned());
+            }
+        }
+    }
+
     // Columns as known from the whitelist — used only to check is_searchable
     // for the search condition below, not returned to the caller.
     let mut validation_columns = build_columns(td_json.as_ref(), &whitelist);

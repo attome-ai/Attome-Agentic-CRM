@@ -2243,20 +2243,24 @@ mod tests {
 
     /// Every compiled platform changeset parses, its checksum verifies in
     /// Rust (JCS), and folding its operations reproduces exactly the platform
-    /// bundle it was converted from — so applying it applies that bundle's
-    /// content (the pure half of the Phase 1.5 equivalence proof).
+    /// bundle it was converted from, when there is one — so applying it
+    /// applies that bundle's content (the pure half of the Phase 1.5
+    /// equivalence proof).
     #[test]
     fn every_platform_changeset_reassembles_to_its_bundle() {
         for entry in PLATFORM_CHANGESETS {
             let d = doc(entry.json);
             assert_eq!(d.name, entry.name, "{}", entry.file);
             assert_eq!(d.layer, Layer::Platform);
-            let (_, bundle_json) = crate::changeset::layers::PLATFORM_BUNDLES
+            // A changeset written as one (not converted from a bundle) has no
+            // bundle to reproduce: it must still fold.
+            let Some((_, bundle_json)) = crate::changeset::layers::PLATFORM_BUNDLES
                 .iter()
                 .find(|(name, _)| *name == entry.name)
-                .unwrap_or_else(|| {
-                    panic!("{}: no platform bundle named {}", entry.file, entry.name)
-                });
+            else {
+                to_bundle(&d).unwrap_or_else(|e| panic!("{}: {e}", entry.file));
+                continue;
+            };
             let mut want =
                 crate::bundle::parse_bundle(bundle_json.as_bytes()).expect("bundle parses");
             let mut got = to_bundle(&d).unwrap_or_else(|e| panic!("{}: {e}", entry.file));
