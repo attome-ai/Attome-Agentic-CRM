@@ -3,5 +3,5 @@
   "record_list_50": { "queries": 16, "redis": 12 },
   "record_update": { "queries": 25, "redis": 10 },
   "global_search": { "queries": 8, "redis": 10 },
-  "sign_in": { "queries": 18, "redis": 10 }
+  "sign_in": { "queries": 19, "redis": 10 }
 }

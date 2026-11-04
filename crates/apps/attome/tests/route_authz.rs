@@ -534,6 +534,21 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "F6: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; checks out only the signed-in shopper's own cart, writing through the portal's record scope.",
     ),
     (
+        "POST",
+        "/{keyword}/api/v1/shop/guest/start",
+        "F8-T7: a public portal route for a guest with no account: `guest_portal` answers 404 unless the portal and guest checkout are on, checks the request is same-origin, and the phone and address are rate-limited (429); it only keeps an unconfirmed basket and texts its code, nothing is ordered.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/shop/guest/confirm",
+        "F8-T7: a public portal route for a guest with no account: `guest_portal` as for start; the order is placed only with the code texted to the guest's phone (wrong, expired or exhausted is 401), as the portal's own service user under its record scope.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/shop/reviews",
+        "F8-T8: a portal route: `shopper` resolves the signed-in portal user from the portal's own session cookie, not a staff context `Authorized<P>` could carry; the review is the user's own contact's, of a product they received, written as the portal's service user and pending until a store person publishes it.",
+    ),
+    (
         "GET",
         "/{keyword}/api/v1/shop/orders",
         "F6: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; lists only the orders of the signed-in shopper's own account.",
