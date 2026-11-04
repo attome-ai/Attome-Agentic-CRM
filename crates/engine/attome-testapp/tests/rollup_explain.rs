@@ -91,27 +91,6 @@ async fn own_invoices_role(app: &TestApp, user: Uuid, entity: &str) {
         .unwrap();
 }
 
-async fn grant(app: &TestApp, user: Uuid, key: &str) {
-    attome_security::db::ensure_privilege(
-        app.db(),
-        key,
-        key,
-        "test grant",
-        attome_core::changeset::Layer::Project,
-    )
-    .await
-    .unwrap();
-    sqlx::query(
-        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
-         SELECT uuidv7(), $1, id, true, now() FROM privilege WHERE key = $2",
-    )
-    .bind(user)
-    .bind(key)
-    .execute(app.db())
-    .await
-    .unwrap();
-}
-
 // feature: A10
 // negative: GET /api/v1/{entity}/{id}/rollups/{attribute}/explain
 #[test]
@@ -187,9 +166,10 @@ fn rollup_explain_lists_readable_records_and_counts_the_rest() {
 
         // A reader who sees only their own invoices, and the account.
         let reader = attome_testapp::seed_user(app.db(), "rollup-reader").await;
-        grant(&app, reader.id, &format!("{account}.read")).await;
-        // Invoices through a role that reads only what its holder owns: a
-        // direct grant alone reads at Global (no access row narrows it).
+        // Accounts and invoices through roles that read only what their
+        // holder owns: a direct grant alone reads at Global (no access row
+        // narrows it), and the reader must not read another account.
+        own_invoices_role(&app, reader.id, &account).await;
         own_invoices_role(&app, reader.id, &invoice).await;
         for (table, id) in [(&account, acme), (&invoice, invoices[0])] {
             sqlx::query(&format!(
