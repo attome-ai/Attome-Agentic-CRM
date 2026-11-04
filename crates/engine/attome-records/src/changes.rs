@@ -300,15 +300,36 @@ pub async fn readable_ids(
         attome_security::RecordAction::Read,
     )
     .await?;
-    let predicate = if ctx.is_admin || level == AccessLevel::Global {
+    // D-369/D-371: the predicate a record read takes, grant conditions and
+    // owner visibility included, so a change feed never names a row the
+    // record itself would refuse.
+    let predicate = if ctx.is_admin {
         None
     } else {
-        attome_security::rls_predicate(
+        let attrs = state
+            .entities
+            .load()
+            .get_by_id(entity_id)
+            .map(|meta| meta.attrs.clone())
+            .unwrap_or_default();
+        let owner_visible = level != AccessLevel::Global
+            && attome_security::resolve_owner_visible(
+                &state.base.db,
+                ctx.user_id,
+                entity_id,
+                entity,
+                attome_security::RecordAction::Read,
+            )
+            .await?;
+        attome_security::rls_predicate_with_conditions(
             ctx,
             entity_id,
             "",
             level,
             attome_security::RecordAction::Read.share_capability(),
+            &format!("{entity}.read"),
+            &attrs,
+            owner_visible,
             2,
         )
     };
@@ -320,13 +341,12 @@ pub async fn readable_ids(
     let sql = attome_db::tag_dynamic("records.changes", &sql);
     let mut query = sqlx::query_scalar::<_, Uuid>(&sql).bind(ids);
     if let Some(p) = &predicate {
-        query = query
-            .bind(p.binds.entity_ref)
-            .bind(p.binds.caller_id)
-            .bind(&p.binds.team_ids)
-            .bind(p.binds.capability)
-            .bind(&p.binds.accessible_org_ids)
-            .bind(&p.binds.subordinate_user_ids);
+        if let Some(tier) = &p.tier_binds {
+            query = attome_security::bind_rls_predicate(query, tier);
+        }
+        for bind in &p.condition_binds {
+            query = query.bind(bind);
+        }
     }
     let visible = query
         .fetch_all(state.base.read_pool(ctx.user_id).await)
