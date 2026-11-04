@@ -121,6 +121,8 @@ pub async fn judge_policy(
         &policy,
         packs.action_ids,
     );
+    // The gate reads the runtime AI switch's snapshot, all-off until read.
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     Ok(crate::permission_test::judge(state, &security, &effective))
 }
 

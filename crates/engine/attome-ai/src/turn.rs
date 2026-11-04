@@ -1219,6 +1219,9 @@ pub async fn run(
                 finish!(TerminalState::Cancelled, String::new());
             }
 
+            // The gate reads the runtime AI switch's snapshot, all-off until
+            // read (or once stale): read it first, as `dispatch` does.
+            attome_core::ai_runtime_switch::refresh(db).await;
             let gate_inputs = crate::engine::gate_inputs(
                 state,
                 registry

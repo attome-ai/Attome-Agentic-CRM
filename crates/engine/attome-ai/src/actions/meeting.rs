@@ -201,6 +201,7 @@ async fn propose_update(
         .resolve(action)
         .map(|d| d.module)
         .ok_or(AppError::NotFound)?;
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let inputs = crate::engine::gate_inputs(state, module);
     let args = json!({
         "entity": update.entity,

@@ -226,6 +226,8 @@ pub async fn run(
     let executors = &*crate::engine::EXECUTORS;
     let planned = steps(&definition);
     let mut out = Vec::with_capacity(records.len());
+    // The gate reads the runtime AI switch's snapshot, all-off until read.
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     for record in records {
         let mut outcomes = Vec::new();
         let mut error = None;

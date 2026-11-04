@@ -767,6 +767,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- An MCP tool call, a macro run, the meeting follow-up write and an agent's permission test read the
+  runtime AI switch before the gate: the switch counts as all-off until read, so the first such call
+  after boot (or after the switch's snapshot aged) was refused as an unknown tool.
+- Lead assignment and call coaching change a record's owner through the audited reassign path; a
+  record body never sets `owner_ref`, and both had stopped assigning.
 - A billing run puts a mid-period proration on the same invoice request as the period's other charges:
   charges are grouped by the period they end with, not the day they start (F3-T15).
 - A website's repeated blocks (a related-links panel, a newsletter box seen on most of its pages) are left

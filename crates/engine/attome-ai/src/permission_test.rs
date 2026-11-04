@@ -421,7 +421,11 @@ pub async fn run(state: &EngineState, actor: Uuid, agent_ref: Uuid) -> Result<Re
         failures,
         over_restricted,
         summary,
-    } = judge(state, &security, &resolved.effective);
+    } = {
+        // The gate reads the runtime AI switch's snapshot, all-off until read.
+        attome_core::ai_runtime_switch::refresh(&state.base.db).await;
+        judge(state, &security, &resolved.effective)
+    };
 
     let run_id = Uuid::now_v7();
     let passed = failures.is_empty();

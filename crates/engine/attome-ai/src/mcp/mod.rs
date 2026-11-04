@@ -961,6 +961,11 @@ async fn tools_call(
         .resolve(&params.name)
         .map(|d| d.module)
         .unwrap_or(attome_modules::MODULE_AI);
+    // `gate_inputs` reads the runtime AI switch's snapshot, which counts as
+    // all-off until it has been read: read it first, as every other entry
+    // to `dispatch` does, or the first call after boot (or after the snapshot
+    // ages) is refused as unavailable.
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let inputs = crate::engine::gate_inputs(state, module);
 
     // A tool loop retries. The gate refuses a `RequiresKey` action from an
