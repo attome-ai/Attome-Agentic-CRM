@@ -111,5 +111,13 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "work_item",
+      "name": "Active Work Item",
+      "sql": "SELECT id, description, due_date, priority, status, title, created_at, modified_at FROM work_item WHERE is_active IS NOT FALSE",
+      "required_privilege": "work_item.read"
+    }
   ]
 }

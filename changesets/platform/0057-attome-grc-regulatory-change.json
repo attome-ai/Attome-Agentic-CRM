@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:53fccb52cddab1ad908cb04d67abbb65843dff3721d0e438000a6f4242eed445",
+  "checksum": "sha256:2bd996bef23bee1ea8ce827c15043d352c7bbff9c0dcdbe09c623c088c031eb4",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-grc-regulatory-change.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -576,11 +576,47 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "grc_regulatory_change",
+          "entity_mappings": [],
+          "name": "Active Regulatory Change",
+          "required_privilege": "grc_regulatory_change.read",
+          "sql": "SELECT id, due_on, effective_on, impact, impact_assessment, published_on, source, source_url, status, summary, title, owner_user, regulation_ref, created_at, modified_at FROM grc_regulatory_change WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "grc_regulatory_change",
+        "query": "Active Regulatory Change"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_regulatory_change_link",
+          "entity_mappings": [],
+          "name": "Active Regulatory Change Link",
+          "required_privilege": "grc_regulatory_change_link.read",
+          "sql": "SELECT id, action, impact, note, change_ref, control_ref, policy_ref, requirement_ref, created_at, modified_at FROM grc_regulatory_change_link WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "grc_regulatory_change_link",
+        "query": "Active Regulatory Change Link"
+      }
+    },
+    {
+      "args": {
         "display_name": "تغيير تنظيمي"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 22,
+      "seq": 24,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change",
@@ -593,7 +629,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 23,
+      "seq": 25,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.title",
@@ -606,7 +642,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 24,
+      "seq": 26,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.regulation_ref",
@@ -619,7 +655,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 25,
+      "seq": 27,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.source",
@@ -632,7 +668,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 26,
+      "seq": 28,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.source_url",
@@ -645,7 +681,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 27,
+      "seq": 29,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.summary",
@@ -658,7 +694,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 28,
+      "seq": 30,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.published_on",
@@ -671,7 +707,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 29,
+      "seq": 31,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.effective_on",
@@ -684,7 +720,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 30,
+      "seq": 32,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.impact",
@@ -697,7 +733,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 31,
+      "seq": 33,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.impact_assessment",
@@ -710,7 +746,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 32,
+      "seq": 34,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.status",
@@ -723,7 +759,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 33,
+      "seq": 35,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.owner_user",
@@ -736,7 +772,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 34,
+      "seq": 36,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change.due_on",
@@ -749,7 +785,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 35,
+      "seq": 37,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change_link",
@@ -762,7 +798,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 36,
+      "seq": 38,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change_link.change_ref",
@@ -775,7 +811,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 37,
+      "seq": 39,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change_link.control_ref",
@@ -788,7 +824,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 38,
+      "seq": 40,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change_link.requirement_ref",
@@ -801,7 +837,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 39,
+      "seq": 41,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change_link.policy_ref",
@@ -814,7 +850,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 40,
+      "seq": 42,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change_link.impact",
@@ -827,7 +863,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 41,
+      "seq": 43,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change_link.action",
@@ -840,7 +876,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 42,
+      "seq": 44,
       "target": {
         "locale": "ar",
         "object_key": "grc_regulatory_change_link.note",

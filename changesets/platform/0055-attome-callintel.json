@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:dfcebe14fa26f1b469746970e9148ca238f2ab10444289194e7549b5e5bcad62",
+  "checksum": "sha256:cb3ce4f1cf76aa2888a62a4b9b14e62ab6ce6bd1561e0204ce8d10dd03eead73",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-callintel.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -1807,11 +1807,173 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "call_analysis",
+          "entity_mappings": [],
+          "name": "Active Call Analysis",
+          "required_privilege": "call_analysis.read",
+          "sql": "SELECT id, account_id, activity_id, analysed_at, customer_longest_story_s, customer_questions, interruptions, longest_monologue_s, model_id, opportunity_id, staff_questions, staff_talk_share, staff_words_per_minute, status, transcript_version, owner_user, created_at, modified_at FROM call_analysis WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "call_analysis",
+        "query": "Active Call Analysis"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_comment",
+          "entity_mappings": [],
+          "name": "Active Call Comment",
+          "required_privilege": "call_comment.read",
+          "sql": "SELECT id, at_ms, body, analysis_ref, author, parent_ref, created_at, modified_at FROM call_comment WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "call_comment",
+        "query": "Active Call Comment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_daily_aggregate",
+          "entity_mappings": [],
+          "name": "Active Call Daily Aggregate",
+          "required_privilege": "call_daily_aggregate.read",
+          "sql": "SELECT id, day, metric, team_ref, tracker_ref, value, created_at, modified_at FROM call_daily_aggregate WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "call_daily_aggregate",
+        "query": "Active Call Daily Aggregate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_finding",
+          "entity_mappings": [],
+          "name": "Active Call Finding",
+          "required_privilege": "call_finding.read",
+          "sql": "SELECT id, end_ms, kind, speaker, start_ms, task_ref, text, analysis_ref, tracker_ref, created_at, modified_at FROM call_finding WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "call_finding",
+        "query": "Active Call Finding"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_library",
+          "entity_mappings": [],
+          "name": "Active Call Library",
+          "required_privilege": "call_library.read",
+          "sql": "SELECT id, description, name, name_ar, created_at, modified_at FROM call_library WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "call_library",
+        "query": "Active Call Library"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_library_item",
+          "entity_mappings": [],
+          "name": "Active Call Library Item",
+          "required_privilege": "call_library_item.read",
+          "sql": "SELECT id, end_ms, start_ms, title, analysis_ref, library_ref, created_at, modified_at FROM call_library_item WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "call_library_item",
+        "query": "Active Call Library Item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_scorecard",
+          "entity_mappings": [],
+          "name": "Active Call Scorecard",
+          "required_privilege": "call_scorecard.read",
+          "sql": "SELECT id, call_type, name, questions, version, created_at, modified_at FROM call_scorecard WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "call_scorecard",
+        "query": "Active Call Scorecard"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_scorecard_answer",
+          "entity_mappings": [],
+          "name": "Active Scorecard Answer",
+          "required_privilege": "call_scorecard_answer.read",
+          "sql": "SELECT id, confirmed_at, confirmed_value, proposed_evidence_ms, proposed_value, question_key, scorecard_version, analysis_ref, confirmed_by, scorecard_ref, created_at, modified_at FROM call_scorecard_answer WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "call_scorecard_answer",
+        "query": "Active Scorecard Answer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_tracker",
+          "entity_mappings": [],
+          "name": "Active Call Tracker",
+          "required_privilege": "call_tracker.read",
+          "sql": "SELECT id, competitor_ref, enabled, exact_terms, examples, name, name_ar, version, created_at, modified_at FROM call_tracker WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "call_tracker",
+        "query": "Active Call Tracker"
+      }
+    },
+    {
+      "args": {
         "display_name": "تحليل المكالمة"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 71,
+      "seq": 80,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis",
@@ -1824,7 +1986,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 72,
+      "seq": 81,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.activity_id",
@@ -1837,7 +1999,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 73,
+      "seq": 82,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.transcript_version",
@@ -1850,7 +2012,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 74,
+      "seq": 83,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.status",
@@ -1863,7 +2025,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 75,
+      "seq": 84,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.analysed_at",
@@ -1876,7 +2038,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 76,
+      "seq": 85,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.model_id",
@@ -1889,7 +2051,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 77,
+      "seq": 86,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.staff_talk_share",
@@ -1902,7 +2064,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 78,
+      "seq": 87,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.longest_monologue_s",
@@ -1915,7 +2077,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 79,
+      "seq": 88,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.customer_longest_story_s",
@@ -1928,7 +2090,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 80,
+      "seq": 89,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.interruptions",
@@ -1941,7 +2103,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 81,
+      "seq": 90,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.staff_questions",
@@ -1954,7 +2116,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 82,
+      "seq": 91,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.customer_questions",
@@ -1967,7 +2129,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 83,
+      "seq": 92,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.staff_words_per_minute",
@@ -1980,7 +2142,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 84,
+      "seq": 93,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.opportunity_id",
@@ -1993,7 +2155,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 85,
+      "seq": 94,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.account_id",
@@ -2006,7 +2168,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 86,
+      "seq": 95,
       "target": {
         "locale": "ar",
         "object_key": "call_analysis.owner_user",
@@ -2019,7 +2181,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 87,
+      "seq": 96,
       "target": {
         "locale": "ar",
         "object_key": "call_tracker",
@@ -2032,7 +2194,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 88,
+      "seq": 97,
       "target": {
         "locale": "ar",
         "object_key": "call_tracker.name",
@@ -2045,7 +2207,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 89,
+      "seq": 98,
       "target": {
         "locale": "ar",
         "object_key": "call_tracker.name_ar",
@@ -2058,7 +2220,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 90,
+      "seq": 99,
       "target": {
         "locale": "ar",
         "object_key": "call_tracker.examples",
@@ -2071,7 +2233,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 91,
+      "seq": 100,
       "target": {
         "locale": "ar",
         "object_key": "call_tracker.exact_terms",
@@ -2084,7 +2246,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 92,
+      "seq": 101,
       "target": {
         "locale": "ar",
         "object_key": "call_tracker.competitor_ref",
@@ -2097,7 +2259,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 93,
+      "seq": 102,
       "target": {
         "locale": "ar",
         "object_key": "call_tracker.enabled",
@@ -2110,7 +2272,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 94,
+      "seq": 103,
       "target": {
         "locale": "ar",
         "object_key": "call_tracker.version",
@@ -2123,7 +2285,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 95,
+      "seq": 104,
       "target": {
         "locale": "ar",
         "object_key": "call_finding",
@@ -2136,7 +2298,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 96,
+      "seq": 105,
       "target": {
         "locale": "ar",
         "object_key": "call_finding.analysis_ref",
@@ -2149,7 +2311,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 97,
+      "seq": 106,
       "target": {
         "locale": "ar",
         "object_key": "call_finding.kind",
@@ -2162,7 +2324,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 98,
+      "seq": 107,
       "target": {
         "locale": "ar",
         "object_key": "call_finding.tracker_ref",
@@ -2175,7 +2337,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 99,
+      "seq": 108,
       "target": {
         "locale": "ar",
         "object_key": "call_finding.text",
@@ -2188,7 +2350,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 100,
+      "seq": 109,
       "target": {
         "locale": "ar",
         "object_key": "call_finding.start_ms",
@@ -2201,7 +2363,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 101,
+      "seq": 110,
       "target": {
         "locale": "ar",
         "object_key": "call_finding.end_ms",
@@ -2214,7 +2376,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 102,
+      "seq": 111,
       "target": {
         "locale": "ar",
         "object_key": "call_finding.speaker",
@@ -2227,7 +2389,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 103,
+      "seq": 112,
       "target": {
         "locale": "ar",
         "object_key": "call_finding.task_ref",
@@ -2240,7 +2402,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 104,
+      "seq": 113,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard",
@@ -2253,7 +2415,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 105,
+      "seq": 114,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard.name",
@@ -2266,7 +2428,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 106,
+      "seq": 115,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard.call_type",
@@ -2279,7 +2441,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 107,
+      "seq": 116,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard.questions",
@@ -2292,7 +2454,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 108,
+      "seq": 117,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard.version",
@@ -2305,7 +2467,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 109,
+      "seq": 118,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer",
@@ -2318,7 +2480,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 110,
+      "seq": 119,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer.analysis_ref",
@@ -2331,7 +2493,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 111,
+      "seq": 120,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer.scorecard_ref",
@@ -2344,7 +2506,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 112,
+      "seq": 121,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer.scorecard_version",
@@ -2357,7 +2519,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 113,
+      "seq": 122,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer.question_key",
@@ -2370,7 +2532,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 114,
+      "seq": 123,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer.proposed_value",
@@ -2383,7 +2545,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 115,
+      "seq": 124,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer.proposed_evidence_ms",
@@ -2396,7 +2558,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 116,
+      "seq": 125,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer.confirmed_value",
@@ -2409,7 +2571,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 117,
+      "seq": 126,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer.confirmed_by",
@@ -2422,7 +2584,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 118,
+      "seq": 127,
       "target": {
         "locale": "ar",
         "object_key": "call_scorecard_answer.confirmed_at",
@@ -2435,7 +2597,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 119,
+      "seq": 128,
       "target": {
         "locale": "ar",
         "object_key": "call_comment",
@@ -2448,7 +2610,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 120,
+      "seq": 129,
       "target": {
         "locale": "ar",
         "object_key": "call_comment.analysis_ref",
@@ -2461,7 +2623,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 121,
+      "seq": 130,
       "target": {
         "locale": "ar",
         "object_key": "call_comment.at_ms",
@@ -2474,7 +2636,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 122,
+      "seq": 131,
       "target": {
         "locale": "ar",
         "object_key": "call_comment.body",
@@ -2487,7 +2649,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 123,
+      "seq": 132,
       "target": {
         "locale": "ar",
         "object_key": "call_comment.author",
@@ -2500,7 +2662,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 124,
+      "seq": 133,
       "target": {
         "locale": "ar",
         "object_key": "call_comment.parent_ref",
@@ -2513,7 +2675,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 125,
+      "seq": 134,
       "target": {
         "locale": "ar",
         "object_key": "call_library",
@@ -2526,7 +2688,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 126,
+      "seq": 135,
       "target": {
         "locale": "ar",
         "object_key": "call_library.name",
@@ -2539,7 +2701,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 127,
+      "seq": 136,
       "target": {
         "locale": "ar",
         "object_key": "call_library.name_ar",
@@ -2552,7 +2714,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 128,
+      "seq": 137,
       "target": {
         "locale": "ar",
         "object_key": "call_library.description",
@@ -2565,7 +2727,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 129,
+      "seq": 138,
       "target": {
         "locale": "ar",
         "object_key": "call_library_item",
@@ -2578,7 +2740,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 130,
+      "seq": 139,
       "target": {
         "locale": "ar",
         "object_key": "call_library_item.library_ref",
@@ -2591,7 +2753,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 131,
+      "seq": 140,
       "target": {
         "locale": "ar",
         "object_key": "call_library_item.analysis_ref",
@@ -2604,7 +2766,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 132,
+      "seq": 141,
       "target": {
         "locale": "ar",
         "object_key": "call_library_item.start_ms",
@@ -2617,7 +2779,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 133,
+      "seq": 142,
       "target": {
         "locale": "ar",
         "object_key": "call_library_item.end_ms",
@@ -2630,7 +2792,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 134,
+      "seq": 143,
       "target": {
         "locale": "ar",
         "object_key": "call_library_item.title",
@@ -2643,7 +2805,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 135,
+      "seq": 144,
       "target": {
         "locale": "ar",
         "object_key": "call_daily_aggregate",
@@ -2656,7 +2818,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 136,
+      "seq": 145,
       "target": {
         "locale": "ar",
         "object_key": "call_daily_aggregate.day",
@@ -2669,7 +2831,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 137,
+      "seq": 146,
       "target": {
         "locale": "ar",
         "object_key": "call_daily_aggregate.team_ref",
@@ -2682,7 +2844,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 138,
+      "seq": 147,
       "target": {
         "locale": "ar",
         "object_key": "call_daily_aggregate.tracker_ref",
@@ -2695,7 +2857,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 139,
+      "seq": 148,
       "target": {
         "locale": "ar",
         "object_key": "call_daily_aggregate.metric",
@@ -2708,7 +2870,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 140,
+      "seq": 149,
       "target": {
         "locale": "ar",
         "object_key": "call_daily_aggregate.value",

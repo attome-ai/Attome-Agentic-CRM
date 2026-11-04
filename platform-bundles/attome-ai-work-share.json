@@ -124,5 +124,13 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "ai_work_measure",
+      "name": "Active Work Measure",
+      "sql": "SELECT id, completion_attribute, completion_values, entity_logical_name, is_active, label, label_ar, process_key, created_at, modified_at FROM ai_work_measure WHERE is_active IS NOT FALSE",
+      "required_privilege": "ai_work_measure.read"
+    }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:7a6d56f8ba12aed98ee05c6077a0af931deeb945714bf530e0183639fc7339c0",
+  "checksum": "sha256:f5b3c4c678f4a770994169f884343e4f87f4d39f86950913c6f6817c1d7a451e",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-service-supplier-sla.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -297,11 +297,29 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "supplier_sla_clock",
+          "entity_mappings": [],
+          "name": "Active Supplier SLA Clock",
+          "required_privilege": "supplier_sla_clock.read",
+          "sql": "SELECT id, due_at, started_at, status, stopped_at, target_minutes, ticket_ref, vendor_id, vendor_name, created_at, modified_at FROM supplier_sla_clock WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "supplier_sla_clock",
+        "query": "Active Supplier SLA Clock"
+      }
+    },
+    {
+      "args": {
         "display_name": "ساعة اتفاقية مستوى خدمة المورد"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "locale": "ar",
         "object_key": "supplier_sla_clock",
@@ -314,7 +332,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "locale": "ar",
         "object_key": "supplier_sla_clock.ticket_ref",
@@ -327,7 +345,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "locale": "ar",
         "object_key": "supplier_sla_clock.vendor_id",
@@ -340,7 +358,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "locale": "ar",
         "object_key": "supplier_sla_clock.vendor_name",
@@ -353,7 +371,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "locale": "ar",
         "object_key": "supplier_sla_clock.target_minutes",
@@ -366,7 +384,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "locale": "ar",
         "object_key": "supplier_sla_clock.started_at",
@@ -379,7 +397,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "locale": "ar",
         "object_key": "supplier_sla_clock.due_at",
@@ -392,7 +410,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 19,
+      "seq": 20,
       "target": {
         "locale": "ar",
         "object_key": "supplier_sla_clock.stopped_at",
@@ -405,7 +423,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 20,
+      "seq": 21,
       "target": {
         "locale": "ar",
         "object_key": "supplier_sla_clock.status",
@@ -418,7 +436,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 21,
+      "seq": 22,
       "target": {
         "locale": "ar",
         "object_key": "service_ticket.supplier_vendor_id",
@@ -431,7 +449,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 22,
+      "seq": 23,
       "target": {
         "locale": "ar",
         "object_key": "service_ticket.supplier_target_minutes",

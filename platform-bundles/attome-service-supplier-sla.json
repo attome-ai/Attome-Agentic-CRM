@@ -184,5 +184,13 @@
         "options": null
       }
     }
+  ],
+  "queries": [
+    {
+      "entity": "supplier_sla_clock",
+      "name": "Active Supplier SLA Clock",
+      "sql": "SELECT id, due_at, started_at, status, stopped_at, target_minutes, ticket_ref, vendor_id, vendor_name, created_at, modified_at FROM supplier_sla_clock WHERE is_active IS NOT FALSE",
+      "required_privilege": "supplier_sla_clock.read"
+    }
   ]
 }

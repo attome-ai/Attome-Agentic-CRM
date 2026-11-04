@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:cad0777ec66dbd162fc43a57c9d0f62e83263364c6f01d6e97f47d4ba3090650",
+  "checksum": "sha256:e234bb39bbe5fdf3dd8975876e11da84a9630ce4ff369e415c32ded85e618a85",
   "closed_at": "2026-11-03T00:00:00Z",
   "description": "Marketing dashboards (E28-T1): campaign performance, email engagement, leads by first touch source and campaign return, and the Marketing Manager role they land on.",
   "format": "attome-changeset/v1",
@@ -37,27 +37,6 @@
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
-          "name": "Marketing: Email Engagement by Send",
-          "required_privilege": "campaign.read",
-          "sql": "SELECT s.subject, COUNT(*) FILTER (WHERE r.status = 'sent')::bigint AS sent, COUNT(r.opened_at)::bigint AS opened, COUNT(r.clicked_at)::bigint AS clicked, ROUND(100.0 * COUNT(r.opened_at) / NULLIF(COUNT(*) FILTER (WHERE r.status = 'sent'), 0), 1) AS open_rate_percent, ROUND(100.0 * COUNT(r.clicked_at) / NULLIF(COUNT(*) FILTER (WHERE r.status = 'sent'), 0), 1) AS click_rate_percent, to_char(s.created_at, 'YYYY-MM-DD') AS sent_on FROM email_campaign_send s JOIN email_campaign_recipient r ON r.send_id = s.id WHERE s.created_at >= NOW() - INTERVAL '90 days' GROUP BY s.id, s.subject, s.created_at ORDER BY s.created_at DESC LIMIT 30",
-          "table_definition": "[]"
-        }
-      },
-      "op": "upsert_query",
-      "phase": "expand",
-      "seq": 2,
-      "target": {
-        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
-        "query": "Marketing: Email Engagement by Send"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "entity": null,
-          "entity_mappings": [],
-          "is_customized": true,
-          "is_report": true,
           "name": "Marketing: Leads by First Touch Source",
           "required_privilege": "lead.read",
           "sql": "SELECT COALESCE(NULLIF(t.first_touch_source, ''), '(direct)') AS source, COUNT(*)::bigint AS leads, COUNT(*) FILTER (WHERE t.lifecycle_stage IN ('sales_qualified', 'customer') OR t.lead_status = 'converted')::bigint AS qualified FROM \"lead\" t WHERE (t.is_active IS NULL OR t.is_active = true) AND t.created_at >= NOW() - INTERVAL '180 days' GROUP BY 1 ORDER BY leads DESC LIMIT 25",
@@ -66,7 +45,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 3,
+      "seq": 2,
       "target": {
         "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Marketing: Leads by First Touch Source"
@@ -87,7 +66,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 4,
+      "seq": 3,
       "target": {
         "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Marketing: Campaign ROI"
@@ -103,7 +82,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 5,
+      "seq": 4,
       "target": {
         "privilege": "campaign.read"
       }
@@ -118,7 +97,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 6,
+      "seq": 5,
       "target": {
         "privilege": "campaign.create"
       }
@@ -133,7 +112,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 7,
+      "seq": 6,
       "target": {
         "privilege": "campaign.update"
       }
@@ -148,7 +127,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 8,
+      "seq": 7,
       "target": {
         "privilege": "campaign_member.read"
       }
@@ -163,7 +142,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 9,
+      "seq": 8,
       "target": {
         "privilege": "campaign_member.create"
       }
@@ -178,7 +157,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 10,
+      "seq": 9,
       "target": {
         "privilege": "campaign_member.update"
       }
@@ -193,7 +172,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 11,
+      "seq": 10,
       "target": {
         "privilege": "marketing_list.read"
       }
@@ -208,7 +187,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 12,
+      "seq": 11,
       "target": {
         "privilege": "marketing_list.create"
       }
@@ -223,7 +202,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 13,
+      "seq": 12,
       "target": {
         "privilege": "marketing_list.update"
       }
@@ -238,7 +217,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 14,
+      "seq": 13,
       "target": {
         "privilege": "lead.read"
       }
@@ -253,7 +232,7 @@
       },
       "op": "ensure_privilege",
       "phase": "expand",
-      "seq": 15,
+      "seq": 14,
       "target": {
         "privilege": "contact.read"
       }
@@ -270,7 +249,7 @@
       },
       "op": "upsert_role",
       "phase": "expand",
-      "seq": 16,
+      "seq": 15,
       "target": {
         "role": "Marketing Manager"
       }
@@ -281,7 +260,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 17,
+      "seq": 16,
       "target": {
         "privilege": "campaign.read",
         "role": "Marketing Manager"
@@ -293,7 +272,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 18,
+      "seq": 17,
       "target": {
         "privilege": "campaign.create",
         "role": "Marketing Manager"
@@ -305,7 +284,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 19,
+      "seq": 18,
       "target": {
         "privilege": "campaign.update",
         "role": "Marketing Manager"
@@ -317,7 +296,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 20,
+      "seq": 19,
       "target": {
         "privilege": "campaign_member.read",
         "role": "Marketing Manager"
@@ -329,7 +308,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 21,
+      "seq": 20,
       "target": {
         "privilege": "campaign_member.create",
         "role": "Marketing Manager"
@@ -341,7 +320,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 22,
+      "seq": 21,
       "target": {
         "privilege": "campaign_member.update",
         "role": "Marketing Manager"
@@ -353,7 +332,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 23,
+      "seq": 22,
       "target": {
         "privilege": "marketing_list.read",
         "role": "Marketing Manager"
@@ -365,7 +344,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 24,
+      "seq": 23,
       "target": {
         "privilege": "marketing_list.create",
         "role": "Marketing Manager"
@@ -377,7 +356,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 25,
+      "seq": 24,
       "target": {
         "privilege": "marketing_list.update",
         "role": "Marketing Manager"
@@ -389,7 +368,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 26,
+      "seq": 25,
       "target": {
         "privilege": "lead.read",
         "role": "Marketing Manager"
@@ -401,7 +380,7 @@
       },
       "op": "grant_role_privilege",
       "phase": "expand",
-      "seq": 27,
+      "seq": 26,
       "target": {
         "privilege": "contact.read",
         "role": "Marketing Manager"

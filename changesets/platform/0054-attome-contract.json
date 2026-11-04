@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:c09a356384e468266aabc5a01e24f34bb04ed2769ecd8677257fd7dfdd99d670",
+  "checksum": "sha256:d161c2fa4e09e4e1eff889782f86d04ce9a8b13488def07cec7be63da4a6f3f4",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-contract.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -636,11 +636,83 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "contract_comparison",
+          "entity_mappings": [],
+          "name": "Active Contract Comparison",
+          "required_privilege": "contract_comparison.read",
+          "sql": "SELECT id, contract_id, deviations_json, diff_json, status, from_version_ref, to_version_ref, created_at, modified_at FROM contract_comparison WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "contract_comparison",
+        "query": "Active Contract Comparison"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract_import",
+          "entity_mappings": [],
+          "name": "Active Contract Import",
+          "required_privilege": "contract_import.read",
+          "sql": "SELECT id, contract_id, file, proposed_json, status, created_at, modified_at FROM contract_import WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "contract_import",
+        "query": "Active Contract Import"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract_playbook_rule",
+          "entity_mappings": [],
+          "name": "Active Playbook Rule",
+          "required_privilege": "contract_playbook_rule.read",
+          "sql": "SELECT id, clause_key, condition, message, message_ar, severity, created_at, modified_at FROM contract_playbook_rule WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "contract_playbook_rule",
+        "query": "Active Playbook Rule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract_version",
+          "entity_mappings": [],
+          "name": "Active Contract Version",
+          "required_privilege": "contract_version.read",
+          "sql": "SELECT id, contract_id, file, source, version_no, created_by_ref, created_at, modified_at FROM contract_version WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "contract_version",
+        "query": "Active Contract Version"
+      }
+    },
+    {
+      "args": {
         "display_name": "قاعدة دليل التفاوض"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 25,
+      "seq": 29,
       "target": {
         "locale": "ar",
         "object_key": "contract_playbook_rule",
@@ -653,7 +725,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 26,
+      "seq": 30,
       "target": {
         "locale": "ar",
         "object_key": "contract_playbook_rule.clause_key",
@@ -666,7 +738,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 27,
+      "seq": 31,
       "target": {
         "locale": "ar",
         "object_key": "contract_playbook_rule.condition",
@@ -679,7 +751,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 28,
+      "seq": 32,
       "target": {
         "locale": "ar",
         "object_key": "contract_playbook_rule.severity",
@@ -692,7 +764,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 29,
+      "seq": 33,
       "target": {
         "locale": "ar",
         "object_key": "contract_playbook_rule.message",
@@ -705,7 +777,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 30,
+      "seq": 34,
       "target": {
         "locale": "ar",
         "object_key": "contract_playbook_rule.message_ar",
@@ -718,7 +790,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 31,
+      "seq": 35,
       "target": {
         "locale": "ar",
         "object_key": "contract_version",
@@ -731,7 +803,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 32,
+      "seq": 36,
       "target": {
         "locale": "ar",
         "object_key": "contract_version.contract_id",
@@ -744,7 +816,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 33,
+      "seq": 37,
       "target": {
         "locale": "ar",
         "object_key": "contract_version.file",
@@ -757,7 +829,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 34,
+      "seq": 38,
       "target": {
         "locale": "ar",
         "object_key": "contract_version.source",
@@ -770,7 +842,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 35,
+      "seq": 39,
       "target": {
         "locale": "ar",
         "object_key": "contract_version.version_no",
@@ -783,7 +855,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 36,
+      "seq": 40,
       "target": {
         "locale": "ar",
         "object_key": "contract_version.created_by_ref",
@@ -796,7 +868,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 37,
+      "seq": 41,
       "target": {
         "locale": "ar",
         "object_key": "contract_comparison",
@@ -809,7 +881,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 38,
+      "seq": 42,
       "target": {
         "locale": "ar",
         "object_key": "contract_comparison.contract_id",
@@ -822,7 +894,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 39,
+      "seq": 43,
       "target": {
         "locale": "ar",
         "object_key": "contract_comparison.from_version_ref",
@@ -835,7 +907,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 40,
+      "seq": 44,
       "target": {
         "locale": "ar",
         "object_key": "contract_comparison.to_version_ref",
@@ -848,7 +920,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 41,
+      "seq": 45,
       "target": {
         "locale": "ar",
         "object_key": "contract_comparison.diff_json",
@@ -861,7 +933,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 42,
+      "seq": 46,
       "target": {
         "locale": "ar",
         "object_key": "contract_comparison.deviations_json",
@@ -874,7 +946,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 43,
+      "seq": 47,
       "target": {
         "locale": "ar",
         "object_key": "contract_comparison.status",
@@ -887,7 +959,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 44,
+      "seq": 48,
       "target": {
         "locale": "ar",
         "object_key": "contract_import",
@@ -900,7 +972,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 45,
+      "seq": 49,
       "target": {
         "locale": "ar",
         "object_key": "contract_import.file",
@@ -913,7 +985,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 46,
+      "seq": 50,
       "target": {
         "locale": "ar",
         "object_key": "contract_import.proposed_json",
@@ -926,7 +998,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 47,
+      "seq": 51,
       "target": {
         "locale": "ar",
         "object_key": "contract_import.status",
@@ -939,7 +1011,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 48,
+      "seq": 52,
       "target": {
         "locale": "ar",
         "object_key": "contract_import.contract_id",

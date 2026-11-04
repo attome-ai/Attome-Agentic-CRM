@@ -656,5 +656,25 @@
         "options": null
       }
     }
+  ],
+  "queries": [
+    {
+      "entity": "metric_comment",
+      "name": "Active Metric Comment",
+      "sql": "SELECT id, body, dimension_value, period_start, author_ref, metric_ref, created_at, modified_at FROM metric_comment WHERE is_active IS NOT FALSE",
+      "required_privilege": "metric_comment.read"
+    },
+    {
+      "entity": "metric_scorecard",
+      "name": "Active Metric Scorecard",
+      "sql": "SELECT id, description, name, owner_user, created_at, modified_at FROM metric_scorecard WHERE is_active IS NOT FALSE",
+      "required_privilege": "metric_scorecard.read"
+    },
+    {
+      "entity": "metric_scorecard_item",
+      "name": "Active Scorecard Metric",
+      "sql": "SELECT id, sort_order, metric_ref, scorecard_ref, created_at, modified_at FROM metric_scorecard_item WHERE is_active IS NOT FALSE",
+      "required_privilege": "metric_scorecard_item.read"
+    }
   ]
 }

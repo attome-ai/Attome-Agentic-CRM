@@ -177,5 +177,13 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "ai_followup_rule",
+      "name": "Active Follow-up Rule",
+      "sql": "SELECT id, channel, daily_cap, idle_days, is_active, mode, name, reason, target_entity, created_at, modified_at FROM ai_followup_rule WHERE is_active IS NOT FALSE",
+      "required_privilege": "ai_followup_rule.read"
+    }
   ]
 }

@@ -13,7 +13,18 @@ use attome_testapp::TestApp;
 use serde_json::Value;
 use uuid::Uuid;
 
-const PACKS: [&str; 3] = ["crm", "sales", "field-service"];
+const PACKS: [&str; 10] = [
+    "crm",
+    "sales",
+    "finance",
+    "regions",
+    "vendor-supplier",
+    "contract-management",
+    "billing",
+    "asset-management",
+    "customer-service",
+    "field-service",
+];
 
 async fn install(app: &TestApp) {
     for pack in PACKS {

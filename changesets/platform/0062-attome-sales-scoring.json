@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:ea3f33a9201e3c89c90103c4698a987ca742cc1a001ca665eecb2b26fa044beb",
+  "checksum": "sha256:49210c30642b6a207cce10eba57304fd22212248373a7edfc755fa1d13b478bf",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-sales-scoring.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -542,11 +542,65 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "points_model",
+          "entity_mappings": [],
+          "name": "Active Points Model",
+          "required_privilege": "points_model.read",
+          "sql": "SELECT id, half_life_days, is_enabled, name, target_entity, created_at, modified_at FROM points_model WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "points_model",
+        "query": "Active Points Model"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "points_rule",
+          "entity_mappings": [],
+          "name": "Active Points Rule",
+          "required_privilege": "points_rule.read",
+          "sql": "SELECT id, activity_type, condition, kind, label, max_hits, model_id, points, rule_key, created_at, modified_at FROM points_rule WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "points_rule",
+        "query": "Active Points Rule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "points_score",
+          "entity_mappings": [],
+          "name": "Active Points Score",
+          "required_privilege": "points_score.read",
+          "sql": "SELECT id, computed_at, entity_name, model_id, reasons, record_id, score, created_at, modified_at FROM points_score WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "points_score",
+        "query": "Active Points Score"
+      }
+    },
+    {
+      "args": {
         "display_name": "نموذج النقاط"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 22,
+      "seq": 25,
       "target": {
         "locale": "ar",
         "object_key": "points_model",
@@ -559,7 +613,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 23,
+      "seq": 26,
       "target": {
         "locale": "ar",
         "object_key": "points_model.name",
@@ -572,7 +626,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 24,
+      "seq": 27,
       "target": {
         "locale": "ar",
         "object_key": "points_model.target_entity",
@@ -585,7 +639,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 25,
+      "seq": 28,
       "target": {
         "locale": "ar",
         "object_key": "points_model.half_life_days",
@@ -598,7 +652,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 26,
+      "seq": 29,
       "target": {
         "locale": "ar",
         "object_key": "points_model.is_enabled",
@@ -611,7 +665,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 27,
+      "seq": 30,
       "target": {
         "locale": "ar",
         "object_key": "points_rule",
@@ -624,7 +678,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 28,
+      "seq": 31,
       "target": {
         "locale": "ar",
         "object_key": "points_rule.label",
@@ -637,7 +691,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 29,
+      "seq": 32,
       "target": {
         "locale": "ar",
         "object_key": "points_rule.model_id",
@@ -650,7 +704,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 30,
+      "seq": 33,
       "target": {
         "locale": "ar",
         "object_key": "points_rule.rule_key",
@@ -663,7 +717,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 31,
+      "seq": 34,
       "target": {
         "locale": "ar",
         "object_key": "points_rule.kind",
@@ -676,7 +730,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 32,
+      "seq": 35,
       "target": {
         "locale": "ar",
         "object_key": "points_rule.points",
@@ -689,7 +743,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 33,
+      "seq": 36,
       "target": {
         "locale": "ar",
         "object_key": "points_rule.condition",
@@ -702,7 +756,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 34,
+      "seq": 37,
       "target": {
         "locale": "ar",
         "object_key": "points_rule.activity_type",
@@ -715,7 +769,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 35,
+      "seq": 38,
       "target": {
         "locale": "ar",
         "object_key": "points_rule.max_hits",
@@ -728,7 +782,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 36,
+      "seq": 39,
       "target": {
         "locale": "ar",
         "object_key": "points_score",
@@ -741,7 +795,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 37,
+      "seq": 40,
       "target": {
         "locale": "ar",
         "object_key": "points_score.record_id",
@@ -754,7 +808,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 38,
+      "seq": 41,
       "target": {
         "locale": "ar",
         "object_key": "points_score.model_id",
@@ -767,7 +821,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 39,
+      "seq": 42,
       "target": {
         "locale": "ar",
         "object_key": "points_score.entity_name",
@@ -780,7 +834,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 40,
+      "seq": 43,
       "target": {
         "locale": "ar",
         "object_key": "points_score.score",
@@ -793,7 +847,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 41,
+      "seq": 44,
       "target": {
         "locale": "ar",
         "object_key": "points_score.reasons",
@@ -806,7 +860,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 42,
+      "seq": 45,
       "target": {
         "locale": "ar",
         "object_key": "points_score.computed_at",

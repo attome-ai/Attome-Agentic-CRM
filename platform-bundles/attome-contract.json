@@ -381,5 +381,31 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "contract_comparison",
+      "name": "Active Contract Comparison",
+      "sql": "SELECT id, contract_id, deviations_json, diff_json, status, from_version_ref, to_version_ref, created_at, modified_at FROM contract_comparison WHERE is_active IS NOT FALSE",
+      "required_privilege": "contract_comparison.read"
+    },
+    {
+      "entity": "contract_import",
+      "name": "Active Contract Import",
+      "sql": "SELECT id, contract_id, file, proposed_json, status, created_at, modified_at FROM contract_import WHERE is_active IS NOT FALSE",
+      "required_privilege": "contract_import.read"
+    },
+    {
+      "entity": "contract_playbook_rule",
+      "name": "Active Playbook Rule",
+      "sql": "SELECT id, clause_key, condition, message, message_ar, severity, created_at, modified_at FROM contract_playbook_rule WHERE is_active IS NOT FALSE",
+      "required_privilege": "contract_playbook_rule.read"
+    },
+    {
+      "entity": "contract_version",
+      "name": "Active Contract Version",
+      "sql": "SELECT id, contract_id, file, source, version_no, created_by_ref, created_at, modified_at FROM contract_version WHERE is_active IS NOT FALSE",
+      "required_privilege": "contract_version.read"
+    }
   ]
 }

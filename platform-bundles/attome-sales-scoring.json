@@ -317,5 +317,25 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "points_model",
+      "name": "Active Points Model",
+      "sql": "SELECT id, half_life_days, is_enabled, name, target_entity, created_at, modified_at FROM points_model WHERE is_active IS NOT FALSE",
+      "required_privilege": "points_model.read"
+    },
+    {
+      "entity": "points_rule",
+      "name": "Active Points Rule",
+      "sql": "SELECT id, activity_type, condition, kind, label, max_hits, model_id, points, rule_key, created_at, modified_at FROM points_rule WHERE is_active IS NOT FALSE",
+      "required_privilege": "points_rule.read"
+    },
+    {
+      "entity": "points_score",
+      "name": "Active Points Score",
+      "sql": "SELECT id, computed_at, entity_name, model_id, reasons, record_id, score, created_at, modified_at FROM points_score WHERE is_active IS NOT FALSE",
+      "required_privilege": "points_score.read"
+    }
   ]
 }

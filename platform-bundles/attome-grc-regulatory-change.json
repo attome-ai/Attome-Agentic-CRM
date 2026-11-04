@@ -348,5 +348,19 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "grc_regulatory_change",
+      "name": "Active Regulatory Change",
+      "sql": "SELECT id, due_on, effective_on, impact, impact_assessment, published_on, source, source_url, status, summary, title, owner_user, regulation_ref, created_at, modified_at FROM grc_regulatory_change WHERE is_active IS NOT FALSE",
+      "required_privilege": "grc_regulatory_change.read"
+    },
+    {
+      "entity": "grc_regulatory_change_link",
+      "name": "Active Regulatory Change Link",
+      "sql": "SELECT id, action, impact, note, change_ref, control_ref, policy_ref, requirement_ref, created_at, modified_at FROM grc_regulatory_change_link WHERE is_active IS NOT FALSE",
+      "required_privilege": "grc_regulatory_change_link.read"
+    }
   ]
 }

@@ -14,9 +14,14 @@ use attome_testapp::TestApp;
 use chrono::{Duration, Utc};
 use uuid::Uuid;
 
-const PACKS: [&str; 5] = [
+const PACKS: [&str; 10] = [
     "crm",
     "sales",
+    "finance",
+    "regions",
+    "vendor-supplier",
+    "contract-management",
+    "billing",
     "asset-management",
     "customer-service",
     "field-service",

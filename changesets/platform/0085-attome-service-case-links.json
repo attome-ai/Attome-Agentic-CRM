@@ -1,6 +1,6 @@
 {
   "author": "attome-service (G1-T1)",
-  "checksum": "sha256:31e90f18ff0ec37a365fe17467b545f7a61a3d6351cc946811c9b3916dc5e75c",
+  "checksum": "sha256:8bb9d4a3ee0cdcf82ad79b6cc6ed632c7dbd61b087d500b00adbdabb6f2c1039",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "G1-T1: links between cases: parent, related, duplicate of, caused by.",
   "format": "attome-changeset/v1",
@@ -117,11 +117,29 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "service_case_link",
+          "entity_mappings": [],
+          "name": "Active Case Link",
+          "required_privilege": "service_case_link.read",
+          "sql": "SELECT id, kind, linked_ticket_ref, ticket_ref, created_at, modified_at FROM service_case_link WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "service_case_link",
+        "query": "Active Case Link"
+      }
+    },
+    {
+      "args": {
         "display_name": "رابط الحالة"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 5,
+      "seq": 6,
       "target": {
         "locale": "ar",
         "object_key": "service_case_link",
@@ -134,7 +152,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 6,
+      "seq": 7,
       "target": {
         "locale": "ar",
         "object_key": "service_case_link.ticket_ref",
@@ -147,7 +165,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 7,
+      "seq": 8,
       "target": {
         "locale": "ar",
         "object_key": "service_case_link.linked_ticket_ref",
@@ -160,7 +178,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 8,
+      "seq": 9,
       "target": {
         "locale": "ar",
         "object_key": "service_case_link.kind",

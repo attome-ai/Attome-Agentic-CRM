@@ -72,5 +72,13 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "service_case_link",
+      "name": "Active Case Link",
+      "sql": "SELECT id, kind, linked_ticket_ref, ticket_ref, created_at, modified_at FROM service_case_link WHERE is_active IS NOT FALSE",
+      "required_privilege": "service_case_link.read"
+    }
   ]
 }

@@ -162,5 +162,13 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "scan_action",
+      "name": "Active Scan Action",
+      "sql": "SELECT id, action_kind, code_pattern, enabled, entity_logicalname, match_attribute, name, set_field_attribute, set_field_value, workflow_ref, created_at, modified_at FROM scan_action WHERE is_active IS NOT FALSE",
+      "required_privilege": "scan_action.read"
+    }
   ]
 }

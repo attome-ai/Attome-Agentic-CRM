@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:e0a11eec7127daae97634e7d4c3dbb674f6d237dea2b5220a6851ff5292ea4e7",
+  "checksum": "sha256:883346c53f317ee51b97aed76c58bae75dcce1493babd3ece477a56075acaab3",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-scan.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -272,11 +272,29 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "scan_action",
+          "entity_mappings": [],
+          "name": "Active Scan Action",
+          "required_privilege": "scan_action.read",
+          "sql": "SELECT id, action_kind, code_pattern, enabled, entity_logicalname, match_attribute, name, set_field_attribute, set_field_value, workflow_ref, created_at, modified_at FROM scan_action WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "scan_action",
+        "query": "Active Scan Action"
+      }
+    },
+    {
+      "args": {
         "display_name": "إجراء المسح"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "locale": "ar",
         "object_key": "scan_action",
@@ -289,7 +307,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "locale": "ar",
         "object_key": "scan_action.name",
@@ -302,7 +320,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "locale": "ar",
         "object_key": "scan_action.entity_logicalname",
@@ -315,7 +333,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "locale": "ar",
         "object_key": "scan_action.match_attribute",
@@ -328,7 +346,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "locale": "ar",
         "object_key": "scan_action.code_pattern",
@@ -341,7 +359,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "locale": "ar",
         "object_key": "scan_action.action_kind",
@@ -354,7 +372,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "locale": "ar",
         "object_key": "scan_action.workflow_ref",
@@ -367,7 +385,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "locale": "ar",
         "object_key": "scan_action.set_field_attribute",
@@ -380,7 +398,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 19,
+      "seq": 20,
       "target": {
         "locale": "ar",
         "object_key": "scan_action.set_field_value",
@@ -393,7 +411,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 20,
+      "seq": 21,
       "target": {
         "locale": "ar",
         "object_key": "scan_action.enabled",

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:cdad5db7fd2ba7b8f0e8716116f0c3aa0f324ed680db79ceb0698702de9ea8f1",
+  "checksum": "sha256:8505066b0bff43809d0d0466907c0e79abbc59a114e1835bfd375c312ecd50f2",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-collections.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -545,11 +545,47 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "ai_collection_rule",
+          "entity_mappings": [],
+          "name": "Active Collection Rule",
+          "required_privilege": "ai_collection_rule.read",
+          "sql": "SELECT id, channel, is_active, kind, max_reminders, name, offset_days, template_text_ar, template_text_en, created_at, modified_at FROM ai_collection_rule WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "ai_collection_rule",
+        "query": "Active Collection Rule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_payment_promise",
+          "entity_mappings": [],
+          "name": "Active Payment Promise",
+          "required_privilege": "ai_payment_promise.read",
+          "sql": "SELECT id, customer_entity, customer_id, invoice_entity, invoice_id, invoice_number, note, promised_amount, promised_date, source, status, created_at, modified_at FROM ai_payment_promise WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "ai_payment_promise",
+        "query": "Active Payment Promise"
+      }
+    },
+    {
+      "args": {
         "display_name": "قاعدة التحصيل"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 21,
+      "seq": 23,
       "target": {
         "locale": "ar",
         "object_key": "ai_collection_rule",
@@ -562,7 +598,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 22,
+      "seq": 24,
       "target": {
         "locale": "ar",
         "object_key": "ai_collection_rule.name",
@@ -575,7 +611,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 23,
+      "seq": 25,
       "target": {
         "locale": "ar",
         "object_key": "ai_collection_rule.kind",
@@ -588,7 +624,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 24,
+      "seq": 26,
       "target": {
         "locale": "ar",
         "object_key": "ai_collection_rule.offset_days",
@@ -601,7 +637,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 25,
+      "seq": 27,
       "target": {
         "locale": "ar",
         "object_key": "ai_collection_rule.channel",
@@ -614,7 +650,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 26,
+      "seq": 28,
       "target": {
         "locale": "ar",
         "object_key": "ai_collection_rule.template_text_en",
@@ -627,7 +663,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 27,
+      "seq": 29,
       "target": {
         "locale": "ar",
         "object_key": "ai_collection_rule.template_text_ar",
@@ -640,7 +676,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 28,
+      "seq": 30,
       "target": {
         "locale": "ar",
         "object_key": "ai_collection_rule.max_reminders",
@@ -653,7 +689,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 29,
+      "seq": 31,
       "target": {
         "locale": "ar",
         "object_key": "ai_collection_rule.is_active",
@@ -666,7 +702,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 30,
+      "seq": 32,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise",
@@ -679,7 +715,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 31,
+      "seq": 33,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.invoice_entity",
@@ -692,7 +728,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 32,
+      "seq": 34,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.invoice_id",
@@ -705,7 +741,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 33,
+      "seq": 35,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.invoice_number",
@@ -718,7 +754,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 34,
+      "seq": 36,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.customer_entity",
@@ -731,7 +767,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 35,
+      "seq": 37,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.customer_id",
@@ -744,7 +780,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 36,
+      "seq": 38,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.promised_amount",
@@ -757,7 +793,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 37,
+      "seq": 39,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.promised_date",
@@ -770,7 +806,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 38,
+      "seq": 40,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.source",
@@ -783,7 +819,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 39,
+      "seq": 41,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.status",
@@ -796,7 +832,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 40,
+      "seq": 42,
       "target": {
         "locale": "ar",
         "object_key": "ai_payment_promise.note",

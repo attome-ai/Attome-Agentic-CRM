@@ -16,11 +16,6 @@
           },
           {
             "kind": "page",
-            "label": "Email",
-            "target": "@page:marketing/marketing-email"
-          },
-          {
-            "kind": "page",
             "label": "Attribution",
             "target": "@page:marketing/marketing-attribution"
           },

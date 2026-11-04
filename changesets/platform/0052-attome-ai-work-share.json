@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:a83cb0c96c6d623b17a5ce11f77fc3128b3bcf9ce5ce5bc330f8c8678010c244",
+  "checksum": "sha256:657ad1a3eb6fe29dbe7f24fc89301c7a37b3ef34ad97de17fc67b70033f6ed0c",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-work-share.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -212,11 +212,29 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "ai_work_measure",
+          "entity_mappings": [],
+          "name": "Active Work Measure",
+          "required_privilege": "ai_work_measure.read",
+          "sql": "SELECT id, completion_attribute, completion_values, entity_logical_name, is_active, label, label_ar, process_key, created_at, modified_at FROM ai_work_measure WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "ai_work_measure",
+        "query": "Active Work Measure"
+      }
+    },
+    {
+      "args": {
         "display_name": "مقياس العمل"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "locale": "ar",
         "object_key": "ai_work_measure",
@@ -229,7 +247,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "locale": "ar",
         "object_key": "ai_work_measure.process_key",
@@ -242,7 +260,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "locale": "ar",
         "object_key": "ai_work_measure.label",
@@ -255,7 +273,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "locale": "ar",
         "object_key": "ai_work_measure.label_ar",
@@ -268,7 +286,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "locale": "ar",
         "object_key": "ai_work_measure.entity_logical_name",
@@ -281,7 +299,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "locale": "ar",
         "object_key": "ai_work_measure.completion_attribute",
@@ -294,7 +312,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "locale": "ar",
         "object_key": "ai_work_measure.completion_values",
@@ -307,7 +325,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "locale": "ar",
         "object_key": "ai_work_measure.is_active",

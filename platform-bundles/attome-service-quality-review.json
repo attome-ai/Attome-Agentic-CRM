@@ -160,5 +160,13 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "service_quality_review",
+      "name": "Active Quality Review",
+      "sql": "SELECT id, accuracy_score, notes, process_score, status, tone_score, week, agent_ref, reviewer_ref, ticket_ref, created_at, modified_at FROM service_quality_review WHERE is_active IS NOT FALSE",
+      "required_privilege": "service_quality_review.read"
+    }
   ]
 }

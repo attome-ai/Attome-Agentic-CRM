@@ -16,6 +16,28 @@ use base64::Engine as _;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+/// The CRM pack, whose account the package extends.
+async fn install_crm(app: &TestApp) {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../packs")
+        .join("crm")
+        .join("changesets");
+    let mut files: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .collect();
+    files.sort();
+    for file in &files {
+        let value: Value = serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+        attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+            .await
+            .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+    }
+    let registry = attome_core::build_registry(app.db()).await.unwrap();
+    app.state.entities.swap(registry);
+}
+
 // feature: T8
 #[test]
 fn a_managed_package_locks_what_it_installs() {
@@ -23,6 +45,7 @@ fn a_managed_package_locks_what_it_installs() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        install_crm(&app).await;
         let ns = format!("t{}", &Uuid::now_v7().simple().to_string()[26..]);
         let owned = format!("{ns}_vehicle");
         let added = format!("{ns}_fleet_size");

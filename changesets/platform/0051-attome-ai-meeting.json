@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:11e61645af9c2f2dbc961a9748c41db5cb103c84a2ee8afda93fe2500706d3e1",
+  "checksum": "sha256:9c562c91b4240980425c5af8b0deaa108452847546963270391edadc94e785e1",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-meeting.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -489,6 +489,42 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "ai_meeting_brief",
+          "entity_mappings": [],
+          "name": "Active Meeting Brief",
+          "required_privilege": "ai_meeting_brief.read",
+          "sql": "SELECT id, account_entity, account_id, brief_text, generated_at, language, meeting_entity, meeting_id, status, created_at, modified_at FROM ai_meeting_brief WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "ai_meeting_brief",
+        "query": "Active Meeting Brief"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_meeting_notes",
+          "entity_mappings": [],
+          "name": "Active Meeting Notes",
+          "required_privilege": "ai_meeting_notes.read",
+          "sql": "SELECT id, action_items_json, decisions, language, meeting_entity, meeting_id, status, summary, transcript_ref, created_at, modified_at FROM ai_meeting_notes WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "ai_meeting_notes",
+        "query": "Active Meeting Notes"
+      }
+    },
+    {
+      "args": {
         "key_fields": [
           "name"
         ],
@@ -502,7 +538,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 19,
+      "seq": 21,
       "target": {
         "entity": "ai_agent",
         "key": {
@@ -516,7 +552,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 20,
+      "seq": 22,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_brief",
@@ -529,7 +565,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 21,
+      "seq": 23,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_brief.meeting_entity",
@@ -542,7 +578,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 22,
+      "seq": 24,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_brief.meeting_id",
@@ -555,7 +591,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 23,
+      "seq": 25,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_brief.account_entity",
@@ -568,7 +604,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 24,
+      "seq": 26,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_brief.account_id",
@@ -581,7 +617,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 25,
+      "seq": 27,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_brief.brief_text",
@@ -594,7 +630,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 26,
+      "seq": 28,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_brief.language",
@@ -607,7 +643,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 27,
+      "seq": 29,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_brief.generated_at",
@@ -620,7 +656,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 28,
+      "seq": 30,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_brief.status",
@@ -633,7 +669,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 29,
+      "seq": 31,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_notes",
@@ -646,7 +682,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 30,
+      "seq": 32,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_notes.meeting_entity",
@@ -659,7 +695,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 31,
+      "seq": 33,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_notes.meeting_id",
@@ -672,7 +708,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 32,
+      "seq": 34,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_notes.transcript_ref",
@@ -685,7 +721,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 33,
+      "seq": 35,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_notes.summary",
@@ -698,7 +734,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 34,
+      "seq": 36,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_notes.action_items_json",
@@ -711,7 +747,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 35,
+      "seq": 37,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_notes.decisions",
@@ -724,7 +760,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 36,
+      "seq": 38,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_notes.language",
@@ -737,7 +773,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 37,
+      "seq": 39,
       "target": {
         "locale": "ar",
         "object_key": "ai_meeting_notes.status",

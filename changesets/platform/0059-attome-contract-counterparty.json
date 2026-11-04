@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:806174c824fdc1e0151ddb288efb463069117a8d5d9b271b908a49a7d89c750f",
+  "checksum": "sha256:c66339252b8ee37282728006ba7487e3872b2f9d0e7388ff6175bb302658aa0c",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-contract-counterparty.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -208,11 +208,29 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "counterparty_match_proposal",
+          "entity_mappings": [],
+          "name": "Active Counterparty Match",
+          "required_privilege": "counterparty_match_proposal.read",
+          "sql": "SELECT id, account_id, account_name, contract_id, counterparty_text, score, status, created_at, modified_at FROM counterparty_match_proposal WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "counterparty_match_proposal",
+        "query": "Active Counterparty Match"
+      }
+    },
+    {
+      "args": {
         "display_name": "مطابقة الطرف المقابل"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "locale": "ar",
         "object_key": "counterparty_match_proposal",
@@ -225,7 +243,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "locale": "ar",
         "object_key": "counterparty_match_proposal.counterparty_text",
@@ -238,7 +256,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "locale": "ar",
         "object_key": "counterparty_match_proposal.contract_id",
@@ -251,7 +269,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "locale": "ar",
         "object_key": "counterparty_match_proposal.account_id",
@@ -264,7 +282,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "locale": "ar",
         "object_key": "counterparty_match_proposal.account_name",
@@ -277,7 +295,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "locale": "ar",
         "object_key": "counterparty_match_proposal.score",
@@ -290,7 +308,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "locale": "ar",
         "object_key": "counterparty_match_proposal.status",

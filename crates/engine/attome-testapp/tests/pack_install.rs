@@ -230,6 +230,7 @@ fn the_commission_pack_installs_once_with_masked_amounts() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        installs_once(&app, "crm", &["account"]).await;
         installs_once(
             &app,
             "commission",

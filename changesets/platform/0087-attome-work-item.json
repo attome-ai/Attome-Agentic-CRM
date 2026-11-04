@@ -1,6 +1,6 @@
 {
   "author": "attome-records (G1-T1, V2-D1588)",
-  "checksum": "sha256:3054df51147976d87c20fd2053909e9d3abe0ec0bbc207b49b510745e48bd264",
+  "checksum": "sha256:0797975305bf70ef4cb4e1b457bbd4302037e18d1fffa49cda6c217a35436c1d",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "V2-D1588 (2): the Work item base in the platform layer, so platform entities such as the service ticket can extend it; library-core adds its party link.",
   "format": "attome-changeset/v1",
@@ -178,11 +178,29 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "work_item",
+          "entity_mappings": [],
+          "name": "Active Work Item",
+          "required_privilege": "work_item.read",
+          "sql": "SELECT id, description, due_date, priority, status, title, created_at, modified_at FROM work_item WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "work_item",
+        "query": "Active Work Item"
+      }
+    },
+    {
+      "args": {
         "display_name": "عنصر عمل"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 7,
+      "seq": 8,
       "target": {
         "locale": "ar",
         "object_key": "work_item",
@@ -195,7 +213,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 8,
+      "seq": 9,
       "target": {
         "locale": "ar",
         "object_key": "work_item.title",
@@ -208,7 +226,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "locale": "ar",
         "object_key": "work_item.description",
@@ -221,7 +239,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "locale": "ar",
         "object_key": "work_item.status",
@@ -234,7 +252,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "locale": "ar",
         "object_key": "work_item.priority",
@@ -247,7 +265,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "locale": "ar",
         "object_key": "work_item.due_date",

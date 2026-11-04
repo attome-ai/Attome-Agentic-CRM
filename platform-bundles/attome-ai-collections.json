@@ -328,5 +328,19 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "ai_collection_rule",
+      "name": "Active Collection Rule",
+      "sql": "SELECT id, channel, is_active, kind, max_reminders, name, offset_days, template_text_ar, template_text_en, created_at, modified_at FROM ai_collection_rule WHERE is_active IS NOT FALSE",
+      "required_privilege": "ai_collection_rule.read"
+    },
+    {
+      "entity": "ai_payment_promise",
+      "name": "Active Payment Promise",
+      "sql": "SELECT id, customer_entity, customer_id, invoice_entity, invoice_id, invoice_number, note, promised_amount, promised_date, source, status, created_at, modified_at FROM ai_payment_promise WHERE is_active IS NOT FALSE",
+      "required_privilege": "ai_payment_promise.read"
+    }
   ]
 }

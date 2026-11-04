@@ -311,5 +311,19 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "ai_meeting_brief",
+      "name": "Active Meeting Brief",
+      "sql": "SELECT id, account_entity, account_id, brief_text, generated_at, language, meeting_entity, meeting_id, status, created_at, modified_at FROM ai_meeting_brief WHERE is_active IS NOT FALSE",
+      "required_privilege": "ai_meeting_brief.read"
+    },
+    {
+      "entity": "ai_meeting_notes",
+      "name": "Active Meeting Notes",
+      "sql": "SELECT id, action_items_json, decisions, language, meeting_entity, meeting_id, status, summary, transcript_ref, created_at, modified_at FROM ai_meeting_notes WHERE is_active IS NOT FALSE",
+      "required_privilege": "ai_meeting_notes.read"
+    }
   ]
 }

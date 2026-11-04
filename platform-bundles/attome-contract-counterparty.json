@@ -123,5 +123,13 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "counterparty_match_proposal",
+      "name": "Active Counterparty Match",
+      "sql": "SELECT id, account_id, account_name, contract_id, counterparty_text, score, status, created_at, modified_at FROM counterparty_match_proposal WHERE is_active IS NOT FALSE",
+      "required_privilege": "counterparty_match_proposal.read"
+    }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:da71902f0351b032db77d3e65aeb2c069d62a8eea6769bf38a25680468ccc391",
+  "checksum": "sha256:05bf952a0d3691e701dd20e8d70a8a7140517d7d0c655b9267c4c44fb90911c3",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-task-checklist.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -186,11 +186,29 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "task_checklist_item",
+          "entity_mappings": [],
+          "name": "Active Checklist Item",
+          "required_privilege": "task_checklist_item.read",
+          "sql": "SELECT id, activity_id, done_at, is_done, sequence, title, created_at, modified_at FROM task_checklist_item WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "task_checklist_item",
+        "query": "Active Checklist Item"
+      }
+    },
+    {
+      "args": {
         "display_name": "بند قائمة التحقق"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 8,
+      "seq": 9,
       "target": {
         "locale": "ar",
         "object_key": "task_checklist_item",
@@ -203,7 +221,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "locale": "ar",
         "object_key": "task_checklist_item.title",
@@ -216,7 +234,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "locale": "ar",
         "object_key": "task_checklist_item.activity_id",
@@ -229,7 +247,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "locale": "ar",
         "object_key": "task_checklist_item.sequence",
@@ -242,7 +260,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "locale": "ar",
         "object_key": "task_checklist_item.is_done",
@@ -255,7 +273,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "locale": "ar",
         "object_key": "task_checklist_item.done_at",
@@ -268,7 +286,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "locale": "ar",
         "object_key": "activity.recurrence_rule",

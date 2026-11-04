@@ -114,5 +114,13 @@
         "options": null
       }
     }
+  ],
+  "queries": [
+    {
+      "entity": "task_checklist_item",
+      "name": "Active Checklist Item",
+      "sql": "SELECT id, activity_id, done_at, is_done, sequence, title, created_at, modified_at FROM task_checklist_item WHERE is_active IS NOT FALSE",
+      "required_privilege": "task_checklist_item.read"
+    }
   ]
 }

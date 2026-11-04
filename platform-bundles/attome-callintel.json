@@ -1061,5 +1061,61 @@
         }
       ]
     }
+  ],
+  "queries": [
+    {
+      "entity": "call_analysis",
+      "name": "Active Call Analysis",
+      "sql": "SELECT id, account_id, activity_id, analysed_at, customer_longest_story_s, customer_questions, interruptions, longest_monologue_s, model_id, opportunity_id, staff_questions, staff_talk_share, staff_words_per_minute, status, transcript_version, owner_user, created_at, modified_at FROM call_analysis WHERE is_active IS NOT FALSE",
+      "required_privilege": "call_analysis.read"
+    },
+    {
+      "entity": "call_comment",
+      "name": "Active Call Comment",
+      "sql": "SELECT id, at_ms, body, analysis_ref, author, parent_ref, created_at, modified_at FROM call_comment WHERE is_active IS NOT FALSE",
+      "required_privilege": "call_comment.read"
+    },
+    {
+      "entity": "call_daily_aggregate",
+      "name": "Active Call Daily Aggregate",
+      "sql": "SELECT id, day, metric, team_ref, tracker_ref, value, created_at, modified_at FROM call_daily_aggregate WHERE is_active IS NOT FALSE",
+      "required_privilege": "call_daily_aggregate.read"
+    },
+    {
+      "entity": "call_finding",
+      "name": "Active Call Finding",
+      "sql": "SELECT id, end_ms, kind, speaker, start_ms, task_ref, text, analysis_ref, tracker_ref, created_at, modified_at FROM call_finding WHERE is_active IS NOT FALSE",
+      "required_privilege": "call_finding.read"
+    },
+    {
+      "entity": "call_library",
+      "name": "Active Call Library",
+      "sql": "SELECT id, description, name, name_ar, created_at, modified_at FROM call_library WHERE is_active IS NOT FALSE",
+      "required_privilege": "call_library.read"
+    },
+    {
+      "entity": "call_library_item",
+      "name": "Active Call Library Item",
+      "sql": "SELECT id, end_ms, start_ms, title, analysis_ref, library_ref, created_at, modified_at FROM call_library_item WHERE is_active IS NOT FALSE",
+      "required_privilege": "call_library_item.read"
+    },
+    {
+      "entity": "call_scorecard",
+      "name": "Active Call Scorecard",
+      "sql": "SELECT id, call_type, name, questions, version, created_at, modified_at FROM call_scorecard WHERE is_active IS NOT FALSE",
+      "required_privilege": "call_scorecard.read"
+    },
+    {
+      "entity": "call_scorecard_answer",
+      "name": "Active Scorecard Answer",
+      "sql": "SELECT id, confirmed_at, confirmed_value, proposed_evidence_ms, proposed_value, question_key, scorecard_version, analysis_ref, confirmed_by, scorecard_ref, created_at, modified_at FROM call_scorecard_answer WHERE is_active IS NOT FALSE",
+      "required_privilege": "call_scorecard_answer.read"
+    },
+    {
+      "entity": "call_tracker",
+      "name": "Active Call Tracker",
+      "sql": "SELECT id, competitor_ref, enabled, exact_terms, examples, name, name_ar, version, created_at, modified_at FROM call_tracker WHERE is_active IS NOT FALSE",
+      "required_privilege": "call_tracker.read"
+    }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "author": "attome-service (G1-T4)",
-  "checksum": "sha256:fac49ef9e79c8932da247f99951f1cd6a658cd0ead07d0111eea211bebea227e",
+  "checksum": "sha256:0ca12d41dbd158398104c400dece9872d718c2b0df06dbeb3d8488229c8d1f15",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "G1-T4: quality reviews of sampled closed cases, scored on tone, accuracy and process.",
   "format": "attome-changeset/v1",
@@ -271,11 +271,29 @@
     },
     {
       "args": {
+        "definition": {
+          "entity": "service_quality_review",
+          "entity_mappings": [],
+          "name": "Active Quality Review",
+          "required_privilege": "service_quality_review.read",
+          "sql": "SELECT id, accuracy_score, notes, process_score, status, tone_score, week, agent_ref, reviewer_ref, ticket_ref, created_at, modified_at FROM service_quality_review WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "service_quality_review",
+        "query": "Active Quality Review"
+      }
+    },
+    {
+      "args": {
         "display_name": "مراجعة الجودة"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review",
@@ -288,7 +306,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review.ticket_ref",
@@ -301,7 +319,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review.agent_ref",
@@ -314,7 +332,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review.reviewer_ref",
@@ -327,7 +345,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review.week",
@@ -340,7 +358,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review.status",
@@ -353,7 +371,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review.tone_score",
@@ -366,7 +384,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review.accuracy_score",
@@ -379,7 +397,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 19,
+      "seq": 20,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review.process_score",
@@ -392,7 +410,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 20,
+      "seq": 21,
       "target": {
         "locale": "ar",
         "object_key": "service_quality_review.notes",
