@@ -302,6 +302,15 @@ jobs:
         run: |
           set -o pipefail
           cargo run -p attome-release --target-dir target/gate -- --check --skip tests 2>&1 | tee release-check.log
+      # The gate's own build (target/gate) and the test binaries (target/) do
+      # not both fit on the runner's disk ("no space on device" while linking
+      # the test binaries): the gate is done with its tree here.
+      - name: free the gate's build
+        if: always()
+        shell: bash
+        run: |
+          rm -rf target/gate
+          df -h . || true
       # No database here: the database suites print SKIP, and everything else
       # runs in parallel (.config/nextest.toml caps the threads for Windows).
       - name: tests
