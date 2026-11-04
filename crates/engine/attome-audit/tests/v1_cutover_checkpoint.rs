@@ -183,9 +183,7 @@ async fn upgraded_chain(db: &DbPool, org: Uuid, store: Option<&StorageClient>) -
     for i in 0..3 {
         insert_legacy_ingest_row(db, &full_event(org, i)).await;
     }
-    chainer::run_once(db, Some(&signer), 1000, store)
-        .await
-        .expect("chainer run (v1 history)");
+    chain(db, &signer, org, store).await;
     for i in 3..5 {
         AuditService::new(db, None)
             .with_chainer_enabled(true)
@@ -193,9 +191,7 @@ async fn upgraded_chain(db: &DbPool, org: Uuid, store: Option<&StorageClient>) -
             .await
             .expect("v2 write");
     }
-    chainer::run_once(db, Some(&signer), 1000, store)
-        .await
-        .expect("chainer run (v2)");
+    chain(db, &signer, org, store).await;
 
     sqlx::query_scalar(
         "SELECT id FROM audit_header WHERE organization_ref = $1 AND hash_version = 1 ORDER BY id",
@@ -204,6 +200,27 @@ async fn upgraded_chain(db: &DbPool, org: Uuid, store: Option<&StorageClient>) -
     .fetch_all(db)
     .await
     .expect("v1 header ids")
+}
+
+/// Chains `org`'s ingested events. One chainer pass chains only rows below
+/// the cluster's oldest open transaction (the xmin watermark), so on a busy
+/// cluster a pass can chain nothing: run passes until none is left.
+async fn chain(db: &DbPool, signer: &AuditSigner, org: Uuid, store: Option<&StorageClient>) {
+    let started = std::time::Instant::now();
+    loop {
+        chainer::run_once(db, Some(signer), 1000, store)
+            .await
+            .expect("chainer run");
+        let (pending, _) = verify::lag(db, org).await.expect("chain lag");
+        if pending == 0 {
+            return;
+        }
+        assert!(
+            started.elapsed() < Duration::from_secs(60),
+            "{pending} events of {org} still unchained after a minute"
+        );
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
 }
 
 async fn verify(db: &DbPool, org: Uuid) -> verify::VerificationReport {
@@ -340,9 +357,7 @@ async fn a_v1_row_after_the_checkpoint_fails_verification() {
 
     // A straggling old-binary writer after the v1 set was frozen.
     insert_legacy_ingest_row(&db, &full_event(org, 9)).await;
-    chainer::run_once(&db, Some(&signer()), 1000, None)
-        .await
-        .expect("chainer run (late v1)");
+    chain(&db, &signer(), org, None).await;
 
     let report = verify(&db, org).await;
     assert!(
@@ -430,9 +445,7 @@ async fn checkpoint_defers_while_pre_v2_payloads_are_pending() {
     ));
 
     // A quiet period also defers while the newest pre-v2 capture is recent.
-    chainer::run_once(&db, Some(&signer()), 1000, None)
-        .await
-        .expect("chainer run (drain the straggler)");
+    chain(&db, &signer(), org, None).await;
     let signer = signer();
     assert!(matches!(
         checkpoint::create_v1_cutover_checkpoint(
@@ -463,9 +476,7 @@ async fn checkpoint_defers_while_pre_v2_payloads_are_pending() {
         .write(full_event(fresh, 0))
         .await
         .expect("v2 write");
-    chainer::run_once(&db, Some(&signer), 1000, None)
-        .await
-        .expect("chainer run (v2 only)");
+    chain(&db, &signer, fresh, None).await;
     assert_eq!(checkpoint(&db, fresh).await, CheckpointOutcome::NoV1History);
     assert_eq!(
         verify(&db, fresh).await.v1_content_protection,
