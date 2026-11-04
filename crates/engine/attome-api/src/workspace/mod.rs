@@ -447,7 +447,9 @@ async fn show(
     ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Workspace>, AppError> {
-    Ok(Json(find_for(&state, &ctx, id).await?))
+    require_builder(&ctx)?;
+    let workspace = find_for(&state, &ctx, id).await?;
+    Ok(Json(workspace))
 }
 
 /// The workspace `id` when `ctx` may work in it; another person's is not

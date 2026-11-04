@@ -46,6 +46,7 @@ pub const HANDOFF_STATUSES: [&str; 4] = ["pending", "accepted", "returned", "ove
 
 /// One hand-off.
 #[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow, ToSchema)]
+#[schema(as = NurtureHandoff)]
 pub struct Handoff {
     pub id: Uuid,
     pub program_id: Uuid,

@@ -24,6 +24,10 @@ const REVIEWED: &[(&str, &str)] = &[
         "0320_change_event_daily_partitions.sql",
         "swaps entity_change_event for its day-partitioned copy: every row is copied (the late ones under the lock) before the old table is dropped and the copy renamed",
     ),
+    (
+        "0364_ops_status_subscriber.sql",
+        "drops two columns of 0314's early ops_status_subscriber shape (a stored unsubscribe token and removed_at) that no release's code read or wrote",
+    ),
 ];
 
 /// One destructive statement: its 1-based line and what it does.

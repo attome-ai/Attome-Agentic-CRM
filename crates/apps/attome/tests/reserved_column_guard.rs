@@ -98,6 +98,48 @@ use Classification::{ExcludesSystemCols, Projection, ServerConstructed};
 /// `ExcludesSystemCols`, and the test will hold you to it.
 const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
     (
+        "crates/engine/attome-api/src/admin/refactor_child.rs",
+        "continue_link_copy",
+        ServerConstructed,
+        "Y2 to-many-to-many: reads ids in batches and inserts join rows built by link_sql from the entity's own lookup metadata, never from a body.",
+    ),
+    (
+        "crates/engine/attome-metadata/src/provision/derived_entity.rs",
+        "view_sql",
+        Projection,
+        "A derived entity's live view: a SELECT of the anchor's columns under its predicate; writes nothing.",
+    ),
+    (
+        "crates/engine/attome-metadata/src/provision/derived_entity.rs",
+        "reconcile",
+        Projection,
+        "Reads which anchor records match the derived entity's condition: a predicate.",
+    ),
+    (
+        "crates/engine/attome-metadata/src/provision/derived_entity.rs",
+        "refresh",
+        Projection,
+        "Reads the anchor's ids in batches to refresh membership: a read.",
+    ),
+    (
+        "crates/engine/attome-metadata/src/provision/derived_entity.rs",
+        "preview",
+        Projection,
+        "Previews which records the condition would add or drop: predicates only.",
+    ),
+    (
+        "crates/engine/attome-metadata/src/provision/derived_entity.rs",
+        "explain",
+        Projection,
+        "Explains one record's membership: reads the predicate's parts on that record.",
+    ),
+    (
+        "crates/engine/attome-metadata/src/provision/derived_entity.rs",
+        "member_ids",
+        Projection,
+        "Lists the matching anchor ids: a predicate and a read.",
+    ),
+    (
         "crates/engine/attome-api/src/inbound_hooks.rs",
         "record_by_key",
         Projection,

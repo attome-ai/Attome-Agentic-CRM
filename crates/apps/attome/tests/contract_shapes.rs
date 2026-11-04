@@ -75,6 +75,20 @@ const ERROR_SHAPE_EXEMPT: &[(&str, &str)] = &[
 /// design: a fixed catalogue, one caller's or one group's rows over a capped
 /// period, a report that is only meaningful whole, or the echo of a write.
 const BARE_ARRAY_EXEMPT: &[&str] = &[
+    // T1-T2: one row per entity of one app, a checklist read whole.
+    "entities_checklist",
+    // Next best actions: the few ranked actions on one record.
+    "next_actions",
+    // A portal person's own linked sign-in identities, a handful at most.
+    "portal_list_identities",
+    // F7/F8 store: the catalogue queries are capped, orders are the shopper's
+    // last 50, reviews a product's newest published (capped), shipping a
+    // fixed list of the store's options.
+    "portal_shop_catalogue",
+    "portal_shop_guest_catalogue",
+    "portal_shop_orders",
+    "portal_shop_product_reviews",
+    "portal_shop_shipping",
     // R1-T2: the privacy requests one person made, a handful at most.
     "portal_privacy_requests",
     "add_custodians",

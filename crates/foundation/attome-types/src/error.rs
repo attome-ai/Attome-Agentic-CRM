@@ -1362,16 +1362,16 @@ mod tests {
             if indices.len() == 1 {
                 continue;
             }
-            assert_eq!(
-                indices.len(),
-                2,
-                "wire code {code} is shared by more than a declared pair: {indices:?}"
-            );
-            let pair = (indices[0].min(indices[1]), indices[0].max(indices[1]));
-            assert!(
-                DECLARED_CODE_ALIASES.contains(&pair),
-                "wire code {code} is shared by undeclared variants {pair:?}"
-            );
+            // A shared code is one base variant (the lowest index) and its
+            // declared aliases: every other variant pairs with the base.
+            let base = indices.iter().copied().min().unwrap_or_default();
+            for other in indices.iter().copied().filter(|i| *i != base) {
+                let pair = (base, other);
+                assert!(
+                    DECLARED_CODE_ALIASES.contains(&pair),
+                    "wire code {code} is shared by undeclared variants {pair:?}"
+                );
+            }
         }
         for pair in DECLARED_CODE_ALIASES {
             let left = codes

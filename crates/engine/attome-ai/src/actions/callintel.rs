@@ -28,6 +28,9 @@ use crate::context::ActionContext;
 use crate::descriptor::{ActionDescriptor, ActionId, Effect, RetryClass, RiskTier};
 use crate::execute::{Action, ActionResult};
 
+/// One call finding as read: the activity, its kind, its start and its text.
+type FindingRow = (String, Option<String>, Option<f64>, Option<String>);
+
 pub const SEARCH_CALLS: &str = "callintel.search_calls";
 pub const DEAL_HIGHLIGHTS: &str = "callintel.deal_highlights";
 pub const COACHING_BRIEF: &str = "callintel.coaching_brief";
@@ -217,7 +220,7 @@ impl Action for DealHighlights {
                 .ok_or_else(|| AppError::Validation("opportunity_id must be a UUID".into()))?;
             attome_records::entity_crud::read_record(state, &ctx.security, "opportunity", deal)
                 .await?;
-            let rows: Vec<(String, Option<String>, Option<f64>, Option<String>)> = sqlx::query_as(
+            let rows: Vec<FindingRow> = sqlx::query_as(
                 "SELECT a.activity_id, f.kind::text, f.start_ms::float8, f.text \
                        FROM call_finding f JOIN call_analysis a ON a.id = f.analysis_ref \
                       WHERE a.opportunity_id = $1 \

@@ -148,6 +148,7 @@ pub struct PublishBody {
 
 /// `POST .../publish`'s answer.
 #[derive(Debug, Serialize, ToSchema)]
+#[schema(as = WorkspacePublished)]
 pub struct Published {
     pub workspace: Workspace,
     pub plan: ChangesetPlan,

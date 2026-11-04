@@ -155,6 +155,10 @@ const BASELINE: &[&str] = &[
     // Y9-T2: the deployment's OpenAPI document reads every engine's live
     // registry at once, which is composition.
     "deployment_openapi",
+    // Derived entities: admin routes over attome-metadata's provisioner and the record engine's reads of every source entity.
+    "derived_admin",
+    // Derived entities: the refresh job beside derived_admin, over the same sources.
+    "derived_maintain",
     "duplicates_admin",
     "duplicates_match",
     "email_admin",
@@ -168,16 +172,30 @@ const BASELINE: &[&str] = &[
     // A19-T2: dated rates are reference data every money field reads; no one
     // engine owns them.
     "exchange_rates",
+    // The exit export: a whole deployment's records and files, across every engine.
+    "exit",
     // Z11-T12: what an expression editor needs from the server.
     "expression_admin",
+    // Y10 extensions: published code that runs at any engine's record hooks.
+    "extension_admin",
+    // Y10 extensions: the hook dispatcher every engine's record writes call.
+    "extension_hooks",
+    // Y10 extensions: the job and webhook kinds, beside the dispatcher.
+    "extension_kinds",
     "features_admin",
     "field_changes",
     "field_hooks",
+    // A12-T4: form load and change hooks over the record engine and the forms.
+    "form_hooks",
+    // GraphQL reads every entity through the record engine, as query/run does.
+    "graphql",
     // M14-T1: builder-defined inbound endpoints.
     "inbound_hooks",
     "jobs_admin",
     // A20-T2: agent-drafted label translations, beside metadata_label_admin.
     "label_drafts",
+    // A leaver's records move to another person across every engine.
+    "leaver",
     "license_admin",
     "limits_admin",
     // L5-T4: the lineage graph read over every engine's definitions.
@@ -188,6 +206,8 @@ const BASELINE: &[&str] = &[
     // B15-T2: map tiles fetched for the page's CSP; a core route (the
     // integration module, which owns outbound adapters, can be switched off).
     "map_tiles",
+    // Field masking applies to every entity's reads.
+    "masking",
     "master_admin",
     // C4-T1: belongs in attome-notification; kept here until that crate
     // takes a record-access (attome-security) dependency.
@@ -209,6 +229,8 @@ const BASELINE: &[&str] = &[
     "my_work_workflow",
     "omnichannel_metrics",
     "openapi",
+    // Ownership changes reassign records across every entity.
+    "ownership_change",
     "profiler_admin",
     // L2-T2/L2-T3: quality dimensions and the incremental sweep, beside quality_score.
     "quality",
@@ -241,6 +263,8 @@ const BASELINE: &[&str] = &[
     "seed_support",
     "service_public",
     "settings_admin",
+    // First-run setup configures several engines at once.
+    "setup",
     // AA9-T6: the limits registry spans every engine (rate classes, bulk,
     // query time), so its read surface sits where they are composed.
     "sidebar",

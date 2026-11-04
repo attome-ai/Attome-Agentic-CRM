@@ -19,7 +19,7 @@ Migrations 0001 to 0088 were read when the rule was introduced. None of them dro
 table or column or changes a column's type; 0079 replaces a CHECK constraint on
 `approval_request.status` (allowed: it widens the accepted values).
 
-Two migrations above the baseline remove structure and were reviewed instead of moved, because
+Three migrations above the baseline remove structure and were reviewed instead of moved, because
 each was already committed when the rule caught it (a committed migration never changes: boot
 checks its checksum). They are listed in `REVIEWED` in `tests/migration_expand_only.rs`:
 
@@ -34,3 +34,7 @@ checks its checksum). They are listed in `REVIEWED` in `tests/migration_expand_o
   and its indexes to the old names. No row is lost. It also drops `change_consumer_applied`'s
   foreign key to the event, which a partitioned table's `(id, created_at)` key cannot carry; the
   prune job deletes a consumer's applied rows itself.
+- `0364_ops_status_subscriber.sql` drops `ops_status_subscriber.unsubscribe_token_hash` and
+  `removed_at`, which 0314 created ahead of the status-subscriber task (AB11-T6) and which no
+  release's code read or wrote; the subscriber table is reshaped in place before any row could
+  use them.

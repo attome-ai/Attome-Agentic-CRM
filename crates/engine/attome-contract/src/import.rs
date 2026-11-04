@@ -325,6 +325,7 @@ pub struct ImportAcceptBody {
 
 /// An accepted import.
 #[derive(Debug, Clone, Serialize, ToSchema)]
+#[schema(as = ContractImportAccepted)]
 pub struct ImportAccepted {
     pub contract_id: Uuid,
     pub obligations: usize,

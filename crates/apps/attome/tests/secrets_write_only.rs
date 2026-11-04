@@ -27,6 +27,11 @@ use serde_json::Value;
 /// `(schema, property, why it may appear in a response)`.
 const ALLOWED: &[(&str, &str, &str)] = &[
     (
+        "RecordFrame",
+        "password",
+        "M16-T3: a flag, whether the field the recorder clicked is a password field (so the step asks for a stored credential); never a password.",
+    ),
+    (
         "DeviceTokens",
         "access_token",
         "C7-T1/T4-T1: the session the device grant issues, returned once to the device that redeemed it.",

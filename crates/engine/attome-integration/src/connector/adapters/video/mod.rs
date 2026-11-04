@@ -74,6 +74,7 @@ pub struct Attendee {
 
 /// A meeting's recording.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[schema(as = VideoRecording)]
 pub struct Recording {
     pub url: String,
     pub kind: Option<String>,

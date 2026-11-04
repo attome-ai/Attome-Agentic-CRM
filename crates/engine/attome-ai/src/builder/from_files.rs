@@ -148,7 +148,7 @@ struct Parsed {
     key: Option<usize>,
 }
 
-fn column_cells<'a>(rows: &'a [Vec<String>], i: usize) -> Vec<&'a str> {
+fn column_cells(rows: &[Vec<String>], i: usize) -> Vec<&str> {
     rows.iter()
         .filter_map(|r| r.get(i).map(|c| c.trim()))
         .filter(|c| !c.is_empty())

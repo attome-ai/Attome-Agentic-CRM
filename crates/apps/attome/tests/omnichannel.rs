@@ -636,6 +636,10 @@ const AI_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../platform-bundles/attome-ai-agent.json"),
     ),
     (
+        "attome-ai-agent-principal",
+        include_str!("../../../../platform-bundles/attome-ai-agent-principal.json"),
+    ),
+    (
         "attome-webcrawl",
         include_str!("../../../../platform-bundles/attome-webcrawl.json"),
     ),

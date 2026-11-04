@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:b054eec5aaf887f2e839066ff9466324b3ccdfaff15df93fe0b8503807e8f735",
+  "checksum": "sha256:2982cdbf1641a7e83ff1df53405c0cb1122da22e2eb92d6940df8a68a9232ec8",
   "closed_at": "2026-11-02T00:00:00Z",
   "description": "F11-T10: the revenue reports as stored queries over the schedule lines and balance snapshots: the waterfall of planned revenue by period, the deferred roll-forward, unbilled balances, remaining performance obligations per contract, and recognised against billed per customer.",
   "format": "attome-changeset/v1",
@@ -68,7 +68,7 @@
       "phase": "expand",
       "seq": 3,
       "target": {
-        "entity": "revenue_balance_snapshot",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Revenue: Unbilled Balance"
       }
     },
@@ -89,7 +89,7 @@
       "phase": "expand",
       "seq": 4,
       "target": {
-        "entity": "revenue_contract",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Revenue: Remaining Performance Obligations"
       }
     },
@@ -110,7 +110,7 @@
       "phase": "expand",
       "seq": 5,
       "target": {
-        "entity": "revenue_balance_snapshot",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Revenue: Recognised vs Billed by Customer"
       }
     }

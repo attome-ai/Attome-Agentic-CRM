@@ -57,7 +57,11 @@ use std::path::{Path, PathBuf};
 ///
 /// 38 (2026-10-31): R1-T2's privacy requests one portal person made, an
 /// exemption below.
-const MAX_BARE_LIST_HANDLERS: usize = 38;
+///
+/// 46 (2026-11-04): the store's catalogue, guest catalogue, orders, product
+/// reviews and shipping options (F7/F8), a portal person's linked identities
+/// and the app checklist's entities, all exemptions below.
+const MAX_BARE_LIST_HANDLERS: usize = 46;
 
 /// Handler return-type signatures that are a *deliberate* exception to the
 /// `PaginatedResponse<T>` rule, not backlog — this scan still counts them
@@ -92,6 +96,12 @@ const MAX_BARE_LIST_HANDLERS: usize = 38;
 /// - `attome-workforce/src/self_service.rs` — `get_my_schedule`, the caller's
 ///   own shifts in at most two months; `put_my_preferences`, the caller's
 ///   own preferences, at most one per weekday.
+/// - `attome-portal/src/router/commerce.rs` — the store: the catalogue and
+///   the guest catalogue (capped by the catalogue query's limit), the
+///   shopper's own last 50 orders, a product's newest published reviews
+///   (capped) and the store's shipping options, a fixed list.
+/// - `attome-api/src/app_checklist.rs` — one row per entity of one app, a
+///   checklist meaningful only whole.
 const EXEMPT_BARE_LIST_HANDLERS: &[&str] = &[
     "attome-security/src/admin/role_grant_conditions.rs",
     "attome-api/src/sidebar.rs",
@@ -103,6 +113,8 @@ const EXEMPT_BARE_LIST_HANDLERS: &[&str] = &[
     "attome-workforce/src/adherence.rs",
     "attome-workforce/src/self_service.rs",
     "attome-portal/src/router/account.rs",
+    "attome-portal/src/router/commerce.rs",
+    "attome-api/src/app_checklist.rs",
 ];
 
 /// Every non-test, non-target `.rs` file under `crates/`.

@@ -439,6 +439,25 @@ pub const DOCS: &[(&str, &str)] = &[
         "docs/workspaces.md",
         include_str!("../../../../../docs/workspaces.md"),
     ),
+    (
+        "docs/dashboard-designer.md",
+        include_str!("../../../../../docs/dashboard-designer.md"),
+    ),
+    ("docs/edge.md", include_str!("../../../../../docs/edge.md")),
+    (
+        "docs/esign.md",
+        include_str!("../../../../../docs/esign.md"),
+    ),
+    (
+        "docs/flow-designer.md",
+        include_str!("../../../../../docs/flow-designer.md"),
+    ),
+    (
+        "docs/graphql.md",
+        include_str!("../../../../../docs/graphql.md"),
+    ),
+    ("docs/jobs.md", include_str!("../../../../../docs/jobs.md")),
+    ("docs/slo.md", include_str!("../../../../../docs/slo.md")),
 ];
 
 const SCHEMA: &str = r#"{

@@ -250,7 +250,7 @@ pub fn area(key: &str) -> &'static str {
         Some("data_profile") => "data",
         Some("quality" | "master" | "lineage") => "data",
         Some("revrec" | "fulfilment" | "contract") => "sales",
-        Some("model" | "packages" | "enrichment") => "data",
+        Some("model" | "packages" | "enrichment" | "forms") => "data",
         Some("grc") => "security",
         _ => "other",
     }

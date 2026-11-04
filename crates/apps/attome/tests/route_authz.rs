@@ -141,10 +141,15 @@ const DYNAMIC_ACTION: &str = "Dynamic";
 /// entity was a body field, was deleted with `POST /api/v1/search/aggregate`
 /// (`query/run` aggregates replace it).
 ///
+/// Raised from 5 to 6 deliberately (O5-T1, 2026-11-02) for
+/// `nba::next_actions` — `GET /api/v1/predict/next-actions` names its record's
+/// entity in the query string, not the path, and `recommend` requires read on
+/// that entity and reads the record through the record-level filter.
+///
 /// If this ever reaches 0, delete the constant and both halves of
 /// `bare_record_scoped_routes_ratchet_downward` rather than leaving a floor
 /// nothing can trip.
-const MAX_BARE_RECORD_SCOPED: usize = 5;
+const MAX_BARE_RECORD_SCOPED: usize = 6;
 
 /// Routes carrying neither an `Authorized<P>` policy nor a `require_*` call,
 /// each with the reason it is safe. Verified by reading every handler.
@@ -239,11 +244,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "H8-T1: a static page with one button for the token it was given; it reads nothing and changes nothing (a mail scanner fetching the link confirms nothing). Bypass-listed.",
     ),
     (
-        "POST",
-        "/api/v1/status/confirm",
-        "H8-T1: the signed link (HMAC under the status-subscriber domain, seven days, over one address) is the credential and confirms only that address's status emails. Bypass-listed.",
-    ),
-    (
         "GET",
         "/api/v1/status/unsubscribe",
         "H8-T1: a static page with one button for the token it was given; it reads nothing and changes nothing. Bypass-listed.",
@@ -267,11 +267,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "GET",
         "/api/v1/contract/review/{token}",
         "W1-T8 counterparty review page: the signed link (HMAC under the contract review domain, contract.review_link_days, over one review round) is the credential; it shows that contract's title, a 15-minute download of its current version and what was sent through this link, never another contract or an internal note. A closed, expired or unknown link is the same 404. Bypass-listed by an exact single-segment match.",
-    ),
-    (
-        "POST",
-        "/api/v1/contract/review/{token}",
-        "W1-T8 counterparty review action: the signed link names one open round; a comment, or one PDF or Word version (at most 7 MB, through the upload pipeline's virus scan, created as the person who shared the link) that ends the round. Bypass-listed by an exact single-segment match; an audited business event.",
     ),
     (
         "GET",

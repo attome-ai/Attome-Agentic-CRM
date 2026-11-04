@@ -323,6 +323,12 @@ async fn seed_agent_catalog(system: &EngineSystem) {
         attome_metadata::provision::ensure_entity(db, "ai_agent", "AI Agent", Some("name"), false)
             .await
             .expect("ensure_entity ai_agent");
+    // AH3-T6: `ai_agent.principal_ref` (platform changeset 0092), which
+    // `start_session` reads; a raw column is enough for a hand-provisioned table.
+    sqlx::query("ALTER TABLE ai_agent ADD COLUMN IF NOT EXISTS principal_ref uuid")
+        .execute(db)
+        .await
+        .expect("ai_agent.principal_ref");
     for logicalname in ["name", "status", "primary_model_ref"] {
         attome_metadata::provision::ensure_attribute(
             db,

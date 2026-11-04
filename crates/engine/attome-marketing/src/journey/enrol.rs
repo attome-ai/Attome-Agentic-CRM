@@ -70,6 +70,7 @@ pub struct Prior {
 
 /// What one enrolment did.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
+#[schema(as = JourneyEnrolOutcome)]
 pub struct EnrolOutcome {
     pub enrolled: u64,
     pub skipped_active: u64,

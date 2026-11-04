@@ -901,6 +901,10 @@ async fn ai_scaffold_records_chain_by_derived_id_on_a_fresh_database() {
             include_str!("../../../../platform-bundles/attome-ai-agent.json"),
         ),
         (
+            "attome-ai-agent-principal",
+            include_str!("../../../../platform-bundles/attome-ai-agent-principal.json"),
+        ),
+        (
             "attome-ai-agent-data",
             include_str!("../../../../platform-bundles/attome-ai-agent-data.json"),
         ),
@@ -970,6 +974,10 @@ async fn ai_scaffold_records_chain_by_derived_id_on_a_fresh_database() {
         (
             "attome-ai-model-catalog-data",
             include_str!("../../../../platform-bundles/attome-ai-model-catalog-data.json"),
+        ),
+        (
+            "attome-ai-agent-principal",
+            include_str!("../../../../platform-bundles/attome-ai-agent-principal.json"),
         ),
         (
             "attome-ai-agent-data",

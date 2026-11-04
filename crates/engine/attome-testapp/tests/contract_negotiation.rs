@@ -62,7 +62,7 @@ async fn contract(app: &TestApp, title: &str, store: bool) -> (Uuid, Uuid) {
         .request(
             Method::POST,
             "/api/v1/contract",
-            Some(json!({ "title": title, "contract_value": 50000 })),
+            Some(json!({ "title": title, "counterparty": "Gulf Services Co", "contract_value": 50000 })),
         )
         .await;
     assert!(code.is_success(), "{code} {body}");

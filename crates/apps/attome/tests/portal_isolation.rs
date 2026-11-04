@@ -4197,6 +4197,10 @@ async fn install_partner_packs(fx: &Fx) {
     attome_api::changeset::boot::apply_platform_definition(&fx.xrm, "attome-docgen")
         .await
         .expect("apply the docgen platform definition");
+    // The contract pack's views read contract versions (the contract engine's).
+    attome_api::changeset::boot::apply_platform_definition(&fx.xrm, "attome-contract")
+        .await
+        .expect("apply the contract platform definition");
     for pack in PARTNER_PACKS {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../../packs")

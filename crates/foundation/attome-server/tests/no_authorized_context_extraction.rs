@@ -25,6 +25,11 @@ const ALLOWED: &[&str] = &[
     // records into. It decides nothing: every route that takes it also takes an
     // `Authorized<P>` extractor, which is where the policy runs.
     "crates/engine/attome-core/src/changeset/extract.rs",
+    // T5-T4: the workspace proxy is middleware, not a handler. It reads the
+    // caller only to check they may enter the workspace the header names
+    // (refusing otherwise) before forwarding; the forwarded route still runs
+    // its own `Authorized<P>` policy.
+    "crates/engine/attome-api/src/workspace/proxy.rs",
 ];
 
 /// A line reads the context outside a policy when it names the type as an

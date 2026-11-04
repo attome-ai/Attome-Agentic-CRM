@@ -55,6 +55,9 @@ const EXTRA_PREFIXES: &[&str] = &[
 /// metadata authoring). A write to a reference-data entity records
 /// `upsert_record` when a changeset is in play.
 const EXTRA_ROUTES: &[&str] = &[
+    // E8: a journey's publish publishes its workflow definition, as the
+    // workflow publish route does.
+    "/api/v1/marketing/journeys/{id}/publish",
     "/api/v1/{entity}",
     "/api/v1/{entity}/{id}",
     "/api/v1/{entity}/upsert",
@@ -68,6 +71,21 @@ const EXTRA_ROUTES: &[&str] = &[
 
 /// Recorded routes and the op(s) each records (design §1.1).
 const RECORDED: &[(&str, &[&str])] = &[
+    // A1-T4: scaffolding an entity creates it with its fields.
+    (
+        "POST /api/v1/admin/entities/{entity_id}/scaffold",
+        &["create_entity", "add_field"],
+    ),
+    // Y2 refactors: a field group moved to a child entity, or a lookup turned
+    // into a many-to-many relationship.
+    (
+        "POST /api/v1/admin/entities/{entity_id}/refactor/extract-child",
+        &["create_entity", "add_field", "upsert_relationship"],
+    ),
+    (
+        "POST /api/v1/admin/entities/{entity_id}/refactor/to-many-to-many",
+        &["upsert_relationship"],
+    ),
     // Reference data through the generic entity API (D-787 rule 7, design §1).
     ("POST /api/v1/{entity}", &["upsert_record"]),
     ("PATCH /api/v1/{entity}/{id}", &["upsert_record"]),
@@ -398,6 +416,14 @@ const RECORDED: &[(&str, &[&str])] = &[
 /// In-scope mutating routes that record nothing, with the reason (design
 /// §1.3 and §7).
 const EXCLUDED: &[(&str, &str)] = &[
+    (
+        "POST /api/v1/admin/entities/{entity_id}/fields/{field_id}/foreign-key",
+        "adds the database foreign key behind an existing lookup online, on this          deployment's table; a fresh install gets the key with the field",
+    ),
+    (
+        "POST /api/v1/admin/entities/{entity_id}/partition",
+        "Y2-T12: moves one deployment's large table into partitions online, by its          size there; storage, not promoted metadata",
+    ),
     (
         "POST /api/v1/admin/themes/preview-check",
         "B13-T5: checks unsaved tokens and writes nothing",

@@ -175,10 +175,7 @@ pub struct Load {
 
 impl Load {
     pub fn start(args: &SteadyArgs) -> Result<Load, String> {
-        let http = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
-            .build()
-            .map_err(|e| e.to_string())?;
+        let http = client(&args.url)?;
         let samples: Samples = Arc::default();
         let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let url = format!("{}/api/v1/{}?page_size=10", args.url, args.entity);
@@ -277,13 +274,17 @@ pub fn print_phase(name: &str, stats: Stats) {
     );
 }
 
+/// Q21-T1: `url` is the operator's own server, named on the command line.
+fn client(url: &str) -> Result<attome_outbound::http::Outbound, String> {
+    let purpose = attome_outbound::http::Purpose::public("cli-chaos").with_private_urls([url]);
+    attome_outbound::http::client(purpose, |b| b.timeout(Duration::from_secs(10)))
+        .map_err(|e| format!("build the HTTP client: {e}"))
+}
+
 /// Two creates with one idempotency key and different bodies; whether the
 /// second was refused (fail closed).
 pub async fn idempotency_probe(args: &SteadyArgs) -> Result<bool, String> {
-    let http = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let http = client(&args.url)?;
     let url = format!("{}/api/v1/{}", args.url, args.entity);
     let key = uuid::Uuid::now_v7().to_string();
     let send = |name: &str| {

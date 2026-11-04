@@ -103,7 +103,7 @@ fn accept_creates_contract_from_reviewed_json() {
                 "status": "active"
             },
             "obligations": [
-                { "title": "Inspect every lift each month", "owed_by": "counterparty" }
+                { "title": "Inspect every lift each month", "owed_by": "counterparty", "due_date": "2027-01-31" }
             ]
         }))
         .unwrap();

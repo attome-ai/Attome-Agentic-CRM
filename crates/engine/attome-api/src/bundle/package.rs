@@ -405,6 +405,7 @@ pub async fn install_locks(
 /// T8-T3: one property an upgrade cannot merge on its own: the package's
 /// new version and the customer both changed it, differently.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
+#[schema(as = PackageConflict)]
 pub struct Conflict {
     /// `entity` or `entity.attribute`.
     pub object: String,

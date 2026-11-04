@@ -79,6 +79,7 @@ fn one() -> f64 {
 
 /// One ranked action on a record.
 #[derive(Debug, Clone, Serialize, ToSchema)]
+#[schema(as = NbaRecommendation)]
 pub struct Recommendation {
     /// The logged recommendation, to accept or reject.
     pub recommendation_id: Uuid,

@@ -114,7 +114,7 @@ fn a_deviating_contract_records_it_and_a_block_rule_refuses_the_clause() {
             .request(
                 Method::POST,
                 "/api/v1/contract",
-                Some(json!({ "title": "Big supply", "contract_value": 2500000 })),
+                Some(json!({ "title": "Big supply", "counterparty": "Gulf Services Co", "contract_value": 2500000 })),
             )
             .await;
         assert!(status.is_success(), "{status} {body}");
@@ -128,7 +128,7 @@ fn a_deviating_contract_records_it_and_a_block_rule_refuses_the_clause() {
             .request(
                 Method::POST,
                 "/api/v1/contract",
-                Some(json!({ "title": "Forged", "playbook_deviations": "[]" })),
+                Some(json!({ "title": "Forged", "counterparty": "Gulf Services Co", "playbook_deviations": "[]" })),
             )
             .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");

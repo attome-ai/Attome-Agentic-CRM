@@ -500,75 +500,146 @@ async fn move_state(
     Ok(agent)
 }
 
-macro_rules! lifecycle_route {
-    ($fn:ident, $action:literal, $path:literal, $opid:literal, $op:ident, $summary:literal) => {
-        #[doc = $summary]
-        #[utoipa::path(
-            post,
-            path = $path,
-            operation_id = $opid,
-            tag = "admin-security",
-            params(("id" = Uuid, Path, description = "The agent's account id")),
-            request_body = StateBody,
-            extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::$op)])))),
-            responses(
-                (status = 200, description = "Success", body = AgentPrincipal),
-                (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-                (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
-                (status = 404, description = "No such agent", body = ErrorResponse),
-                (status = 409, description = "Its state does not allow this, it changed since `If-Match`, or another change holds it", body = ErrorResponse),
-                (status = 422, description = "No `If-Match`, or the reason failed validation", body = ErrorResponse),
-            ),
-            security(("session_cookie" = []), ("api_key" = [])),
-        )]
-        async fn $fn(
-            State(state): State<EngineState>,
-            ctx: Authorized<Privilege<area::Users>>,
-            headers: HeaderMap,
-            Path(id): Path<Uuid>,
-            body: Option<Json<StateBody>>,
-        ) -> Result<Json<AgentPrincipal>, AppError> {
-            let expected = if_match(&headers)?;
-            let reason = body.and_then(|Json(b)| b.reason);
-            Ok(Json(
-                move_state(&state, ctx.user_id, id, expected, $action, reason).await?,
-            ))
-        }
-    };
+/// One lifecycle move as a route: `If-Match`, an optional reason, then
+/// [`move_state`].
+async fn lifecycle(
+    state: &EngineState,
+    actor: Uuid,
+    headers: &HeaderMap,
+    id: Uuid,
+    body: Option<Json<StateBody>>,
+    action: &str,
+) -> Result<Json<AgentPrincipal>, AppError> {
+    let expected = if_match(headers)?;
+    let reason = body.and_then(|Json(b)| b.reason);
+    Ok(Json(
+        move_state(state, actor, id, expected, action, reason).await?,
+    ))
 }
 
-lifecycle_route!(
-    pause_agent,
-    "pause",
-    "/api/v1/admin/agents/{id}/pause",
-    "pause_agent_principal",
-    AccountDisabled,
-    "Pause an agent principal\n\nAn active agent stops acting until resumed. Takes `If-Match`. Audited."
-);
-lifecycle_route!(
-    suspend_agent,
-    "suspend",
-    "/api/v1/admin/agents/{id}/suspend",
-    "suspend_agent_principal",
-    AccountDisabled,
-    "Suspend an agent principal\n\nAn active or paused agent is held, for review. Takes `If-Match`. Audited."
-);
-lifecycle_route!(
-    resume_agent,
-    "resume",
-    "/api/v1/admin/agents/{id}/resume",
-    "resume_agent_principal",
-    AccountEnabled,
-    "Resume an agent principal\n\nA paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited."
-);
-lifecycle_route!(
-    revoke_agent,
-    "revoke",
-    "/api/v1/admin/agents/{id}/revoke",
-    "revoke_agent_principal",
-    Revoke,
-    "Revoke an agent principal\n\nFinal: its keys, sessions and account end. Takes `If-Match`. Audited."
-);
+/// Pause an agent principal
+///
+/// An active agent stops acting until resumed. Takes `If-Match`. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/agents/{id}/pause",
+    operation_id = "pause_agent_principal",
+    tag = "admin-security",
+    params(("id" = Uuid, Path, description = "The agent's account id")),
+    request_body = StateBody,
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::AccountDisabled)])))),
+    responses(
+        (status = 200, description = "Success", body = AgentPrincipal),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such agent", body = ErrorResponse),
+        (status = 409, description = "Its state does not allow this, it changed since `If-Match`, or another change holds it", body = ErrorResponse),
+        (status = 422, description = "No `If-Match`, or the reason failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn pause_agent(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Users>>,
+    headers: HeaderMap,
+    Path(id): Path<Uuid>,
+    body: Option<Json<StateBody>>,
+) -> Result<Json<AgentPrincipal>, AppError> {
+    lifecycle(&state, ctx.user_id, &headers, id, body, "pause").await
+}
+
+/// Suspend an agent principal
+///
+/// An active or paused agent is held, for review. Takes `If-Match`. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/agents/{id}/suspend",
+    operation_id = "suspend_agent_principal",
+    tag = "admin-security",
+    params(("id" = Uuid, Path, description = "The agent's account id")),
+    request_body = StateBody,
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::AccountDisabled)])))),
+    responses(
+        (status = 200, description = "Success", body = AgentPrincipal),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such agent", body = ErrorResponse),
+        (status = 409, description = "Its state does not allow this, it changed since `If-Match`, or another change holds it", body = ErrorResponse),
+        (status = 422, description = "No `If-Match`, or the reason failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn suspend_agent(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Users>>,
+    headers: HeaderMap,
+    Path(id): Path<Uuid>,
+    body: Option<Json<StateBody>>,
+) -> Result<Json<AgentPrincipal>, AppError> {
+    lifecycle(&state, ctx.user_id, &headers, id, body, "suspend").await
+}
+
+/// Resume an agent principal
+///
+/// A paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/agents/{id}/resume",
+    operation_id = "resume_agent_principal",
+    tag = "admin-security",
+    params(("id" = Uuid, Path, description = "The agent's account id")),
+    request_body = StateBody,
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::AccountEnabled)])))),
+    responses(
+        (status = 200, description = "Success", body = AgentPrincipal),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such agent", body = ErrorResponse),
+        (status = 409, description = "Its state does not allow this, it changed since `If-Match`, or another change holds it", body = ErrorResponse),
+        (status = 422, description = "No `If-Match`, or the reason failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn resume_agent(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Users>>,
+    headers: HeaderMap,
+    Path(id): Path<Uuid>,
+    body: Option<Json<StateBody>>,
+) -> Result<Json<AgentPrincipal>, AppError> {
+    lifecycle(&state, ctx.user_id, &headers, id, body, "resume").await
+}
+
+/// Revoke an agent principal
+///
+/// Final: its keys, sessions and account end. Takes `If-Match`. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/agents/{id}/revoke",
+    operation_id = "revoke_agent_principal",
+    tag = "admin-security",
+    params(("id" = Uuid, Path, description = "The agent's account id")),
+    request_body = StateBody,
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Revoke)])))),
+    responses(
+        (status = 200, description = "Success", body = AgentPrincipal),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such agent", body = ErrorResponse),
+        (status = 409, description = "Its state does not allow this, it changed since `If-Match`, or another change holds it", body = ErrorResponse),
+        (status = 422, description = "No `If-Match`, or the reason failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn revoke_agent(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Users>>,
+    headers: HeaderMap,
+    Path(id): Path<Uuid>,
+    body: Option<Json<StateBody>>,
+) -> Result<Json<AgentPrincipal>, AppError> {
+    lifecycle(&state, ctx.user_id, &headers, id, body, "revoke").await
+}
 
 /// Reassign an agent's sponsor
 ///

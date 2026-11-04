@@ -326,6 +326,7 @@ async fn scorecard(
 
 /// The governance evidence for an audit.
 #[derive(Debug, Clone, Serialize, ToSchema)]
+#[schema(as = GovernanceEvidence)]
 pub struct Evidence {
     pub generated_at: DateTime<Utc>,
     /// `{domain_id, domain, user_id, role}`.

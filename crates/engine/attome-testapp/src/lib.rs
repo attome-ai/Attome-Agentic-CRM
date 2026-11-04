@@ -347,9 +347,11 @@ async fn apply_platform_definitions(state: &EngineState) {
     // intelligence), AI personalities (the agent definition looks them up),
     // and the metric governance fields (the metric tests read
     // `dimension_attributes`; the engine system applies the metric and
-    // glossary definitions it builds on).
+    // glossary definitions it builds on), and integration systems (the
+    // marketing pack's social posts look them up).
     for module in [
         "attome-docgen",
+        "attome-integration",
         "attome-search-saved-search",
         "attome-workflow",
         "attome-contract",

@@ -158,6 +158,9 @@ pub async fn request_approval(
     request_approval_with(db, action, request, true).await
 }
 
+/// A session's agent principal, its actor chain and the principal's sponsor.
+type SessionPrincipalRow = (Option<Uuid>, Option<Vec<Uuid>>, Option<Uuid>);
+
 /// AH3-T7: who may not decide a request from `session`: for a session bound
 /// to an agent principal, the agent, every person in its chain and, when
 /// `exclude_sponsor`, its sponsor. Empty for any other session.
@@ -166,7 +169,7 @@ pub async fn excluded_for_session(
     session: Uuid,
     exclude_sponsor: bool,
 ) -> Result<Vec<Uuid>, AppError> {
-    let row: Option<(Option<Uuid>, Option<Vec<Uuid>>, Option<Uuid>)> = sqlx::query_as(
+    let row: Option<SessionPrincipalRow> = sqlx::query_as(
         "SELECT s.agent_principal_ref, s.actor_chain, a.sponsor_user_ref \
            FROM agent_session s \
            LEFT JOIN agent_principal a ON a.user_ref = s.agent_principal_ref \

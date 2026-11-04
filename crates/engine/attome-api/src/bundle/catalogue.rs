@@ -402,6 +402,7 @@ async fn add_to_catalogue(
 
 /// A review's decision.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
+#[schema(as = CatalogueReviewDecision)]
 #[serde(rename_all = "snake_case")]
 pub enum ReviewDecision {
     Approved,
@@ -410,6 +411,7 @@ pub enum ReviewDecision {
 
 /// Body of `POST /api/v1/admin/packages/catalogue/{id}/review`.
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = CatalogueReviewBody)]
 pub struct ReviewBody {
     pub decision: ReviewDecision,
     #[serde(default)]
