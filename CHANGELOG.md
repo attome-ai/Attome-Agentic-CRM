@@ -777,6 +777,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- Master data: a source system's version that fails validation no longer replaces the version of
+  that record already attached. It waits beside it (`held_payload`) in the steward's held queue, and
+  the attached version keeps feeding the golden record until the held one is released or rejected
+  (rejecting it keeps the attached version).
 - Security: a record list (`GET /api/v1/{entity}`, `POST /api/v1/query/execute` on one entity,
   `POST /api/v1/query/run` and a SQL report's views) applies every grant condition on
   `{entity}.read` (D-369) and the role's owner visibility (D-371), as reading one record does; so

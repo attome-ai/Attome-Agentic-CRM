@@ -28,6 +28,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_ev
 use attome_core::EngineState;
 use attome_core::lineage::manual;
 use attome_records::entity_crud::history::{ValuesAt, values_at};
+use attome_records::entity_crud::master::steward::HELD_PREDICATE;
 use attome_records::entity_crud::master::{self, steward, xref};
 use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, SelfService};
@@ -636,7 +637,7 @@ async fn held(
         parts.push((
             format!(
                 "SELECT ${n}::text AS entity, id, source_system, external_id, received_at, \
-                        held_reason FROM {table} WHERE status = 'held'"
+                        held_reason FROM {table} WHERE {HELD_PREDICATE}"
             ),
             entity,
         ));

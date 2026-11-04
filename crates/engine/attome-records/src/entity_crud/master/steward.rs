@@ -62,13 +62,35 @@ pub struct ContributionRow {
     pub status: String,
     pub held_reason: Option<String>,
     pub payload: Value,
+    /// A version waiting for a steward; beside an attached one, or the
+    /// payload itself while nothing is attached.
+    pub held_payload: Option<Value>,
 }
 
 impl ContributionRow {
     pub fn payload_object(&self) -> Map<String, Value> {
         self.payload.as_object().cloned().unwrap_or_default()
     }
+
+    /// Whether a version waits for a steward: the row is held, or a held
+    /// version waits beside the attached one.
+    pub fn is_held(&self) -> bool {
+        self.status == "held" || self.held_payload.is_some()
+    }
+
+    /// The version a steward releases when they give none: the held one.
+    pub fn held_object(&self) -> Map<String, Value> {
+        self.held_payload
+            .as_ref()
+            .and_then(Value::as_object)
+            .cloned()
+            .unwrap_or_else(|| self.payload_object())
+    }
 }
+
+/// Rows with a version waiting for a steward (SQL, over a contribution
+/// table).
+pub const HELD_PREDICATE: &str = "(status = 'held' OR held_payload IS NOT NULL)";
 
 /// The contribution `id` of `entity`.
 pub async fn contribution(
@@ -77,7 +99,8 @@ pub async fn contribution(
     id: Uuid,
 ) -> Result<Option<ContributionRow>, AppError> {
     sqlx::query_as(&format!(
-        "SELECT id, golden_id, source_system, external_id, status, held_reason, payload \
+        "SELECT id, golden_id, source_system, external_id, status, held_reason, payload, \
+                held_payload \
            FROM {} WHERE id = $1",
         quote_ident(&contribution_table(entity))
     ))
@@ -158,8 +181,9 @@ pub async fn claim_release(
     payload: &Map<String, Value>,
 ) -> Result<bool, AppError> {
     let done = sqlx::query(&format!(
-        "UPDATE {} SET status = 'attached', payload = $2, held_reason = NULL \
-          WHERE id = $1 AND status = 'held'",
+        "UPDATE {} SET status = 'attached', payload = $2, held_reason = NULL, \
+                       held_payload = NULL \
+          WHERE id = $1 AND {HELD_PREDICATE}",
         quote_ident(&contribution_table(entity))
     ))
     .bind(id)
@@ -186,11 +210,15 @@ pub async fn hold(db: &DbPool, entity: &str, id: Uuid, reason: &str) -> Result<(
     Ok(())
 }
 
-/// Rejects a held contribution: `detached`, with the steward's reason.
-/// False when it was not held.
+/// Rejects a held contribution: `detached`, with the steward's reason. A
+/// held version beside an attached one is dropped and the attached one
+/// stays. False when nothing was held.
 pub async fn reject(db: &DbPool, entity: &str, id: Uuid, reason: &str) -> Result<bool, AppError> {
     let done = sqlx::query(&format!(
-        "UPDATE {} SET status = 'detached', held_reason = $2 WHERE id = $1 AND status = 'held'",
+        "UPDATE {} SET status = CASE WHEN status = 'attached' THEN 'attached' \
+                                     ELSE 'detached' END, \
+                       held_reason = $2, held_payload = NULL \
+          WHERE id = $1 AND {HELD_PREDICATE}",
         quote_ident(&contribution_table(entity))
     ))
     .bind(id)
@@ -307,10 +335,10 @@ pub async fn release_held(
     let row = contribution(db, entity, id)
         .await?
         .ok_or(AppError::NotFound)?;
-    if row.status != "held" {
+    if !row.is_held() {
         return Err(AppError::Conflict("the contribution is not held"));
     }
-    let payload = payload.unwrap_or_else(|| row.payload_object());
+    let payload = payload.unwrap_or_else(|| row.held_object());
     if let Some(reason) = super::validation_failure(state, entity, &payload)? {
         return Err(AppError::Validation(reason));
     }

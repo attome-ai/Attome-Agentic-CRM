@@ -17,7 +17,9 @@ pub enum Ingested {
         golden: Uuid,
         queued: bool,
     },
-    /// It failed the entity's field validation; nothing else changed.
+    /// It failed the entity's field validation; nothing else changed. A
+    /// version already attached stays attached, and this one waits beside
+    /// it in `held_payload` for a steward.
     Held { contribution: Uuid, reason: String },
 }
 
@@ -77,27 +79,48 @@ pub async fn ingest(
 
     // A3: the entity's own field validation; a failing version is held.
     let held_reason = validation_failure(state, entity, payload)?;
-    let (contribution, golden): (Uuid, Option<Uuid>) = sqlx::query_as(&format!(
-        "INSERT INTO {t} (source_system, external_id, payload, status, held_reason, received_at) \
-         VALUES ($1, $2, $3, $4, $5, now()) \
-         ON CONFLICT (source_system, external_id) DO UPDATE \
-            SET payload = EXCLUDED.payload, status = EXCLUDED.status, \
-                held_reason = EXCLUDED.held_reason, received_at = now() \
-         RETURNING id, golden_id",
-        t = quote_ident(&contribution_table(entity))
-    ))
-    .bind(source_system)
-    .bind(external_id)
-    .bind(Value::Object(payload.clone()))
-    .bind(if held_reason.is_some() {
-        "held"
+    let version = Value::Object(payload.clone());
+    let (contribution, golden): (Uuid, Option<Uuid>) = if held_reason.is_some() {
+        // A held version never replaces an attached one: it waits in
+        // `held_payload`, and the attached payload keeps feeding the golden
+        // record. A row with nothing attached holds it as its payload too.
+        sqlx::query_as(&format!(
+            "INSERT INTO {t} AS c (source_system, external_id, payload, status, held_reason, \
+                                  held_payload, received_at) \
+             VALUES ($1, $2, $3, 'held', $4, $3, now()) \
+             ON CONFLICT (source_system, external_id) DO UPDATE \
+                SET payload = CASE WHEN c.status = 'attached' THEN c.payload \
+                                   ELSE EXCLUDED.payload END, \
+                    status = CASE WHEN c.status = 'attached' THEN 'attached' ELSE 'held' END, \
+                    held_reason = EXCLUDED.held_reason, \
+                    held_payload = EXCLUDED.held_payload, received_at = now() \
+             RETURNING id, golden_id",
+            t = quote_ident(&contribution_table(entity))
+        ))
+        .bind(source_system)
+        .bind(external_id)
+        .bind(&version)
+        .bind(&held_reason)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
     } else {
-        "attached"
-    })
-    .bind(&held_reason)
-    .fetch_one(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
+        sqlx::query_as(&format!(
+            "INSERT INTO {t} (source_system, external_id, payload, status, received_at) \
+             VALUES ($1, $2, $3, 'attached', now()) \
+             ON CONFLICT (source_system, external_id) DO UPDATE \
+                SET payload = EXCLUDED.payload, status = 'attached', held_reason = NULL, \
+                    held_payload = NULL, received_at = now() \
+             RETURNING id, golden_id",
+            t = quote_ident(&contribution_table(entity))
+        ))
+        .bind(source_system)
+        .bind(external_id)
+        .bind(&version)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+    };
     if let Some(reason) = held_reason {
         return Ok(Ingested::Held {
             contribution,
@@ -186,7 +209,9 @@ pub async fn attach(
         }
     };
     sqlx::query(&format!(
-        "UPDATE {t} SET golden_id = $2, status = 'attached', held_reason = NULL WHERE id = $1",
+        "UPDATE {t} SET golden_id = $2, status = 'attached', held_reason = NULL, \
+                        held_payload = NULL \
+          WHERE id = $1",
         t = quote_ident(&contribution_table(entity))
     ))
     .bind(pending.contribution)

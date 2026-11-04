@@ -5,7 +5,9 @@
 //!   record. One row per (source system, external id); `golden_id` is the
 //!   record it is attached to (none while held), with its payload, when it
 //!   was received, and its status (`attached`, `held`, `detached`) and why
-//!   it is held.
+//!   it is held. A version that fails validation after one was attached
+//!   waits in `held_payload`: the attached version keeps feeding the golden
+//!   record until a steward releases or rejects the held one.
 //! - `<entity>__provenance`: for each golden record and attribute, the
 //!   contribution its value came from, by which survivorship rule, when,
 //!   and who pinned it, if a person did.
@@ -60,6 +62,7 @@ pub fn master_table_ddl(entity: &str) -> Result<Vec<String>, AppError> {
                  status text NOT NULL DEFAULT 'held'
                      CHECK (status IN ('attached', 'held', 'detached')),
                  held_reason text,
+                 held_payload jsonb,
                  UNIQUE (source_system, external_id)
              )",
             contribution_t = attome_core::quote_ident(&contribution),
