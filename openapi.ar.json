@@ -197691,6 +197691,13 @@
           "owner_layer": {
             "type": "string",
             "description": "Solution 7 (D-785): the layer that owns this member row."
+          },
+          "read_condition": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Q15-T3: a rule expression over the record's own fields; the profile\nshows the field in full only on records that meet it. Absent when it\nshows the field on every record."
           }
         }
       },
@@ -224325,6 +224332,13 @@
                 "owner_layer": {
                   "type": "string",
                   "description": "Solution 7 (D-785): the layer that owns this member row."
+                },
+                "read_condition": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Q15-T3: a rule expression over the record's own fields; the profile\nshows the field in full only on records that meet it. Absent when it\nshows the field on every record."
                 }
               }
             }
@@ -258398,6 +258412,13 @@
               "null"
             ],
             "description": "Q15-T1: show the field only masked: `last4`, `email`, `phone` or\n`full`. Needs `can_read`; omitted or null shows it in full."
+          },
+          "read_condition": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Q15-T3: show the field in full only on records that meet this rule\nexpression (the Z11-T16 language, over fields a grant condition may\nread). Needs `can_read`, cannot be updated, and excludes\n`mask_format`; a mask comes from another profile row. Omitted or null\nshows the field on every record."
           }
         }
       },
@@ -272228,7 +272249,6 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -272281,5 +272301,6 @@
       }
     }
   },
+  "x-version-adapters": [],
   "x-api-version": "2026-10"
 }

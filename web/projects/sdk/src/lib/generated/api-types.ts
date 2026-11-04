@@ -47178,6 +47178,12 @@ export interface components {
             mask_format?: string | null;
             /** @description Solution 7 (D-785): the layer that owns this member row. */
             owner_layer: string;
+            /**
+             * @description Q15-T3: a rule expression over the record's own fields; the profile
+             *     shows the field in full only on records that meet it. Absent when it
+             *     shows the field on every record.
+             */
+            read_condition?: string | null;
         };
         FieldSecurityProfileItem: {
             description?: string | null;
@@ -57401,6 +57407,12 @@ export interface components {
                 mask_format?: string | null;
                 /** @description Solution 7 (D-785): the layer that owns this member row. */
                 owner_layer: string;
+                /**
+                 * @description Q15-T3: a rule expression over the record's own fields; the profile
+                 *     shows the field in full only on records that meet it. Absent when it
+                 *     shows the field on every record.
+                 */
+                read_condition?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -70431,6 +70443,14 @@ export interface components {
              *     `full`. Needs `can_read`; omitted or null shows it in full.
              */
             mask_format?: string | null;
+            /**
+             * @description Q15-T3: show the field in full only on records that meet this rule
+             *     expression (the Z11-T16 language, over fields a grant condition may
+             *     read). Needs `can_read`, cannot be updated, and excludes
+             *     `mask_format`; a mask comes from another profile row. Omitted or null
+             *     shows the field on every record.
+             */
+            read_condition?: string | null;
         };
         /**
          * @description When a `set_value` policy writes: on every write, or on create only when
