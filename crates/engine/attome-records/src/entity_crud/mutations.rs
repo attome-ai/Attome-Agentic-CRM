@@ -458,6 +458,18 @@ pub(crate) async fn project_row(
     // P1.12: routes to the readonly pool when configured, unless this caller
     // wrote recently (sticky-primary) â€” see AppState::read_pool.
     let pool = state.base.read_pool(ctx.user_id).await;
+    // Q15-T3: a live record read on the interactive surface shows each
+    // conditional field whose condition the record meets, as granted.
+    let widened = match source {
+        RowSource::Live(record_id)
+            if surface == attome_security::field_gate::Surface::Interactive =>
+        {
+            crate::field_conditions::widened_for_record(state, ctx, entity_name, attrs, record_id)
+                .await
+        }
+        _ => None,
+    };
+    let ctx = widened.as_ref().unwrap_or(ctx);
 
     // D-589: AI context and document generation read one record at a time,
     // but they are bulk surfaces.

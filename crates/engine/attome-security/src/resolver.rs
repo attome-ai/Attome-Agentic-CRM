@@ -141,6 +141,8 @@ pub async fn resolve_uncached(db: &DbPool, user_id: Uuid) -> Result<SecurityCont
     ctx.field_grants = field_grants;
     ctx.field_write_grants = field_write_grants;
     ctx.field_masks = field_masks;
+    ctx.field_read_conditions =
+        crate::db::resolve_field_read_conditions(db, user_id, &ctx.field_grants).await?;
     ctx.bulk_fields = bulk_fields;
     ctx.accessible_org_ids = rlc.accessible_org_ids;
     ctx.team_ids = rlc.team_ids;

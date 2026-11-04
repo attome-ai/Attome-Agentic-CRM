@@ -194,6 +194,12 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "The query spec's aggregate SELECT over the root table: a read.",
     ),
     (
+        "crates/engine/attome-records/src/field_conditions.rs",
+        "reveal_in_rows",
+        Projection,
+        "Q15-T3: one conditionally granted field's value for the listed rows that meet its condition: a read.",
+    ),
+    (
         "crates/engine/attome-records/src/query_spec/compile.rs",
         "resolve",
         Projection,

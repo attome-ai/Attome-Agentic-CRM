@@ -174,6 +174,8 @@ impl SecurityCache {
         ctx.field_grants = field_grants;
         ctx.field_write_grants = field_write_grants;
         ctx.field_masks = field_masks;
+        ctx.field_read_conditions =
+            crate::db::resolve_field_read_conditions(&self.db, user_id, &ctx.field_grants).await?;
         ctx.bulk_fields = bulk_fields;
         ctx.epoch = epoch;
         ctx.accessible_org_ids = rlc.accessible_org_ids;

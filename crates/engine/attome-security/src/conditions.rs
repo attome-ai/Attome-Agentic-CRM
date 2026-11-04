@@ -325,6 +325,47 @@ pub fn check_expression(value: &serde_json::Value, attrs: &[AttrInfo]) -> Result
     render_expression(text, attrs, "", 1).map(|_| ())
 }
 
+/// Q15-T3: the predicate under which `ctx` reads `entity.field` in full, from
+/// its conditional field grants ([`SecurityContext::field_read_conditions`]):
+/// their expressions OR-joined on `table_alias`'s row, placeholders numbered
+/// from `first_placeholder`. `None` when no conditional grant names the field.
+/// An expression that no longer renders against `attrs` (a field it reads was
+/// deleted or gated) drops out; when none renders the predicate is `FALSE`,
+/// so the field stays hidden rather than shown.
+pub fn field_condition_predicate(
+    ctx: &SecurityContext,
+    entity: &str,
+    field: &str,
+    attrs: &[AttrInfo],
+    table_alias: &str,
+    first_placeholder: usize,
+) -> Option<ConditionPredicate> {
+    let expressions = ctx
+        .field_read_conditions
+        .get(&format!("{entity}.{field}"))?;
+    let mut placeholder = first_placeholder;
+    let mut arms = Vec::new();
+    let mut binds = Vec::new();
+    for expression in expressions {
+        if let Ok((sql, rendered)) = render_expression(expression, attrs, table_alias, placeholder)
+        {
+            placeholder += rendered.len();
+            arms.push(sql);
+            binds.extend(rendered);
+        }
+    }
+    if arms.is_empty() {
+        return Some(ConditionPredicate {
+            sql: "FALSE".to_owned(),
+            binds: Vec::new(),
+        });
+    }
+    Some(ConditionPredicate {
+        sql: arms.join(" OR "),
+        binds,
+    })
+}
+
 /// Resolution result: the AND/OR-combined SQL fragment (already wrapped in
 /// its own parens, ready to `AND`-splice into a caller's WHERE clause) plus
 /// its bind values in placeholder order (`$first_placeholder`..).

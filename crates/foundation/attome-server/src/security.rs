@@ -267,6 +267,16 @@ pub struct SecurityContext {
     /// so every surface that does not project masks keeps hiding it.
     #[serde(default)]
     pub field_masks: HashMap<String, String>,
+    /// Q15-T3: `"{entity}.{field}"` -> the rule expressions (Z11-T16) under
+    /// which this caller may read a sensitive field in full: a profile grants
+    /// it with a `read_condition` and none grants it outright. One expression
+    /// holding for a record is enough. Such a field is in neither
+    /// `field_grants` nor `field_write_grants`, so a surface that does not
+    /// check the record against these keeps hiding it (or masking it, when a
+    /// mask grant exists too). An entry cached before this field existed
+    /// reads as empty: the field stays hidden, which fails closed.
+    #[serde(default)]
+    pub field_read_conditions: HashMap<String, Vec<String>>,
     /// D-589: bulk-surface field exposure. See [`BulkFields`].
     #[serde(default)]
     pub bulk_fields: BulkFields,
@@ -396,6 +406,7 @@ impl SecurityContext {
             field_grants: HashSet::new(),
             field_write_grants: HashSet::new(),
             field_masks: HashMap::new(),
+            field_read_conditions: HashMap::new(),
             bulk_fields: BulkFields::default(),
             epoch: 0,
             accessible_org_ids: Vec::new(),
@@ -484,6 +495,10 @@ impl SecurityContext {
                 .into_iter()
                 .map(|f| format!("write:{f}")),
         );
+        for key in sorted(self.field_read_conditions.keys()) {
+            let expressions = sorted(&self.field_read_conditions[&key]);
+            lines.push(format!("read_if:{key}={}", expressions.join("|")));
+        }
         match &self.bulk_fields {
             BulkFields::Legacy => lines.push("bulk:legacy".into()),
             BulkFields::Listed(fields) => {
@@ -550,6 +565,7 @@ impl SecurityContext {
             field_grants: self.field_grants.clone(),
             field_write_grants: self.field_write_grants.clone(),
             field_masks: self.field_masks.clone(),
+            field_read_conditions: self.field_read_conditions.clone(),
             bulk_fields: self.bulk_fields.clone(),
             epoch: self.epoch,
             accessible_org_ids: self.accessible_org_ids.clone(),
@@ -564,6 +580,15 @@ impl SecurityContext {
         }
     }
 
+    /// Q15-T3: a copy also granting `extra` field reads (`"{entity}.{field}"`):
+    /// `attome-records` reads one record with the conditional fields it meets
+    /// granted. Deep-copies.
+    pub fn with_field_grants(&self, extra: impl IntoIterator<Item = String>) -> SecurityContext {
+        let mut ctx = self.with_privileges(&[]);
+        ctx.field_grants.extend(extra);
+        ctx
+    }
+
     /// A copy of this context marked as a service principal (D-791 rule 3).
     /// Deep-copies, as [`EntityCeiling::apply`] does; only API-key and S2S
     /// requests pay it.
@@ -575,6 +600,7 @@ impl SecurityContext {
             field_grants: self.field_grants.clone(),
             field_write_grants: self.field_write_grants.clone(),
             field_masks: self.field_masks.clone(),
+            field_read_conditions: self.field_read_conditions.clone(),
             bulk_fields: self.bulk_fields.clone(),
             epoch: self.epoch,
             accessible_org_ids: self.accessible_org_ids.clone(),
@@ -662,6 +688,7 @@ impl EntityCeiling {
             field_grants: ctx.field_grants.clone(),
             field_write_grants: ctx.field_write_grants.clone(),
             field_masks: ctx.field_masks.clone(),
+            field_read_conditions: ctx.field_read_conditions.clone(),
             bulk_fields: ctx.bulk_fields.clone(),
             epoch: ctx.epoch,
             accessible_org_ids: ctx.accessible_org_ids.clone(),
@@ -849,6 +876,7 @@ mod tests {
             role_ids: Some(Vec::new()),
             unit_scope: Default::default(),
             field_masks: Default::default(),
+            field_read_conditions: Default::default(),
             service_principal: false,
             chain: Vec::new(),
         }
@@ -921,6 +949,7 @@ mod tests {
                     role_ids: None,
                     unit_scope: Default::default(),
                     field_masks: Default::default(),
+                    field_read_conditions: Default::default(),
                     service_principal: false,
                     chain: Vec::new(),
                 }))
@@ -967,6 +996,7 @@ mod tests {
             role_ids: None,
             unit_scope: Default::default(),
             field_masks: Default::default(),
+            field_read_conditions: Default::default(),
             service_principal: false,
             chain: Vec::new(),
         }

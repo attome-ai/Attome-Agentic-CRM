@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A field-security grant can carry a read condition (Q15-T3): `read_condition` on
+  `POST /api/v1/admin/security/field-profiles/{id}/fields` takes a rule expression over the record's own fields, and its
+  holder sees the field in full on record reads and lists only for the records that meet it (migration 0398;
+  `docs/access-model.md`). Knowledge retrieval now narrows its collections by a read grant condition (D-369).
 - The flow designer's data-mapping panel (M2-T2): a selected step's inputs and every earlier step's typed outputs,
   mapped by dragging or from the keyboard; what publishing would refuse is checked on every change and marked on the
   step (`docs/flow-designer.md`).

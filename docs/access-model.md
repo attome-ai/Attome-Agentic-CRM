@@ -161,6 +161,16 @@ stay unconfirmed and gate nothing until confirmed, so no field disappears on upg
 client in full; record reads and lists show the mask, export and other bulk surfaces hide the field, and a
 masked field cannot be changed. A grant in full from any profile wins over a mask.
 
+A grant may also carry a **read condition** (`read_condition`, Q15-T3): a rule expression over the
+record's own fields, in the language and with the fields a record grant condition may use, such as
+`region == "gcc"`. Its holder sees the field in full on a record read or in a list only on the records
+that meet it; on the others the field stays hidden, or masked when another profile masks it. Such a grant
+reads only (no `can_update`, no `mask_format` on the same row), a grant in full from any profile wins over
+it, and every other surface (export, query, reports, AI context, search) keeps the field hidden. A list
+leaves an encrypted field hidden, since it decrypts nothing. An expression that no longer translates (a
+field it reads was deleted) shows nothing. An agent keeps a read condition only where its sponsor reads
+the field in full, and takes the sponsor's condition where it reads the field in full itself.
+
 Bulk surfaces (export, query, reports, AI context) also need the field listed for the role, unless the
 role is still in D-589 legacy mode.
 

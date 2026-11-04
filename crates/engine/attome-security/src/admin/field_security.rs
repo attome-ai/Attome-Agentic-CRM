@@ -39,7 +39,7 @@ const PROFILE_SNAPSHOT: &str = "SELECT id, name, description, is_customized, is_
 /// `field_security_profile_field`'s snapshot, profile by name.
 const PROFILE_FIELD_SNAPSHOT: &str = "SELECT f.id, f.profile_ref, p.name AS profile, \
      f.entity_logicalname, f.field_logicalname, f.can_read, f.can_update, f.mask_format, \
-     f.row_version, f.owner_layer \
+     f.read_condition, f.row_version, f.owner_layer \
      FROM field_security_profile_field f \
      JOIN field_security_profile p ON p.id = f.profile_ref \
      WHERE f.id = $1";
@@ -239,6 +239,11 @@ pub struct FieldSecurityProfileFieldItem {
     /// field only masked; absent when it shows it in full.
     #[serde(skip_serializing_if = "Option::is_none")]
     mask_format: Option<String>,
+    /// Q15-T3: a rule expression over the record's own fields; the profile
+    /// shows the field in full only on records that meet it. Absent when it
+    /// shows the field on every record.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    read_condition: Option<String>,
     /// Solution 7 (D-785): the layer that owns this member row.
     owner_layer: String,
 }
@@ -275,9 +280,18 @@ pub(super) async fn list_field_profile_fields(
     let window = query.window();
 
     #[allow(clippy::type_complexity)]
-    let rows: Vec<(Uuid, String, String, bool, bool, Option<String>, String)> = sqlx::query_as(
+    let rows: Vec<(
+        Uuid,
+        String,
+        String,
+        bool,
+        bool,
+        Option<String>,
+        Option<String>,
+        String,
+    )> = sqlx::query_as(
         "SELECT id, entity_logicalname, field_logicalname, can_read, can_update, mask_format, \
-                owner_layer \
+                read_condition, owner_layer \
          FROM field_security_profile_field WHERE profile_ref = $1 \
          ORDER BY entity_logicalname, field_logicalname LIMIT $2 OFFSET $3",
     )
@@ -305,6 +319,7 @@ pub(super) async fn list_field_profile_fields(
                 can_read,
                 can_update,
                 mask_format,
+                read_condition,
                 owner_layer,
             )| {
                 FieldSecurityProfileFieldItem {
@@ -314,6 +329,7 @@ pub(super) async fn list_field_profile_fields(
                     can_read,
                     can_update,
                     mask_format,
+                    read_condition,
                     owner_layer,
                 }
             },
@@ -342,6 +358,13 @@ pub(super) struct SetFieldProfileFieldBody {
     /// `full`. Needs `can_read`; omitted or null shows it in full.
     #[serde(default)]
     mask_format: Option<String>,
+    /// Q15-T3: show the field in full only on records that meet this rule
+    /// expression (the Z11-T16 language, over fields a grant condition may
+    /// read). Needs `can_read`, cannot be updated, and excludes
+    /// `mask_format`; a mask comes from another profile row. Omitted or null
+    /// shows the field on every record.
+    #[serde(default)]
+    read_condition: Option<String>,
 }
 
 /// Set a profile's field right
@@ -395,13 +418,40 @@ pub(super) async fn set_field_profile_field(
                 .as_str(),
         ),
     };
-    let can_update = body.can_update.unwrap_or(mask_format.is_none());
+    // Q15-T3: a conditional read is a read only, checked against the
+    // entity's live attributes as a grant condition is (it runs in SQL).
+    let read_condition = body
+        .read_condition
+        .as_deref()
+        .map(str::trim)
+        .filter(|text| !text.is_empty());
+    let can_update = body
+        .can_update
+        .unwrap_or(mask_format.is_none() && read_condition.is_none());
     if mask_format.is_some() && (can_update || !body.can_read) {
         return Err(AppError::Validation(
             "a masked field needs can_read and cannot be updated: send can_read true and \
              can_update false"
                 .into(),
         ));
+    }
+    if let Some(expression) = read_condition {
+        if mask_format.is_some() || can_update || !body.can_read {
+            return Err(AppError::Validation(
+                "a conditional field read needs can_read, cannot be updated and takes no \
+                 mask_format: send can_read true and can_update false"
+                    .into(),
+            ));
+        }
+        let attrs = state
+            .entities
+            .load()
+            .get(entity)
+            .map(|meta| meta.attrs.clone())
+            .ok_or_else(|| AppError::Validation(format!("unknown entity '{entity}'")))?;
+        crate::conditions::check_expression(&serde_json::Value::from(expression), &attrs).map_err(
+            |reason| AppError::Validation(format!("untranslatable_condition: {reason}")),
+        )?;
     }
 
     let profile_exists: bool = sqlx::query_scalar(
@@ -432,8 +482,10 @@ pub(super) async fn set_field_profile_field(
         .ok_or(AppError::NotFound)?;
     // An existing member is changed only by its own layer; one already
     // holding these permissions changes nothing and records nothing.
-    let existing: Option<(String, bool, bool, Option<String>)> = sqlx::query_as(
-        "SELECT owner_layer, can_read, can_update, mask_format FROM field_security_profile_field \
+    #[allow(clippy::type_complexity)]
+    let existing: Option<(String, bool, bool, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT owner_layer, can_read, can_update, mask_format, read_condition \
+         FROM field_security_profile_field \
          WHERE profile_ref = $1 AND entity_logicalname = $2 AND field_logicalname = $3 \
          FOR UPDATE",
     )
@@ -445,9 +497,13 @@ pub(super) async fn set_field_profile_field(
     .map_err(AppError::internal)?;
     let changes = match &existing {
         None => true,
-        Some((owner, row_read, row_update, row_mask)) => {
-            let same = (*row_read, *row_update, row_mask.as_deref())
-                == (body.can_read, can_update, mask_format);
+        Some((owner, row_read, row_update, row_mask, row_condition)) => {
+            let same = (
+                *row_read,
+                *row_update,
+                row_mask.as_deref(),
+                row_condition.as_deref(),
+            ) == (body.can_read, can_update, mask_format, read_condition);
             if !same {
                 recording.check_owner(parse_owner_layer(owner)?)?;
             }
@@ -464,12 +520,16 @@ pub(super) async fn set_field_profile_field(
         layer,
     )
     .await?;
-    sqlx::query("UPDATE field_security_profile_field SET mask_format = $2 WHERE id = $1")
-        .bind(id)
-        .bind(mask_format)
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
+    sqlx::query(
+        "UPDATE field_security_profile_field SET mask_format = $2, read_condition = $3 \
+         WHERE id = $1",
+    )
+    .bind(id)
+    .bind(mask_format)
+    .bind(read_condition)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
     mark_profile_customized(&mut *tx, profile_id).await?;
     let snapshot = snapshot_row(&mut tx, PROFILE_FIELD_SNAPSHOT, id).await?;
     let owner_layer = snapshot["owner_layer"]
@@ -521,6 +581,7 @@ pub(super) async fn set_field_profile_field(
         can_read: body.can_read,
         can_update,
         mask_format: mask_format.map(str::to_owned),
+        read_condition: read_condition.map(str::to_owned),
         owner_layer,
     }))
 }

@@ -10927,6 +10927,206 @@ fn masked_field_reads_masked_and_cannot_be_updated() {
     })
 }
 
+/// Q15-T3: a field granted under a read condition shows in full on the
+/// records that meet it, on a record get and on the entity list, and stays
+/// hidden on the others. The admin route refuses a condition it cannot
+/// translate, and one on a field that could be updated.
+// op: POST /api/v1/admin/entities, POST /api/v1/admin/entities/{entity_id}/fields, POST /api/v1/admin/security/grants, POST /api/v1/admin/security/field-profiles, POST /api/v1/admin/security/field-profiles/{id}/fields, POST /api/v1/{entity}, GET /api/v1/{entity}/{id}, GET /api/v1/{entity}
+#[test]
+fn conditional_field_read_shows_only_on_records_that_meet_it() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+        let post = |uri: String, cookie: &str, body: String| {
+            Request::builder()
+                .method("POST")
+                .uri(uri)
+                .header("cookie", cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+
+        let logicalname = format!("cond_field_{}", Uuid::now_v7().simple());
+        let res = app
+            .clone()
+            .oneshot(post(
+                "/api/v1/admin/entities".into(),
+                &admin_cookie,
+                format!(r#"{{"logicalname":"{logicalname}","name":"Conditional Field"}}"#),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let entity_id = body_json(res).await["id"].as_str().unwrap().to_owned();
+        for field in [
+            r#"{"logicalname":"region","name":"Region","field_type":"text","is_filterable":true}"#,
+            r#"{"logicalname":"tax_id","name":"Tax id","field_type":"text","is_sensitive":true}"#,
+        ] {
+            let res = app
+                .clone()
+                .oneshot(post(
+                    format!("/api/v1/admin/entities/{entity_id}/fields"),
+                    &admin_cookie,
+                    field.into(),
+                ))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::CREATED, "{field}");
+        }
+
+        let user_id = Uuid::now_v7();
+        let user_email = format!("cond-reader-{user_id}@test.local");
+        sqlx::query(
+            "INSERT INTO user_account (id, email, user_name, is_active) VALUES ($1, $2, $3, true)",
+        )
+        .bind(user_id)
+        .bind(&user_email)
+        .bind(format!("cond-reader-{user_id}"))
+        .execute(&db)
+        .await
+        .unwrap();
+        let res = app
+            .clone()
+            .oneshot(post(
+                "/api/v1/admin/security/grants".into(),
+                &admin_cookie,
+                format!(r#"{{"user_email":"{user_email}","privilege_key":"{logicalname}.read"}}"#),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let res = app
+            .clone()
+            .oneshot(post(
+                "/api/v1/admin/security/field-profiles".into(),
+                &admin_cookie,
+                format!(r#"{{"name":"cond-{user_id}"}}"#),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let profile_id = body_json(res).await["id"].as_str().unwrap().to_owned();
+        let fields_uri = format!("/api/v1/admin/security/field-profiles/{profile_id}/fields");
+        let member = |extra: &str| {
+            format!(
+                r#"{{"entity_logicalname":"{logicalname}","field_logicalname":"tax_id","can_read":true{extra}}}"#
+            )
+        };
+        for (extra, why) in [
+            (
+                r#","read_condition":"nonesuch == \"gcc\"""#,
+                "a condition on an unknown field is refused",
+            ),
+            (
+                r#","can_update":true,"read_condition":"region == \"gcc\"""#,
+                "a conditional read that could be updated is refused",
+            ),
+        ] {
+            let res = app
+                .clone()
+                .oneshot(post(fields_uri.clone(), &admin_cookie, member(extra)))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY, "{why}");
+        }
+        let res = app
+            .clone()
+            .oneshot(post(
+                fields_uri,
+                &admin_cookie,
+                member(r#","read_condition":"region == \"gcc\"""#),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let item = body_json(res).await;
+        assert_eq!(item["read_condition"], "region == \"gcc\"");
+        assert_eq!(
+            item["can_update"], false,
+            "a condition defaults can_update to false"
+        );
+
+        let role_id = Uuid::now_v7();
+        sqlx::query("INSERT INTO role (id, name, description, owner_layer) VALUES ($1, $2, 'q15', 'project')")
+            .bind(role_id)
+            .bind(format!("cond-role-{role_id}"))
+            .execute(&db)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO role_mm_field_security_profile (role_ref, profile_ref, owner_layer) VALUES ($1, $2::uuid, 'project')",
+        )
+        .bind(role_id)
+        .bind(&profile_id)
+        .execute(&db)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO user_account_mm_role (id, user_ref, role_ref) VALUES ($1, $2, $3)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(user_id)
+        .bind(role_id)
+        .execute(&db)
+        .await
+        .unwrap();
+        let reader_cookie = session_cookie(user_id);
+
+        let mut ids = Vec::new();
+        for (region, tax_id) in [("gcc", "GCC-TAX-0001"), ("eu", "EU-TAX-0002")] {
+            let res = app
+                .clone()
+                .oneshot(post(
+                    format!("/api/v1/{logicalname}"),
+                    &admin_cookie,
+                    format!(r#"{{"region":"{region}","tax_id":"{tax_id}"}}"#),
+                ))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::CREATED);
+            ids.push(body_json(res).await["id"].as_str().unwrap().to_owned());
+        }
+
+        let get = |uri: String| {
+            Request::builder()
+                .method("GET")
+                .uri(uri)
+                .header("cookie", &reader_cookie)
+                .body(Body::empty())
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{logicalname}/{}", ids[0])))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let gcc = body_json(res).await;
+        assert_eq!(gcc["data"]["tax_id"], "GCC-TAX-0001", "{gcc}");
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{logicalname}/{}", ids[1])))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let eu = body_json(res).await;
+        assert!(eu["data"].get("tax_id").is_none(), "{eu}");
+        assert!(!eu.to_string().contains("EU-TAX-0002"), "{eu}");
+
+        let res = app
+            .oneshot(get(format!("/api/v1/{logicalname}")))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let list = body_json(res).await;
+        assert!(list.to_string().contains("GCC-TAX-0001"), "{list}");
+        assert!(!list.to_string().contains("EU-TAX-0002"), "{list}");
+    })
+}
+
 // ── Q10-T5: permission sets over the admin API ──
 
 fn json_req(method: &str, uri: &str, cookie: &str, body: Option<Value>) -> Request<Body> {

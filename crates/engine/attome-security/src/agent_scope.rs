@@ -103,10 +103,13 @@ pub struct SponsorGrants {
     pub field_grants: HashSet<String>,
     pub field_write_grants: HashSet<String>,
     pub field_masks: HashMap<String, String>,
+    /// Q15-T3: the sponsor's conditional field reads.
+    pub field_read_conditions: HashMap<String, Vec<String>>,
 }
 
 /// Narrows `ctx` (an agent's own resolution) to `sponsor`. Pure.
 pub fn apply(ctx: &mut SecurityContext, sponsor: &SponsorGrants, scope: Option<&[String]>) {
+    ctx.field_read_conditions = narrow_read_conditions(ctx, sponsor, scope);
     ctx.privileges = intersect(&ctx.privileges, &sponsor.privileges, scope);
     ctx.field_grants = intersect(&ctx.field_grants, &sponsor.field_grants, scope);
     ctx.field_write_grants = intersect(&ctx.field_write_grants, &sponsor.field_write_grants, scope);
@@ -119,6 +122,33 @@ pub fn apply(ctx: &mut SecurityContext, sponsor: &SponsorGrants, scope: Option<&
     ctx.is_admin = false;
 }
 
+/// Q15-T3: the conditional field reads an agent keeps. A field the agent
+/// reads under a condition keeps it only where the sponsor reads the field
+/// outright; a field the agent reads outright and the sponsor only under a
+/// condition takes the sponsor's condition. A field both read only under a
+/// condition is dropped (two conditions would have to hold together, which
+/// one OR-list cannot say), so it fails closed. Runs before `ctx`'s own
+/// grants are narrowed. Pure.
+fn narrow_read_conditions(
+    ctx: &SecurityContext,
+    sponsor: &SponsorGrants,
+    scope: Option<&[String]>,
+) -> HashMap<String, Vec<String>> {
+    let in_scope = |key: &str| scope.is_none_or(|s| s.iter().any(|e| e == entity_of(key)));
+    let own = ctx
+        .field_read_conditions
+        .iter()
+        .filter(|(key, _)| sponsor.field_grants.contains(*key));
+    let sponsors = sponsor
+        .field_read_conditions
+        .iter()
+        .filter(|(key, _)| ctx.field_grants.contains(*key));
+    own.chain(sponsors)
+        .filter(|(key, _)| in_scope(key))
+        .map(|(key, expressions)| (key.clone(), expressions.clone()))
+        .collect()
+}
+
 /// Narrows `ctx`, an agent's own resolution, to its sponsor's grants and
 /// its scope (`facts` from [`agent_facts`]).
 pub async fn narrow(
@@ -129,6 +159,8 @@ pub async fn narrow(
     let privileges = crate::db::resolve_privileges(db, facts.sponsor).await?;
     let (field_grants, field_write_grants, field_masks) =
         crate::db::resolve_field_access(db, facts.sponsor).await?;
+    let field_read_conditions =
+        crate::db::resolve_field_read_conditions(db, facts.sponsor, &field_grants).await?;
     apply(
         ctx,
         &SponsorGrants {
@@ -136,6 +168,7 @@ pub async fn narrow(
             field_grants,
             field_write_grants,
             field_masks,
+            field_read_conditions,
         },
         facts.entity_scope.as_deref(),
     );
@@ -218,7 +251,38 @@ mod tests {
             field_grants: HashSet::new(),
             field_write_grants: HashSet::new(),
             field_masks: HashMap::new(),
+            field_read_conditions: HashMap::new(),
         }
+    }
+
+    #[test]
+    fn agent_conditional_reads_are_bounded_by_the_sponsor() {
+        let mut ctx = agent(&["account.read"]);
+        ctx.field_grants = set(&["account.iban"]);
+        ctx.field_read_conditions
+            .insert("account.tax_id".into(), vec!["region == 'gcc'".into()]);
+        ctx.field_read_conditions
+            .insert("account.salary".into(), vec!["tier == 1".into()]);
+        let mut sp = sponsor(&["account.read"]);
+        // The sponsor reads tax_id outright: the agent keeps its condition.
+        sp.field_grants = set(&["account.tax_id"]);
+        // The agent reads iban outright, the sponsor only under a condition.
+        sp.field_read_conditions
+            .insert("account.iban".into(), vec!["region == 'eu'".into()]);
+        // Both read salary only under a condition: dropped.
+        sp.field_read_conditions
+            .insert("account.salary".into(), vec!["tier == 2".into()]);
+        apply(&mut ctx, &sp, None);
+        assert_eq!(
+            ctx.field_read_conditions.get("account.tax_id"),
+            Some(&vec!["region == 'gcc'".to_owned()])
+        );
+        assert_eq!(
+            ctx.field_read_conditions.get("account.iban"),
+            Some(&vec!["region == 'eu'".to_owned()])
+        );
+        assert!(!ctx.field_read_conditions.contains_key("account.salary"));
+        assert!(ctx.field_grants.is_empty());
     }
 
     #[test]

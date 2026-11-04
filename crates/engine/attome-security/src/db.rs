@@ -138,6 +138,7 @@ pub async fn resolve_field_access(
             JOIN user_account_mm_role ur ON ur.role_ref = rp.role_ref
             WHERE ur.user_ref = $1 AND ur.is_deleted = false
               AND rp.is_deleted = false AND (f.can_read = true OR f.can_update = true)
+              AND f.read_condition IS NULL
             "#,
         )
         .bind(user_id)
@@ -184,6 +185,61 @@ pub async fn resolve_field_access(
         write_grants.remove(key);
     }
     Ok((read_grants, write_grants, masks))
+}
+
+/// Q15-T3: the fields `user_id` may read in full only on records that meet a
+/// condition, `"{entity}.{field}"` -> the rule expressions of every profile
+/// row granting it so (any one holding is enough). A field `full` already
+/// grants outright (the caller's `field_grants`) is left out: the most
+/// permissive grant wins, as in [`resolve_field_access`], which ignores
+/// conditional rows. A conditional row grants reading only, never update.
+pub async fn resolve_field_read_conditions(
+    db: &DbPool,
+    user_id: Uuid,
+    full: &HashSet<String>,
+) -> Result<HashMap<String, Vec<String>>, AppError> {
+    let rows: Vec<(String, String, String)> = tokio::time::timeout(
+        QUERY_TIMEOUT,
+        sqlx::query_as(
+            r#"
+            SELECT DISTINCT f.entity_logicalname, f.field_logicalname, f.read_condition
+            FROM field_security_profile_field f
+            JOIN role_mm_field_security_profile rp ON rp.profile_ref = f.profile_ref
+            JOIN user_account_mm_role ur ON ur.role_ref = rp.role_ref
+            WHERE ur.user_ref = $1 AND ur.is_deleted = false
+              AND rp.is_deleted = false AND f.can_read = true
+              AND f.read_condition IS NOT NULL
+            "#,
+        )
+        .bind(user_id)
+        .fetch_all(db),
+    )
+    .await
+    .map_err(|_| AppError::internal("field-condition resolution query timed out"))?
+    .map_err(AppError::internal)?;
+    Ok(group_read_conditions(rows, full))
+}
+
+/// [`resolve_field_read_conditions`]'s grouping. Pure.
+fn group_read_conditions(
+    rows: Vec<(String, String, String)>,
+    full: &HashSet<String>,
+) -> HashMap<String, Vec<String>> {
+    let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    for (entity, field, expression) in rows {
+        let key = format!("{entity}.{field}");
+        if full.contains(&key) || expression.trim().is_empty() {
+            continue;
+        }
+        let expressions = out.entry(key).or_default();
+        if !expressions.contains(&expression) {
+            expressions.push(expression);
+        }
+    }
+    for expressions in out.values_mut() {
+        expressions.sort();
+    }
+    out
 }
 
 /// D-589: the caller's bulk-surface field exposure. `Legacy` (today's
@@ -2009,4 +2065,40 @@ pub async fn would_create_position_cycle(
     .map_err(AppError::internal)?;
 
     Ok(found.unwrap_or(false))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_full_grant_wins_over_a_conditional_one() {
+        let row = |field: &str, expression: &str| {
+            (
+                "account".to_owned(),
+                field.to_owned(),
+                expression.to_owned(),
+            )
+        };
+        let full: HashSet<String> = ["account.iban".to_owned()].into_iter().collect();
+        let grouped = group_read_conditions(
+            vec![
+                row("tax_id", "region == \"gcc\""),
+                row("tax_id", "tier == 1"),
+                row("tax_id", "region == \"gcc\""),
+                row("iban", "tier == 2"),
+                row("salary", "  "),
+            ],
+            &full,
+        );
+        assert_eq!(
+            grouped.get("account.tax_id"),
+            Some(&vec![
+                "region == \"gcc\"".to_owned(),
+                "tier == 1".to_owned()
+            ])
+        );
+        assert!(!grouped.contains_key("account.iban"), "full wins");
+        assert!(!grouped.contains_key("account.salary"), "blank is no grant");
+    }
 }

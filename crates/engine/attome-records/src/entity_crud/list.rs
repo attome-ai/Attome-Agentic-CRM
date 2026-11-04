@@ -214,10 +214,13 @@ pub(super) async fn list_records(
     }
     // S4-T12: a page compiles through QuerySpec, the engine query/run uses,
     // on the interactive surface (masked fields read masked).
+    let default_columns = select.is_none();
     let select = match select {
         Some(select) => select,
         None => default_select(&state, &ctx, &entity_input)?,
     };
+    // Q15-T3: the entity whose conditional fields a default page reveals.
+    let reveal_entity = default_columns.then(|| entity_input.clone());
     let spec = QuerySpec {
         entity: entity_input,
         select,
@@ -260,11 +263,18 @@ pub(super) async fn list_records(
     else {
         return Err(AppError::internal("a record list compiled to aggregates"));
     };
-    let items = page
-        .items
-        .into_iter()
-        .map(|row| Value::Object(row.0))
-        .collect();
+    let mut rows: Vec<serde_json::Map<String, Value>> =
+        page.items.into_iter().map(|row| row.0).collect();
+    if let Some(entity) = reveal_entity {
+        let attrs = state
+            .entities
+            .load()
+            .get(&entity)
+            .map(|meta| meta.attrs.clone())
+            .unwrap_or_default();
+        crate::field_conditions::reveal_in_rows(&state, &ctx, &entity, &attrs, &mut rows).await?;
+    }
+    let items = rows.into_iter().map(Value::Object).collect();
     Ok(Json(CursorPage::new(items, page.next_cursor)).into_response())
 }
 

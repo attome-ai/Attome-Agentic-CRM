@@ -59,6 +59,8 @@ pub mod entity_crud;
 pub mod entity_mutation;
 /// Z11-T12: one expression checked for an editor or agent.
 pub mod expression_check;
+/// Q15-T3: fields a grant reveals only on records that meet its condition.
+mod field_conditions;
 /// A9-T2: lookup paths a read_time formula reads.
 mod formula_paths;
 /// AA10-T2: the size check that sends a heavy operation inline or to the
