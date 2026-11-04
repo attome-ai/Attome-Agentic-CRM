@@ -1975,7 +1975,8 @@ async fn execute_cached(
 ///   per user because the rows are filtered by record-level access.
 /// - TTL: five seconds.
 /// - Invalidation: the entity change feed's newest event id is in the key,
-///   so any recorded write starts a new key; so are the caller's permission
+///   so any recorded write starts a new key; so are the caller's authz
+///   epoch (bumped on every access change for them), permission
 ///   fingerprint and the count and newest id of the record shares that name
 ///   them, their teams or the people under them, so a grant, a share or a
 ///   revoke (none of which is a change event) is never answered from before
@@ -2040,9 +2041,12 @@ async fn repeat_key(
         .iter()
         .map(|b| format!("{b:02x}"))
         .collect();
+    // The authz epoch moves on every access change for the caller (a role's
+    // access level, a grant): the fingerprint alone does not see a level.
     Ok(format!(
-        "{}:{}:{shares}:{}:{hash}",
+        "{}:{}:{}:{shares}:{}:{hash}",
         position.map_or_else(|| "none".to_owned(), |p| p.to_string()),
+        ctx.epoch,
         ctx.permission_fingerprint(),
         newest_share.map_or_else(|| "none".to_owned(), |p| p.to_string()),
     ))
