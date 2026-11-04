@@ -1948,7 +1948,7 @@ async fn execute_cached(
     else {
         return run(body).await;
     };
-    let key = match repeat_key(state, &body).await {
+    let key = match repeat_key(state, ctx, &body).await {
         Ok(key) => key,
         // The cache is a convenience: without a position, run the query.
         Err(_) => return run(body).await,
@@ -1964,7 +1964,11 @@ async fn execute_cached(
 ///   per user because the rows are filtered by record-level access.
 /// - TTL: five seconds.
 /// - Invalidation: the entity change feed's newest event id is in the key,
-///   so any recorded write starts a new key.
+///   so any recorded write starts a new key; so are the caller's permission
+///   fingerprint and the count and newest id of the record shares that name
+///   them, their teams or the people under them, so a grant, a share or a
+///   revoke (none of which is a change event) is never answered from before
+///   it.
 /// - Failure: process-local only, never Redis; no change position means the
 ///   query simply runs.
 /// - Cold start: empty. Bounded at 64 MiB of serialized responses.
@@ -1992,7 +1996,11 @@ static REPEATS: std::sync::LazyLock<Option<attome_cache::tiered::TieredCache<Val
     });
 
 /// The change-feed position and a hash of the whole request.
-async fn repeat_key(state: &EngineState, body: &ExecuteQueryRequest) -> Result<String, AppError> {
+async fn repeat_key(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    body: &ExecuteQueryRequest,
+) -> Result<String, AppError> {
     use sha2::{Digest, Sha256};
     // uuid has an order but no max(); ids are UUIDv7, so the last is newest.
     let position: Option<Uuid> =
@@ -2000,14 +2008,32 @@ async fn repeat_key(state: &EngineState, body: &ExecuteQueryRequest) -> Result<S
             .fetch_optional(&state.base.db)
             .await
             .map_err(AppError::internal)?;
+    // The shares that can reach the caller. Ids only grow (UUIDv7), so the
+    // count and the newest id change whenever the set does: a share adds a
+    // newer id, a revoke lowers the count.
+    let mut principals = Vec::with_capacity(1 + ctx.team_ids.len());
+    principals.push(ctx.user_id);
+    principals.extend(ctx.team_ids.iter().copied());
+    principals.extend(ctx.subordinate_user_ids.iter().copied());
+    let (shares, newest_share): (i64, Option<Uuid>) = sqlx::query_as(
+        "SELECT count(*), (SELECT s.id FROM record_share s WHERE s.principal_id = ANY($1) \
+                            ORDER BY s.id DESC LIMIT 1) \
+           FROM record_share WHERE principal_id = ANY($1)",
+    )
+    .bind(&principals)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
     let request = serde_json::to_string(body).map_err(AppError::internal)?;
     let hash: String = Sha256::digest(request.as_bytes())
         .iter()
         .map(|b| format!("{b:02x}"))
         .collect();
     Ok(format!(
-        "{}:{hash}",
-        position.map_or_else(|| "none".to_owned(), |p| p.to_string())
+        "{}:{}:{shares}:{}:{hash}",
+        position.map_or_else(|| "none".to_owned(), |p| p.to_string()),
+        ctx.permission_fingerprint(),
+        newest_share.map_or_else(|| "none".to_owned(), |p| p.to_string()),
     ))
 }
 

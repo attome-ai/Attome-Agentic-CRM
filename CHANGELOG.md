@@ -777,6 +777,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- Security: `POST /api/v1/query/execute`'s five-second repeat cache (AA4-T9) no longer answers
+  from before a change to the caller's access. Its key now also carries the caller's permission
+  fingerprint and their record shares, so a share, a revoke or a role change is seen at once; until
+  now only a recorded record write started a new key.
 - Master data: a source system's version that fails validation no longer replaces the version of
   that record already attached. It waits beside it (`held_payload`) in the steward's held queue, and
   the attached version keeps feeding the golden record until the held one is released or rejected
