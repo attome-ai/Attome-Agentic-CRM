@@ -1203,6 +1203,17 @@ fn lookup_hierarchies(
     out
 }
 
+/// The system columns every entity table has, typed for a filter compiled
+/// against the record's own row.
+struct SystemColumns;
+
+impl FilterSchema for SystemColumns {
+    fn cast(&self, field: &str) -> Result<&'static str, FieldCastError> {
+        let data_type = system_column_data_type(field).ok_or(FieldCastError::Unknown)?;
+        parameter_cast(data_type).ok_or(FieldCastError::UnsupportedType)
+    }
+}
+
 impl FilterSchema for QueryExecFilterSchema<'_> {
     fn cast(&self, field: &str) -> Result<&'static str, FieldCastError> {
         let column = self
@@ -2735,6 +2746,27 @@ pub async fn execute_stored_query_with_definition(
     // Columns as known from the whitelist — used only to check is_searchable
     // for the search condition below, not returned to the caller.
     let mut validation_columns = build_columns(td_json.as_ref(), &whitelist);
+    // `build_columns` leaves `id` out (it is never a shown column), but a
+    // system column the SQL selects is still a filter and sort identifier:
+    // a delta read restricts on `id`.
+    for name in &whitelist {
+        if let Some(data_type) = system_column_data_type(name)
+            && !validation_columns.iter().any(|c| &c.name == name)
+        {
+            validation_columns.push(ColumnDef {
+                name: name.clone(),
+                display_name: name.clone(),
+                data_type: data_type.to_owned(),
+                is_visible: false,
+                is_sortable: true,
+                is_searchable: false,
+                is_clickable: false,
+                route_template: String::new(),
+                lookup_target_entity: None,
+                choice_styles: None,
+            });
+        }
+    }
     // The database storage kind is metadata-owned: never trust a request
     // field to claim that an arbitrary output column is a `TEXT[]` Choice.
     let mut multi_choice_fields = std::collections::HashSet::new();
@@ -2878,16 +2910,38 @@ pub async fn execute_stored_query_with_definition(
         today: chrono::Utc::now().date_naive(),
     };
     for f in &body.filters {
-        if !whitelist.contains(&f.field) {
+        // A1-T6: a system column the SQL does not select (a high-volume
+        // entity's `created_at` window over a view that selects only `id`)
+        // is read from the record's own row, on a query over one entity.
+        let row_entity = (!whitelist.contains(&f.field)
+            && whitelist.iter().any(|w| w == "id")
+            && system_column_data_type(&f.field).is_some())
+        .then_some(linked_entity_logical_name.as_deref())
+        .flatten();
+        if !whitelist.contains(&f.field) && row_entity.is_none() {
             return Err(AppError::Validation(format!(
                 "unknown filter field: {}",
                 f.field
             )));
         }
         for f in attome_core::filter::expand_dynamic(f, &dynamic)? {
-            let (cond, binds) = attome_core::filter::compile(&f, &filter_schema, params.len() + 1)?;
-            conds.push(cond);
-            params.extend(binds);
+            match row_entity {
+                Some(entity) => {
+                    let (cond, binds) =
+                        attome_core::filter::compile(&f, &SystemColumns, params.len() + 1)?;
+                    conds.push(format!(
+                        "id IN (SELECT e.id FROM {} e WHERE {cond})",
+                        quote_ident(entity)
+                    ));
+                    params.extend(binds);
+                }
+                None => {
+                    let (cond, binds) =
+                        attome_core::filter::compile(&f, &filter_schema, params.len() + 1)?;
+                    conds.push(cond);
+                    params.extend(binds);
+                }
+            }
         }
     }
     // AA4-T4: a seek is a bound comparison on the sort column, compiled like
