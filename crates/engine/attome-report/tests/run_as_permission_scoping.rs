@@ -93,8 +93,9 @@ fn test_config(db: &DbUrlParts) -> AppConfig {
                 "metadata_registry_enabled": false
             }},
             "storage": {{
-                "s3_endpoint": "http://localhost:9000", "s3_public_endpoint": "",
-                "s3_region": "us-east-1", "s3_access_key": "test", "s3_secret_key": "test",
+                "s3_endpoint": "{s3_endpoint}", "s3_public_endpoint": "",
+                "s3_region": "us-east-1", "s3_access_key": "{s3_access_key}",
+                "s3_secret_key": "{s3_secret_key}",
                 "s3_bucket": "attome-test", "s3_use_path_style": true, "s3_verify_ssl": false
             }},
             "auth": {{
@@ -130,6 +131,11 @@ fn test_config(db: &DbUrlParts) -> AppConfig {
         redis_host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "localhost".into()),
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         jwt_secret = THROWAWAY_JWT_SECRET,
+        // `TEST_S3_ENDPOINT` moves the object store off the dev store's port.
+        s3_endpoint =
+            std::env::var("TEST_S3_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".into()),
+        s3_access_key = attome_testkit::s3_env("S3_ACCESS_KEY"),
+        s3_secret_key = attome_testkit::s3_env("S3_SECRET_KEY"),
     );
 
     serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
@@ -465,6 +471,9 @@ async fn seed_entity_query(db: &PgPool, sql: &str, entity_id: Uuid, privilege: &
 
 #[tokio::test]
 async fn scheduled_run_never_surfaces_a_row_run_as_cannot_see() {
+    if attome_testkit::s3_or_skip().is_none() {
+        return;
+    }
     let system = skip_if_no_db!(test_system().await);
     let db = system.state().base.db.clone();
     let security = system.state().base.security.clone();
