@@ -179,15 +179,9 @@ async fn bounded<T>(
 
 /// An `AppError` again, for each caller that waited on one shared load.
 fn reissue(error: &AppError) -> AppError {
-    match error {
-        AppError::NotFound => AppError::NotFound,
-        AppError::Forbidden => AppError::Forbidden,
-        AppError::Unauthorized => AppError::Unauthorized,
-        AppError::Overloaded(what) => AppError::Overloaded(what),
-        AppError::Conflict(what) => AppError::Conflict(what),
-        AppError::Validation(message) => AppError::Validation(message.clone()),
-        other => AppError::internal(other.to_string()),
-    }
+    // The loader's own error, whole: a query timeout stays a 504, a rule
+    // violation keeps its rule, and so on.
+    error.clone()
 }
 
 /// One declared cache over values `V`.
