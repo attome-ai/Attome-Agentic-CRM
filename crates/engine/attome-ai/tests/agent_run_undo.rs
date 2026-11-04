@@ -89,9 +89,15 @@ async fn set_status(f: &Fixture, session: Option<Uuid>, record: Uuid, version: i
 /// write lands in `audit_ingest` and undo, which reads the headers, sees it
 /// only after a chain run.
 async fn chain(f: &Fixture) {
-    attome_audit::chainer::run_once(f.db(), None, 10_000, None)
-        .await
-        .expect("chainer run");
+    attome_audit::chainer::run_until_caught_up(
+        f.db(),
+        None,
+        10_000,
+        None,
+        std::time::Duration::from_secs(30),
+    )
+    .await
+    .expect("chainer run");
 }
 
 async fn undo(f: &Fixture, session: Uuid) -> Uuid {

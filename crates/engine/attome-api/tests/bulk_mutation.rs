@@ -1029,9 +1029,15 @@ async fn hard_delete_snapshot_masks_sensitive_columns() {
     // `audit_header` + `audit_snapshot` pair once the chainer drains
     // it. Masking happens at capture, before either storage site, so this
     // proves the stored snapshot — not just the in-flight event.
-    attome_audit::chainer::run_once(&state.base.db, state.audit_signer.as_deref(), 1000, None)
-        .await
-        .expect("drain the audit ingest queue");
+    attome_audit::chainer::run_until_caught_up(
+        &state.base.db,
+        state.audit_signer.as_deref(),
+        1000,
+        None,
+        std::time::Duration::from_secs(30),
+    )
+    .await
+    .expect("drain the audit ingest queue");
 
     let snapshot: Option<Value> = sqlx::query_scalar(
         "SELECT snapshot_json::jsonb FROM audit_snapshot \
@@ -2660,9 +2666,15 @@ mod bulk_parent_events {
     }
 
     async fn drain(db: &attome_db::DbPool, state: &EngineState) {
-        attome_audit::chainer::run_once(db, state.audit_signer.as_deref(), 1000, None)
-            .await
-            .expect("drain the audit ingest queue");
+        attome_audit::chainer::run_until_caught_up(
+            db,
+            state.audit_signer.as_deref(),
+            1000,
+            None,
+            std::time::Duration::from_secs(30),
+        )
+        .await
+        .expect("drain the audit ingest queue");
     }
 
     /// Outcomes: all succeed (`Succeeded`), k of N fail (`PartiallyFailed`,

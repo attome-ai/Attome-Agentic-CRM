@@ -388,9 +388,15 @@ async fn verify(d: &Decided) -> Value {
 }
 
 async fn run_chainer(state: &EngineState) {
-    attome_audit::chainer::run_once(&state.base.db, state.audit_signer.as_deref(), 1000, None)
-        .await
-        .expect("run the audit chainer");
+    attome_audit::chainer::run_until_caught_up(
+        &state.base.db,
+        state.audit_signer.as_deref(),
+        1000,
+        None,
+        std::time::Duration::from_secs(30),
+    )
+    .await
+    .expect("run the audit chainer");
 }
 
 async fn digest_ingest_rows(db: &attome_db::DbPool, decision_id: Uuid) -> i64 {

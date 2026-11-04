@@ -3377,9 +3377,15 @@ fn history_restore_puts_back_a_replaced_value() {
             .expect("version");
         // The audit chainer turns captured events into the headers the
         // history reads.
-        attome_audit::chainer::run_once(&state.base.db, state.audit_signer.as_deref(), 1000, None)
-            .await
-            .expect("drain the audit ingest queue");
+        attome_audit::chainer::run_until_caught_up(
+            &state.base.db,
+            state.audit_signer.as_deref(),
+            1000,
+            None,
+            std::time::Duration::from_secs(30),
+        )
+        .await
+        .expect("drain the audit ingest queue");
 
         let res = app
             .clone()
@@ -3490,9 +3496,15 @@ fn history_search_finds_a_value_crossing() {
             assert_eq!(res.status(), StatusCode::OK);
             ids.push(id);
         }
-        attome_audit::chainer::run_once(&state.base.db, state.audit_signer.as_deref(), 1000, None)
-            .await
-            .expect("drain the audit ingest queue");
+        attome_audit::chainer::run_until_caught_up(
+            &state.base.db,
+            state.audit_signer.as_deref(),
+            1000,
+            None,
+            std::time::Duration::from_secs(30),
+        )
+        .await
+        .expect("drain the audit ingest queue");
 
         let res = app
             .clone()

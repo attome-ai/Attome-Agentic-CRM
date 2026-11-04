@@ -93,9 +93,15 @@ async fn chained_org(db: &DbPool, org: Uuid, key_id: &str, seed_byte: &str) -> A
             .expect("audit write (chainer path)");
     }
 
-    let batches = chainer::run_once(db, Some(&signer), 100, None)
-        .await
-        .expect("chainer run");
+    let batches = chainer::run_until_caught_up(
+        db,
+        Some(&signer),
+        100,
+        Some(org),
+        std::time::Duration::from_secs(30),
+    )
+    .await
+    .expect("chainer run");
     assert!(
         batches.iter().any(|b| b.organization_ref == org),
         "the chainer must produce a batch for this organization"

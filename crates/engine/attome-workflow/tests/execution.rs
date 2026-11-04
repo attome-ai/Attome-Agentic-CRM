@@ -3704,9 +3704,15 @@ async fn instance_start_attributes_to_the_real_starter_or_system() {
 /// Bounded, and a chainer error fails the test rather than being swallowed.
 async fn drain_audit_chainer(db: &attome_db::DbPool) {
     for _ in 0..100 {
-        let drained = attome_audit::chainer::run_once(db, None, 500, None)
-            .await
-            .expect("audit chainer run");
+        let drained = attome_audit::chainer::run_until_caught_up(
+            db,
+            None,
+            500,
+            None,
+            std::time::Duration::from_secs(30),
+        )
+        .await
+        .expect("audit chainer run");
         if drained.is_empty() {
             return;
         }

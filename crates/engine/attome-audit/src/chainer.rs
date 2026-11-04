@@ -130,6 +130,34 @@ pub async fn run_once(
     Ok(summaries)
 }
 
+/// Runs [`run_once`] until nothing is left to chain — for `org`, or for every
+/// organization when `None` — or `deadline` passes. A batch takes only the
+/// events whose transactions are resolved under the snapshot's xmin, so on a
+/// busy cluster (any older transaction still open) one pass can leave events
+/// for the next; a caller that needs the chain current now (a test, an
+/// operator's drain) uses this. Returns every batch written.
+pub async fn run_until_caught_up(
+    db: &DbPool,
+    signer: Option<&AuditSigner>,
+    batch_size: i64,
+    org: Option<Uuid>,
+    deadline: std::time::Duration,
+) -> Result<Vec<ChainBatchSummary>, AppError> {
+    let started = std::time::Instant::now();
+    let mut written = Vec::new();
+    loop {
+        written.extend(run_once(db, signer, batch_size, None).await?);
+        let pending = match org {
+            Some(org) => crate::verify::lag(db, org).await?.0,
+            None => aggregate_lag(db).await?.total_pending_ingest,
+        };
+        if pending == 0 || started.elapsed() >= deadline {
+            return Ok(written);
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+}
+
 /// D-002 single-tenant means this is realistically one row, but the sync
 /// path (P1.5) already partitions the chain per `organization_ref`, so the
 /// chainer mirrors that instead of assuming a single global org. `pub` (not
