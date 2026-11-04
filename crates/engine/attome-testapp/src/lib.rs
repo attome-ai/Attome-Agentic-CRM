@@ -494,6 +494,7 @@ impl TestApp {
         headers: &[(&str, &str)],
         body: Option<Value>,
     ) -> (StatusCode, Value) {
+        let mutating = method != Method::GET;
         let mut builder = Request::builder()
             .method(method)
             .uri(path)
@@ -520,10 +521,23 @@ impl TestApp {
         let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("read the response body");
+        self.after_metadata_write(mutating, path, status).await;
         (
             status,
             serde_json::from_slice(&bytes).unwrap_or(Value::Null),
         )
+    }
+
+    /// A server picks up a metadata write through its registry catch-up,
+    /// which is asynchronous and debounced; a test reads straight after the
+    /// write, so a successful admin write rebuilds the registry here first.
+    async fn after_metadata_write(&self, mutating: bool, path: &str, status: StatusCode) {
+        if mutating && status.is_success() && path.starts_with("/api/v1/admin/") {
+            let registry = attome_core::build_registry(&self.state.base.db)
+                .await
+                .expect("build the metadata registry");
+            self.state.entities.swap(registry);
+        }
     }
 
     /// Sends one request with `cookie`.
@@ -547,6 +561,7 @@ impl TestApp {
         headers: &[(&str, &str)],
         body: Option<Value>,
     ) -> (StatusCode, Value) {
+        let mutating = method != Method::GET;
         let mut builder = Request::builder()
             .method(method)
             .uri(path)
@@ -573,6 +588,7 @@ impl TestApp {
         let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("read the response body");
+        self.after_metadata_write(mutating, path, status).await;
         (
             status,
             serde_json::from_slice(&bytes).unwrap_or(Value::Null),
