@@ -1669,6 +1669,11 @@ export const xrmAr = {
       notANumber: 'يقبل هذا الحقل رقمًا، والرمز الممسوح ليس رقمًا.',
       badCheckDigit: 'رقم التحقق في الباركود خاطئ؛ امسحه مرة أخرى.',
       cameraDenied: 'تعذّر فتح الكاميرا. اسمح بها في المتصفح أو اكتب الرمز.',
+      // B16-T14 — reading the text in view when there is no code.
+      readText: 'قراءة النص',
+      readingText: 'جارٍ القراءة…',
+      readTextFailed: 'تعذّرت قراءة النص. حاول مرة أخرى بإضاءة أوضح ومسافة أقرب، أو اكتبه.',
+      noTextFound: 'لم يُعثر على نص في الصورة.',
     },
     change: 'تغيير', clear: 'مسح', remove: 'إزالة', searchPlaceholder: 'بحث…',
     hijriDate: 'التاريخ الهجري', hijriDay: 'اليوم الهجري', hijriMonth: 'الشهر الهجري', hijriYear: 'السنة الهجرية',

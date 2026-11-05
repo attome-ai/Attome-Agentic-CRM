@@ -3,12 +3,14 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { HttpEventType } from '@angular/common/http';
-import { of } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CurrencyService, LangService } from '@attome/base';
 import { FieldInputComponent, fromLocalDateTimeInput, toLocalDateTimeInput } from './field-input.component';
 import { EntityService } from '@attome/xrm/core/entity/data';
 import { FileUploadService } from '../file-upload.service';
+import { ScanService } from '@attome/base/scan';
+import { ReadTextService } from '../read-text.service';
 import {
   XRM_FIELD_POLICY, type FieldLockState, type FieldRuleMessage, type XrmFieldPolicy,
 } from '../../business-rules/field-policy';
@@ -477,5 +479,89 @@ describe('date_time input values (Y2-T1)', () => {
     expect(toLocalDateTimeInput('not a date')).toBe('');
     expect(fromLocalDateTimeInput('')).toBeNull();
     expect(fromLocalDateTimeInput('nope')).toBeUndefined();
+  });
+});
+
+// B16-T14 — when there is no code, the scan panel can read the text in view:
+// the frame goes to the deployment's vision model only when "Read text" is
+// pressed, and the button shows only where reading text is on.
+@Component({
+  standalone: true,
+  imports: [ReactiveFormsModule, FieldInputComponent],
+  template: `
+    <form [formGroup]="form">
+      <attome-field-input [field]="field" />
+    </form>
+  `,
+})
+class ReadTextHostComponent {
+  field: FieldSchema = textField('label', { scan: { enabled: true } } as FieldSchema['options']);
+  form = new FormGroup({ label: new FormControl<unknown>('') });
+}
+
+describe('FieldInputComponent — read text (B16-T14)', () => {
+  let available: ReturnType<typeof vi.fn>;
+  let read: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    available = vi.fn(() => of(true));
+    read = vi.fn(() => of({ text: '  INV-2026-0042  ', model: 'qwen2.5-vl' }));
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      { drawImage: () => undefined } as unknown as CanvasRenderingContext2D,
+    );
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/jpeg;base64,QUJD');
+    TestBed.configureTestingModule({
+      imports: [ReadTextHostComponent],
+      providers: [
+        { provide: EntityService, useValue: {} },
+        { provide: FileUploadService, useValue: {} },
+        { provide: CurrencyService, useValue: MOCK_CURRENCY_SERVICE },
+        { provide: LangService, useValue: { translate: (key: string) => key } },
+        { provide: ScanService, useValue: { startCamera: () => NEVER, stop: () => undefined } },
+        { provide: ReadTextService, useValue: { available, read } },
+      ],
+    });
+  });
+
+  async function openPanel() {
+    const fixture = TestBed.createComponent(ReadTextHostComponent);
+    fixture.detectChanges();
+    const input = fixture.debugElement.query(By.directive(FieldInputComponent)).componentInstance as FieldInputComponent;
+    input.openScan();
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+    const video = (fixture.nativeElement as HTMLElement).querySelector('video') as HTMLVideoElement;
+    Object.defineProperty(video, 'videoWidth', { value: 1280 });
+    Object.defineProperty(video, 'videoHeight', { value: 720 });
+    return { fixture, input };
+  }
+
+  it('sends the frame only when asked, and the text fills the field', async () => {
+    const { fixture } = await openPanel();
+    expect(read).not.toHaveBeenCalled();
+    const button = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="read-text"]') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    button.click();
+    fixture.detectChanges();
+    expect(read).toHaveBeenCalledWith('QUJD', 'image/jpeg');
+    expect(fixture.componentInstance.form.value.label).toBe('INV-2026-0042');
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="scan-panel"]')).toBeNull();
+  });
+
+  it('hides the button where reading text is off', async () => {
+    available.mockReturnValue(of(false));
+    const { fixture } = await openPanel();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="read-text"]')).toBeNull();
+  });
+
+  it('says so when the text cannot be read, and leaves the field alone', async () => {
+    read.mockReturnValue(throwError(() => ({ status: 503 })));
+    const { fixture } = await openPanel();
+    ((fixture.nativeElement as HTMLElement).querySelector('[data-testid="read-text"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.value.label).toBe('');
+    const error = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="scan-error"]');
+    expect(error?.textContent).toContain('fieldInput.scan.readTextFailed');
   });
 });

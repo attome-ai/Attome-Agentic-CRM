@@ -145,6 +145,8 @@ impl EngineModel for ActionModel {
             // identical middleware stack and MODULE_AI licence gate as every
             // other action route.
             .merge(crate::conversation_routes::routes())
+            // N21 / B16-T14 — reading the text of a captured image.
+            .merge(crate::read_text::routes())
             // AI4-T6 — follow-ups.
             .merge(crate::followup_routes::routes())
             // AI8-T3 — agent performance backfill, admin-gated.

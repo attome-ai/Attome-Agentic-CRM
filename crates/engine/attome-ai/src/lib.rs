@@ -168,6 +168,8 @@ pub mod provider_credential;
 pub mod provider_models;
 pub mod publish_gate;
 pub mod quality_monitor;
+/// N21 / B16-T14: reading the text of a captured image.
+pub mod read_text;
 pub mod registry;
 pub mod relationship_strength;
 /// G6-T3: the likely reply template for a case.
@@ -251,6 +253,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(provider_admin::openapi_fragment());
     // C4 — `/ai/conversations…`, the chat HTTP API.
     doc.merge(conversation_routes::openapi_fragment());
+    // N21 / B16-T14 — `/ai/read-text`.
+    doc.merge(read_text::openapi_fragment());
     // C10-B — `/admin/ai/bot-analytics`.
     doc.merge(analytics::openapi_fragment());
     doc.merge(runtime_switch::openapi_fragment());

@@ -1709,6 +1709,11 @@ export const xrmEn = {
       notANumber: 'This field takes a number; the code scanned is not one.',
       badCheckDigit: 'The barcode check digit is wrong; scan it again.',
       cameraDenied: 'The camera could not be opened. Allow it in the browser, or type the code.',
+      // B16-T14 — reading the text in view when there is no code.
+      readText: 'Read text',
+      readingText: 'Reading…',
+      readTextFailed: 'The text could not be read. Try again with steadier, closer light, or type it.',
+      noTextFound: 'No text was found in the picture.',
     },
     change: 'Change', clear: 'Clear', remove: 'Remove', searchPlaceholder: 'Search…',
     hijriDate: 'Hijri date', hijriDay: 'Hijri day', hijriMonth: 'Hijri month', hijriYear: 'Hijri year',

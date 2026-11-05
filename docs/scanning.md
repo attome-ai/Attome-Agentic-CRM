@@ -55,6 +55,17 @@ The GTIN is what is matched; the batch and expiry go to the fields named by
 `gs1_batch_attribute` and `gs1_expiry_attribute`. Reading stops at an
 identifier the app does not know.
 
+### Reading text when there is no code (B16-T14)
+
+A text field's scan panel also offers **Read text** where the deployment has a vision model for reading
+text (the `ocr` model server, N21): `GET /api/v1/ai/read-text` answers `{ "available": true }`, and
+the button is hidden otherwise. Pressing it sends the camera's current frame (JPEG, longer edge at most
+1,600 pixels) to `POST /api/v1/ai/read-text`; nothing is sent while the camera merely runs. The text the
+model reads, in its own language and script, fills the field for the person to check before saving.
+The route stores nothing and logs neither the image nor the text, allows ten reads a minute per person,
+and answers 503 `feature_unavailable` where no model is configured. It sits behind the AI module's
+licence with the other AI routes.
+
 ## Finding records: `GET /api/v1/scan/find?value=…&entity=…`
 
 Returns the records holding the scanned value in a scan-enabled field

@@ -28,6 +28,7 @@ import { FieldHistoryComponent } from '../field-history/field-history.component'
 import { PolymorphicLookupComponent, type PolymorphicValue } from '../polymorphic-lookup/polymorphic-lookup.component';
 import { ImageUploadComponent } from '../image-upload/image-upload.component';
 import { ScanFieldOptions, scanToValues } from './scan-to-values';
+import { ReadTextService, captureFrame } from '../read-text.service';
 import { checkFailure } from '../field-checks';
 import { RollupExplainComponent } from './rollup-explain.component';
 
@@ -89,6 +90,7 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   private readonly lang     = inject(LangService);
   private readonly prefs    = inject(UserPreferencesService);
   private readonly scanner  = inject(ScanService);
+  private readonly readTextApi = inject(ReadTextService);
   private readonly native   = inject(NativeService);
 
   // ── Scanning (B16-T4) ─────────────────────────────────────────────────────
@@ -103,11 +105,19 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   readonly scanOpen  = signal(false);
   readonly scanError = signal<string | null>(null);
   private scanSub: Subscription | null = null;
+  /** B16-T14: whether this deployment can read text from an image (asked when the camera opens). */
+  readonly readTextAvailable = signal(false);
+  readonly readingText = signal(false);
 
   /** Opens the camera under the field; the first code read fills it. */
   openScan(): void {
     this.scanError.set(null);
     this.scanOpen.set(true);
+    // B16-T14: the "Read text" button shows only where reading text is on;
+    // only a text field takes the text.
+    if (this.field().field_type === 'text') {
+      this.readTextApi.available().subscribe(available => this.readTextAvailable.set(available));
+    }
     // The <video> renders with the panel; start once it exists.
     queueMicrotask(() => {
       const video = this.scanVideoRef()?.nativeElement;
@@ -124,6 +134,39 @@ export class FieldInputComponent implements OnInit, OnDestroy {
     this.scanSub = null;
     this.scanner.stop();
     this.scanOpen.set(false);
+  }
+
+  /**
+   * B16-T14: when there is no code to scan, the person can ask for the
+   * text in view instead: the current frame goes to the deployment's own
+   * vision model only on this click, and the text it reads fills the field.
+   */
+  readText(): void {
+    const video = this.scanVideoRef()?.nativeElement;
+    const frame = video ? captureFrame(video, document) : null;
+    if (!frame) {
+      this.scanError.set('fieldInput.scan.readTextFailed');
+      return;
+    }
+    this.readingText.set(true);
+    this.readTextApi.read(frame, 'image/jpeg').subscribe({
+      next: read => {
+        this.readingText.set(false);
+        this.closeScan();
+        const text = read.text.trim();
+        if (!text) {
+          this.scanError.set('fieldInput.scan.noTextFound');
+          return;
+        }
+        this.scanError.set(null);
+        this.ctrl.setValue(text);
+        this.ctrl.markAsDirty();
+      },
+      error: () => {
+        this.readingText.set(false);
+        this.scanError.set('fieldInput.scan.readTextFailed');
+      },
+    });
   }
 
   /** Puts one scan into the form: the value, and GS1 batch and expiry into their fields. */

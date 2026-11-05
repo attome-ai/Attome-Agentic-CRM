@@ -22,6 +22,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Reading the text of an image (B16-T14, N21): `POST /api/v1/ai/read-text` sends one image to the
+  deployment's own vision model and answers its text (stored nowhere, ten a minute per person);
+  `GET` on the same path says whether it is available. A text field's scan panel offers **Read text**
+  where it is.
 - Packages carry static files (T3-T2): a package folder's `files/` is signed into the package, staged
   at the install preview (migration `0401`, `package_file`) and served once installed at
   `GET /api/v1/packages/{id}/files`. `GET /api/v1/model/components/{id}` answers a custom component's

@@ -24,6 +24,12 @@
   @if (scanOpen()) {
     <div class="scan-panel" data-testid="scan-panel">
       <video #scanVideo class="scan-video" playsinline muted></video>
+      @if (readTextAvailable()) {
+        <!-- B16-T14: the frame is sent only when this is pressed. -->
+        <button type="button" class="scan-close" data-testid="read-text" [disabled]="readingText()" (click)="readText()">
+          {{ (readingText() ? 'fieldInput.scan.readingText' : 'fieldInput.scan.readText') | translate }}
+        </button>
+      }
       <button type="button" class="scan-close" (click)="closeScan()">{{ 'fieldInput.scan.cancel' | translate }}</button>
     </div>
   }
