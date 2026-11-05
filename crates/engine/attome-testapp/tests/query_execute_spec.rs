@@ -215,6 +215,36 @@ fn a_kpi_counts_only_what_its_reader_may_see() {
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(number(&body["data"]["records"][0], "value"), 6.0, "{body}");
 
+        // A view-like query keeping `id` but not the owner columns the
+        // reader's scope needs is scoped through the id: their three rows.
+        let thin_view = create_query(
+            &app,
+            json!({
+                "name": "thin view",
+                "entity_logical_name": entity_id,
+                "required_privilege": format!("{entity}.read"),
+                "sql_query": format!("SELECT id, title FROM \"{entity}\" WHERE is_active = true")
+            }),
+        )
+        .await;
+        let (status, body) = app
+            .request_as(
+                &reader.cookie,
+                Method::POST,
+                "/api/v1/query/execute",
+                Some(json!({ "query_id": thin_view, "page_size": 10, "include_total": true })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let mut titles: Vec<&str> = body["data"]["records"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|r| r["title"].as_str())
+            .collect();
+        titles.sort_unstable();
+        assert_eq!(titles, ["r1", "r2", "r3"], "{body}");
+
         // What a QuerySpec cannot honour here is a 422, not ignored.
         let (status, body) = app
             .request_as(

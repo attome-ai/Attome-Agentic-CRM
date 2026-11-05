@@ -2971,12 +2971,12 @@ pub async fn execute_stored_query_with_definition(
 
     // V2-D1808: the record scope names the rows' own columns (`t.id`, and
     // `t.organization_ref`, `t.owner_ref`, `t.owner_type` or a grant
-    // condition's field by the reader's access). A query whose output lacks
-    // one, such as an aggregate KPI or a view selecting a few attributes,
-    // cannot be narrowed to this reader: it is refused as forbidden rather
-    // than failing in the database. Administrators and readers no filter
-    // narrows still run it; a pack's KPI is declared as a QuerySpec, which
-    // applies the scope before aggregating.
+    // condition's field by the reader's access). An output that lacks one
+    // but keeps `id` is scoped through the id on the entity's own table; one
+    // with no `id` at all (an aggregate KPI) cannot be narrowed to this reader
+    // and is refused as forbidden rather than failing in the database.
+    // Administrators and readers no filter narrows still run it; a pack's KPI
+    // is declared as a QuerySpec, which applies the scope before aggregating.
     if scope_conds > 0 {
         let needed = row_columns_named(&conds[..scope_conds]);
         if !needed.is_empty() {
@@ -2998,16 +2998,39 @@ pub async fn execute_stored_query_with_definition(
                 .map(String::as_str)
                 .filter(|name| !output.iter().any(|o| o == name))
                 .collect();
-            if !missing.is_empty() {
-                tracing::warn!(
-                    query_id = %qrow.id,
-                    user_id = %ctx.user_id,
-                    ?missing,
-                    "records: a stored query does not return the columns the record filter \
-                     needs, so a reader below full read access is refused; declare it as a \
-                     QuerySpec or return these columns (V2-D1808)"
-                );
-                return Err(AppError::Forbidden);
+            let has_id = output.iter().any(|o| o == "id");
+            match (
+                missing.is_empty(),
+                has_id,
+                linked_entity_logical_name.as_deref(),
+            ) {
+                (true, _, _) => {}
+                // An output that keeps the record's `id` but not the other
+                // columns (a view selecting a few attributes) is scoped on
+                // the entity's own row through that id: the inner `t` is the
+                // table, so the same predicate and placeholders apply, and a
+                // row whose id the reader may not read is left out.
+                (false, true, Some(table)) => {
+                    let scope = conds.drain(..scope_conds).collect::<Vec<_>>().join(" AND ");
+                    conds.insert(
+                        0,
+                        format!(
+                            "t.id IN (SELECT t.id FROM {} t WHERE {scope})",
+                            quote_ident(table)
+                        ),
+                    );
+                }
+                _ => {
+                    tracing::warn!(
+                        query_id = %qrow.id,
+                        user_id = %ctx.user_id,
+                        ?missing,
+                        "records: a stored query does not return the columns the record filter \
+                         needs, so a reader below full read access is refused; declare it as a \
+                         QuerySpec or return these columns (V2-D1808)"
+                    );
+                    return Err(AppError::Forbidden);
+                }
             }
         }
     }
