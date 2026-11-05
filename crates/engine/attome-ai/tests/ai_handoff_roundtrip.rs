@@ -213,7 +213,31 @@ async fn trip(script: impl FnOnce(Uuid, Uuid) -> Vec<Value>) -> Option<Trip> {
         .execute(&db)
         .await
         .expect("ai_agent.principal_ref");
-    for name in ["name", "status"] {
+    // The agent's model, which the mandatory agent-action audit event names
+    // (`execute::session_model_id`): without these the event's lookup
+    // fails, unless another test on the shared database made them first.
+    let model_entity =
+        attome_metadata::provision::ensure_entity(&db, "ai_model", "AI Model", Some("name"), false)
+            .await
+            .expect("provision ai_model");
+    for name in ["name", "provider_model_id"] {
+        attome_metadata::provision::ensure_attribute(
+            &db,
+            model_entity,
+            name,
+            name,
+            "text",
+            false,
+            false,
+            true,
+            true,
+            None,
+            None,
+        )
+        .await
+        .expect("provision ai_model attribute");
+    }
+    for name in ["name", "status", "primary_model_ref"] {
         attome_metadata::provision::ensure_attribute(
             &db,
             agent_entity,
