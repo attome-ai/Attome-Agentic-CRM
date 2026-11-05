@@ -93,6 +93,10 @@ pub struct Options {
     /// AA14-T6: also run the Core Web Vitals check on three key screens
     /// (`--web-vitals`; needs `e2e/node_modules` and its browsers).
     pub web_vitals: bool,
+    /// B22-T1: also run the browser suite (`--e2e`): every Playwright spec
+    /// under `e2e/tests` in each project, axe on every built-in screen among
+    /// them (needs `e2e/node_modules` and its browsers).
+    pub e2e: bool,
     /// AB9-T10: also run the chaos suite against a test rig (`--chaos`;
     /// the rig's flags in `ATTOME_CHAOS_SUITE_ARGS`).
     pub chaos: bool,
@@ -194,6 +198,9 @@ pub fn check_with(options: &Options) -> ExitCode {
     }
     if options.web_vitals {
         steps.push(("web_vitals", web_vitals as Step));
+    }
+    if options.e2e {
+        steps.push(("e2e", e2e as Step));
     }
     if options.slo_evidence {
         steps.push(("slo_evidence", slo_evidence as Step));
@@ -530,6 +537,7 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
                     "--reproducible" => options.reproducible = true,
                     "--perf" => options.perf = true,
                     "--web-vitals" => options.web_vitals = true,
+                    "--e2e" => options.e2e = true,
                     "--chaos" => options.chaos = true,
                     "--by" => options.by = Some(rest.next()?.clone()),
                     "--skip" => options.skip.push(rest.next()?.clone()),
@@ -969,6 +977,20 @@ fn web_vitals(root: &Path) -> Result<(), String> {
         }
     }
     outcome
+}
+
+/// B22-T1: the browser suite (`e2e/playwright.config.ts`): every spec under
+/// `e2e/tests` in English and Arabic on a desktop and a phone, which starts
+/// the web app itself (or uses one on port 4199). Its accessibility spec runs
+/// axe on every built-in screen.
+fn e2e(root: &Path) -> Result<(), String> {
+    let e2e = root.join("e2e");
+    if !e2e.join("node_modules").is_dir() {
+        return Err("e2e/node_modules is missing: run `npm ci` and `npx playwright install chromium` in e2e/ first".to_owned());
+    }
+    let mut command = Command::new(npm_program("npx"));
+    command.args(["playwright", "test"]);
+    run(&mut command, &e2e, "playwright e2e")
 }
 
 fn web(root: &Path) -> Result<(), String> {
@@ -1507,6 +1529,7 @@ mod tests {
             skip: Vec::new(),
             customer_tests: None,
             web_vitals: false,
+            e2e: false,
             chaos: false,
             overrides: overrides
                 .iter()

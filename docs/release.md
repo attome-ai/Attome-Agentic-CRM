@@ -37,7 +37,9 @@ customer then gets its own throwaway database with this commit's schema and serv
 API key that lives only for that run, its configuration pushed and its tests imported and run; a
 failed test the export marks blocking fails the step, any other failure is a line in
 `target/release-gate/<commit>/upgrade-notes.md`; the step needs `curl` on the path), plus the web app with
-`--web` and, with `--reproducible`, two release builds whose `attome` binaries must hash the same
+`--web`, the browser suite with `--e2e` (every Playwright spec under `e2e/tests` in English and Arabic
+on a desktop and a phone, axe on every built-in screen among them; needs `e2e/node_modules` and its
+browsers) and, with `--reproducible`, two release builds whose `attome` binaries must hash the same
 (`target/release-gate/repro.json`) and, with `--perf`, `attome perf compare`: the newest record in
 `docs/perf-history/` against the previous release's on the same machine (record one with
 `attome perf record --release <v>` after the load-test matrix; see that folder's README).
