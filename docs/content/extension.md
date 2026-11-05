@@ -68,6 +68,11 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   A job extension can also run by itself: `"schedule": {"cron": "0 6 * * *", "timezone":
   "Asia/Riyadh", "input": {...}}` in its manifest (checked at upload) runs it once per slot across
   every worker, as the administrator who uploaded the published version.
+- **Starting one.** `attome new extension <name> --kind hook|job|webhook [--dir <folder>]` writes
+  a Rust crate `attome dev` builds: `Cargo.toml`, `src/lib.rs` (the logic in one pure `decide`
+  function with unit tests `cargo test` runs natively, and the calling convention around it),
+  `manifest.json` with a starting set of grants, and a README. `--lang ts` is refused until
+  JavaScript extensions are supported.
 - **Developing.** `attome dev <folder>` watches a Rust extension crate (with its `manifest.json`),
   builds it for `wasm32-unknown-unknown` on every change, prints cargo's errors with their source
   lines, and uploads each good build as a new draft version (`--once` builds one time; `--target`

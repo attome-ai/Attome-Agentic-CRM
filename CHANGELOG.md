@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `attome new extension <name> --kind hook|job|webhook` writes a Rust extension project that
+  `attome dev` builds: the logic in a pure `decide` with unit tests, the calling convention, a
+  starting `manifest.json` and a README (M17-T2).
 - Test targets (AC5-T10): `docs/test-targets.json` sets the floors for negative-path coverage of
   mutating operations (7 percent today) and browser tests (6); `attome test map --check-targets`
   and the release gate's new `test_targets` step fail naming a missed one.

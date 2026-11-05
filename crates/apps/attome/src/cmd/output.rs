@@ -120,7 +120,17 @@ const COMMANDS: &[(&str, &[&str])] = &[
         ],
     ),
     ("dev", &["--name", "--once", "--target", "--url"]),
-    ("new", &["component", "--dir", "--package"]),
+    (
+        "new",
+        &[
+            "component",
+            "extension",
+            "--dir",
+            "--package",
+            "--kind",
+            "--lang",
+        ],
+    ),
     (
         "package",
         &[

@@ -170,6 +170,8 @@ required-features = ["keycloak-tests"]
 
 [dev-dependencies]
 attome-approval.workspace = true
+# M17-T2: new_extension's tests check its manifests and exports against the runtime's.
+attome-extension.workspace = true
 attome-fleet.workspace    = true
 # AA14-T3: request_counts counts each request's Redis commands.
 attome-cache              = { workspace = true, features = ["count-redis"] }

@@ -31,6 +31,7 @@ pub mod migrate;
 pub mod model_files;
 /// T3-T4: `attome new component`, a custom component project.
 pub mod new_component;
+pub mod new_extension;
 /// T4-T5: `--json`, write confirmation and shell completions.
 pub mod output;
 /// T8-T4: build, publish and install packages.

@@ -28,6 +28,9 @@ Usage:
   attome new component <tag> [--dir <folder>] [--package <name>]
                                 A custom web component project (TypeScript, the
                                 component SDK, its manifest and a test)
+  attome new extension <name> --kind hook|job|webhook [--dir <folder>]
+                                An extension project (Rust for WebAssembly, its
+                                manifest and tests) that `attome dev` builds
   attome dev <folder> [--name <name>] [--once]
                                 Rebuild an extension on every change and upload
                                 each good build as a draft version
@@ -202,7 +205,11 @@ fn main() -> ExitCode {
         },
         ["new", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
-            outcome(attome::cmd::new_component::run(&rest).map_err(Into::into))
+            if rest.first().map(String::as_str) == Some("extension") {
+                outcome(attome::cmd::new_extension::run(&rest).map_err(Into::into))
+            } else {
+                outcome(attome::cmd::new_component::run(&rest).map_err(Into::into))
+            }
         }
         ["dev", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
