@@ -579,20 +579,245 @@ async fn hold(duration: Duration) {
     }
 }
 
-/// `attome drill chaos run ...`.
+/// AB9-T4: what one fault run found, as the checks of its evidence:
+/// `fault_injected` and `fault_undone` always, and with the steady state
+/// `auto_stopped` (passes when it did not trigger), `security_failed_closed`,
+/// `error_rate_within_limit` and `p95_within_limit` (after the fault is
+/// undone) and `audit_chain_ok`.
+#[derive(Debug, Default)]
+pub struct FaultOutcome {
+    pub checks: Vec<attome_ops::evidence::Check>,
+}
+
+impl FaultOutcome {
+    /// Records one check: passed, failed, or (`None`) not checked.
+    pub fn record(&mut self, name: &str, result: Option<bool>, detail: impl Into<String>) {
+        use attome_ops::evidence::{Check, CheckResult};
+        let detail: String = detail.into();
+        self.checks.push(Check {
+            name: name.to_owned(),
+            result: match result {
+                Some(true) => CheckResult::Pass,
+                Some(false) => CheckResult::Fail,
+                None => CheckResult::Skipped,
+            },
+            detail: (!detail.is_empty()).then_some(detail),
+        });
+    }
+
+    /// A check failed (one not checked is not a failure).
+    pub fn failed(&self) -> bool {
+        self.checks
+            .iter()
+            .any(|c| c.result == attome_ops::evidence::CheckResult::Fail)
+    }
+}
+
+/// Injects the fault `plan` describes, holds it for its duration (watching
+/// the steady state when `steady` is given), undoes it and answers what it
+/// found. `Err` when the run could not start (the load did not start).
+pub async fn run_plan(
+    args: &ChaosArgs,
+    steady: Option<&super::chaos_steady::SteadyArgs>,
+    plan: Plan,
+) -> Result<FaultOutcome, String> {
+    use super::chaos_steady as steady_state;
+    let spec = args.fault;
+    println!(
+        "{} for {} s. Expected: {}",
+        spec.name,
+        args.duration.as_secs(),
+        spec.expected
+    );
+    let mut outcome = FaultOutcome::default();
+    match plan {
+        Plan::Steps {
+            inject: steps,
+            undo,
+        } => {
+            // AB9-T3: the load runs before, during and after the fault.
+            let load = match steady.map(steady_state::Load::start) {
+                Some(Ok(load)) => Some(load),
+                Some(Err(error)) => return Err(format!("the load could not start: {error}")),
+                None => None,
+            };
+            if let Some(load) = &load {
+                tokio::time::sleep(steady_state::PHASE).await;
+                steady_state::print_phase("before", steady_state::Stats::of(&load.take()));
+            }
+            let mut system = System;
+            let guard = match inject(&mut system, &steps, undo) {
+                Ok(guard) => guard,
+                Err(error) => {
+                    eprintln!(
+                        "attome drill chaos: the fault was not injected ({error}); what was done is undone"
+                    );
+                    if let Some(load) = load {
+                        load.finish().await;
+                    }
+                    outcome.record("fault_injected", Some(false), error);
+                    return Ok(outcome);
+                }
+            };
+            outcome.record("fault_injected", Some(true), "");
+            match (&load, steady) {
+                (Some(load), Some(steady)) => {
+                    let (stats, auto_stopped, probes) =
+                        steady_state::during(load, steady, args.duration).await;
+                    steady_state::print_phase("during", stats);
+                    if auto_stopped {
+                        println!(
+                            "auto_stopped: Fail (the limits were passed three windows in a row)"
+                        );
+                    }
+                    outcome.record(
+                        "auto_stopped",
+                        Some(!auto_stopped),
+                        if auto_stopped {
+                            "the limits were passed three windows in a row"
+                        } else {
+                            ""
+                        },
+                    );
+                    let mut refused = 0usize;
+                    let mut accepted = 0usize;
+                    for probe in &probes {
+                        match probe {
+                            Ok(true) => refused += 1,
+                            Ok(false) => {
+                                accepted += 1;
+                                println!(
+                                    "fail_closed: Fail (a reused idempotency key was accepted)"
+                                );
+                            }
+                            Err(error) => println!("fail_closed: not checked ({error})"),
+                        }
+                    }
+                    let verdict = match (accepted, refused) {
+                        (0, 0) => None,
+                        (0, _) => Some(true),
+                        _ => Some(false),
+                    };
+                    outcome.record(
+                        "security_failed_closed",
+                        verdict,
+                        format!("{refused} reused key(s) refused, {accepted} accepted"),
+                    );
+                }
+                _ => hold(args.duration).await,
+            }
+            let failures = guard.finish();
+            for failure in &failures {
+                eprintln!("attome drill chaos: undo failed: {failure}. {}", spec.undo);
+            }
+            outcome.record(
+                "fault_undone",
+                Some(failures.is_empty()),
+                failures.join("; "),
+            );
+            if let Some(load) = load {
+                tokio::time::sleep(steady_state::PHASE).await;
+                let after = steady_state::Stats::of(&load.take());
+                steady_state::print_phase("after", after);
+                load.finish().await;
+                if let Some(steady) = steady {
+                    let rate = after.error_rate();
+                    outcome.record(
+                        "error_rate_within_limit",
+                        Some(rate <= steady.max_error_rate),
+                        format!(
+                            "{rate:.3} after the fault (limit {})",
+                            steady.max_error_rate
+                        ),
+                    );
+                    outcome.record(
+                        "p95_within_limit",
+                        Some(after.p95_ms <= steady.max_p95_ms),
+                        format!(
+                            "{} ms after the fault (limit {})",
+                            after.p95_ms, steady.max_p95_ms
+                        ),
+                    );
+                }
+                if let Some(url) = steady.and_then(|s| s.database_url.as_deref()) {
+                    match steady_state::audit_chain_failures(url).await {
+                        Ok(failed) if failed.is_empty() => {
+                            println!("audit_chain: Pass");
+                            outcome.record("audit_chain_ok", Some(true), "");
+                        }
+                        Ok(failed) => {
+                            println!("audit_chain: Fail ({})", failed.join(", "));
+                            outcome.record("audit_chain_ok", Some(false), failed.join(", "));
+                        }
+                        Err(error) => {
+                            println!("audit_chain: not checked ({error})");
+                            outcome.record("audit_chain_ok", None, error);
+                        }
+                    }
+                }
+            }
+            if failures.is_empty() {
+                println!("undone");
+            }
+        }
+        Plan::FakeModel { fail } => {
+            println!(
+                "serving the fake model on 127.0.0.1:{} (the target must already point at it)",
+                args.port
+            );
+            let code = fake_model(args.port, fail, hold(args.duration)).await;
+            outcome.record("fault_injected", Some(code == EXIT_OK), "");
+            outcome.record("fault_undone", Some(true), "the fake model stopped");
+        }
+        Plan::SmtpRefused => {
+            println!(
+                "nothing listens on 127.0.0.1:{}; a target pointed at it cannot send email",
+                args.port
+            );
+            hold(args.duration).await;
+            outcome.record("fault_injected", Some(true), "");
+            outcome.record("fault_undone", Some(true), "");
+        }
+        Plan::QueueFlood => {
+            let url = args.database_url.clone().unwrap_or_default();
+            match queue_flood(&url).await {
+                Ok(sent) => {
+                    println!("{sent} jobs queued; they drain on their own");
+                    outcome.record("fault_injected", Some(true), format!("{sent} jobs queued"));
+                }
+                Err(error) => {
+                    eprintln!("attome drill chaos: {error}");
+                    outcome.record("fault_injected", Some(false), error);
+                }
+            }
+            outcome.record("fault_undone", Some(true), "the jobs drain on their own");
+        }
+    }
+    Ok(outcome)
+}
+
+/// `attome drill chaos run ...` and (AB9-T4) `attome drill chaos suite ...`.
 #[tokio::main]
 pub async fn run_cli(args: &[String]) -> u8 {
-    let args: Vec<String> = match args {
-        [first, rest @ ..] if first == "run" => rest.to_vec(),
+    match args {
+        [first, rest @ ..] if first == "run" => run_one(rest).await,
+        [first, rest @ ..] if first == "suite" => super::chaos_suite::run(rest).await,
         _ => {
             eprintln!(
                 "attome drill chaos: usage: attome drill chaos run --fault <name> [--duration <s>] ..."
             );
-            return EXIT_USAGE;
+            eprintln!(
+                "                           attome drill chaos suite --key <file> --out <dir> ..."
+            );
+            EXIT_USAGE
         }
-    };
+    }
+}
+
+/// `attome drill chaos run ...`: one fault.
+async fn run_one(args: &[String]) -> u8 {
     // AB9-T3: the steady-state checks' own arguments.
-    let (steady, args) = match super::chaos_steady::take_args(&args) {
+    let (steady, args) = match super::chaos_steady::take_args(args) {
         Ok(split) => split,
         Err(message) => {
             eprintln!("attome drill chaos: {message}");
@@ -658,124 +883,12 @@ pub async fn run_cli(args: &[String]) -> u8 {
             return EXIT_USAGE;
         }
     };
-    let spec = args.fault;
-    println!(
-        "{} for {} s. Expected: {}",
-        spec.name,
-        args.duration.as_secs(),
-        spec.expected
-    );
-    match plan {
-        Plan::Steps {
-            inject: steps,
-            undo,
-        } => {
-            use super::chaos_steady as steady_state;
-            // AB9-T3: the load runs before, during and after the fault.
-            let load = match steady.as_ref().map(steady_state::Load::start) {
-                Some(Ok(load)) => Some(load),
-                Some(Err(error)) => {
-                    eprintln!("attome drill chaos: the load could not start: {error}");
-                    return EXIT_USAGE;
-                }
-                None => None,
-            };
-            if let Some(load) = &load {
-                tokio::time::sleep(steady_state::PHASE).await;
-                steady_state::print_phase("before", steady_state::Stats::of(&load.take()));
-            }
-            let mut system = System;
-            let guard = match inject(&mut system, &steps, undo) {
-                Ok(guard) => guard,
-                Err(error) => {
-                    eprintln!(
-                        "attome drill chaos: the fault was not injected ({error}); what was done is undone"
-                    );
-                    return EXIT_FAILED;
-                }
-            };
-            let mut checks_ok = true;
-            match (&load, &steady) {
-                (Some(load), Some(steady)) => {
-                    let (stats, auto_stopped, probes) =
-                        steady_state::during(load, steady, args.duration).await;
-                    steady_state::print_phase("during", stats);
-                    if auto_stopped {
-                        println!(
-                            "auto_stopped: Fail (the limits were passed three windows in a row)"
-                        );
-                        checks_ok = false;
-                    }
-                    for probe in &probes {
-                        match probe {
-                            Ok(true) => {}
-                            Ok(false) => {
-                                println!(
-                                    "fail_closed: Fail (a reused idempotency key was accepted)"
-                                );
-                                checks_ok = false;
-                            }
-                            Err(error) => println!("fail_closed: not checked ({error})"),
-                        }
-                    }
-                }
-                _ => hold(args.duration).await,
-            }
-            let failures = guard.finish();
-            for failure in &failures {
-                eprintln!("attome drill chaos: undo failed: {failure}. {}", spec.undo);
-            }
-            if let Some(load) = load {
-                tokio::time::sleep(steady_state::PHASE).await;
-                steady_state::print_phase("after", steady_state::Stats::of(&load.take()));
-                load.finish().await;
-                if let Some(url) = steady.as_ref().and_then(|s| s.database_url.as_deref()) {
-                    match steady_state::audit_chain_failures(url).await {
-                        Ok(failed) if failed.is_empty() => println!("audit_chain: Pass"),
-                        Ok(failed) => {
-                            println!("audit_chain: Fail ({})", failed.join(", "));
-                            checks_ok = false;
-                        }
-                        Err(error) => println!("audit_chain: not checked ({error})"),
-                    }
-                }
-            }
-            if failures.is_empty() {
-                println!("undone");
-            }
-            if failures.is_empty() && checks_ok {
-                EXIT_OK
-            } else {
-                EXIT_FAILED
-            }
-        }
-        Plan::FakeModel { fail } => {
-            println!(
-                "serving the fake model on 127.0.0.1:{} (the target must already point at it)",
-                args.port
-            );
-            fake_model(args.port, fail, hold(args.duration)).await
-        }
-        Plan::SmtpRefused => {
-            println!(
-                "nothing listens on 127.0.0.1:{}; a target pointed at it cannot send email",
-                args.port
-            );
-            hold(args.duration).await;
-            EXIT_OK
-        }
-        Plan::QueueFlood => {
-            let url = args.database_url.clone().unwrap_or_default();
-            match queue_flood(&url).await {
-                Ok(sent) => {
-                    println!("{sent} jobs queued; they drain on their own");
-                    EXIT_OK
-                }
-                Err(error) => {
-                    eprintln!("attome drill chaos: {error}");
-                    EXIT_FAILED
-                }
-            }
+    match run_plan(&args, steady.as_ref(), plan).await {
+        Ok(outcome) if outcome.failed() => EXIT_FAILED,
+        Ok(_) => EXIT_OK,
+        Err(message) => {
+            eprintln!("attome drill chaos: {message}");
+            EXIT_USAGE
         }
     }
 }

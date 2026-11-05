@@ -26,6 +26,9 @@
 //!   and writes signed evidence with the recovery time, writes lost and split
 //!   brain (`attome_ops::drill_failover`).
 //!
+//! - `attome drill chaos suite --key <file> --out <dir> ...` (AB9-T4) runs
+//!   every catalogue fault in turn and writes one signed report per fault
+//!   (`super::chaos_suite`).
 //! - `attome drill chaos run --fault <name> ...` (AB9-T2) injects one fault
 //!   of the catalogue and always undoes it (`super::chaos`).
 //!
@@ -73,6 +76,7 @@ const USAGE: &str = "usage:
   attome drill standby-promote --cluster <name> --confirm <name>
   attome drill failover --scenario <leader|router|redis> --confirm <scenario> --key <file> ...
   attome drill chaos run --fault <name> [--duration <s>] [--fake-endpoints] ...
+  attome drill chaos suite --key <file> --out <dir> [--allow-net-admin] [run flags] ...
   attome drill <restore|upgrade-check> ...";
 
 /// One parsed `attome drill` command.
