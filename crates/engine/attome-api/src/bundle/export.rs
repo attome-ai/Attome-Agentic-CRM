@@ -450,6 +450,24 @@ async fn export_queries(
             .push(QueryEntityMapping { entity, id_column });
     }
 
+    // V2-D1808: the current version's saved QuerySpec and parameters, so a
+    // spec-only query exports as one (its SQL is empty).
+    let specs: Vec<(Uuid, Option<serde_json::Value>, Option<serde_json::Value>)> = sqlx::query_as(
+        "SELECT v.query_id, v.query_spec, v.parameters
+         FROM sql_query_version v
+         WHERE v.query_spec IS NOT NULL
+           AND v.id = (SELECT v2.id FROM sql_query_version v2
+                       WHERE v2.query_id = v.query_id
+                       ORDER BY v2.id DESC LIMIT 1)",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut spec_by_query: HashMap<Uuid, (serde_json::Value, Option<serde_json::Value>)> = specs
+        .into_iter()
+        .filter_map(|(id, spec, params)| spec.map(|spec| (id, (spec, params))))
+        .collect();
+
     let mut keys: HashMap<Uuid, QueryRef> = HashMap::with_capacity(rows.len());
     for q in rows {
         if q.record_no.as_deref().is_none_or(str::is_empty) {
@@ -468,9 +486,15 @@ async fn export_queries(
         };
         let query_id = q.id;
         let mappings = mapping_by_query.remove(&query_id).unwrap_or_default();
-        let Some(def) = query_def(q, entity, mappings) else {
+        let Some(mut def) = query_def(q, entity, mappings) else {
             continue;
         };
+        if let Some((spec, params)) = spec_by_query.remove(&query_id) {
+            def.parameters = params
+                .and_then(|p| serde_json::from_value(p).ok())
+                .filter(|p: &Vec<attome_records::query_spec::saved::ParamDecl>| !p.is_empty());
+            def.query_spec = Some(spec);
+        }
         keys.insert(query_id, def.key());
         bundle.queries.push(def);
     }
