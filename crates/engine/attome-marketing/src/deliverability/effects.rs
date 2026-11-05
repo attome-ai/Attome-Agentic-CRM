@@ -44,7 +44,7 @@ pub async fn apply(db: &attome_db::DbPool) -> Result<EffectsRun, AppError> {
         let table = attome_core::quote_ident(entity);
         out.invalidated += sqlx::query(&format!(
             "UPDATE {table} t SET email_verification_status = 'invalid', modified_at = now(), \
-                 row_version = row_version + 1 \
+                 row_version = t.row_version + 1 \
              FROM email_suppression s \
              WHERE s.is_deleted = false AND s.reason = 'hard_bounce' \
                AND lower(t.email) = lower(s.email) \

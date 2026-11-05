@@ -321,7 +321,7 @@ pub async fn shift_in_tx(
     Ok(sqlx::query(
         "UPDATE opportunity_line_schedule s \
          SET period_start = (s.period_start::date + make_interval(months => $2))::date, \
-             modified_at = now(), row_version = row_version + 1 \
+             modified_at = now(), row_version = s.row_version + 1 \
          FROM opportunity_line l \
          WHERE l.id = s.line_ref AND l.opportunity_ref = $1 \
            AND (s.is_active IS NULL OR s.is_active = true)",
