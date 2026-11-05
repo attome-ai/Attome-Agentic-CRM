@@ -478,6 +478,50 @@ fn entity_list_sql(
     ))
 }
 
+/// V2-D1808: the columns of the filtered row (alias `t`) that `fragments`
+/// name, as `t.col` or `t."col"`; the share and parent subqueries use other
+/// aliases (`s`, `d`, `rls_parent`), so only the row's own columns are found.
+fn row_columns_named(fragments: &[String]) -> std::collections::BTreeSet<String> {
+    let mut names = std::collections::BTreeSet::new();
+    for sql in fragments {
+        let bytes = sql.as_bytes();
+        let ident = |b: u8| b.is_ascii_alphanumeric() || b == b'_';
+        let mut i = 0;
+        while i + 2 <= bytes.len() {
+            let starts = bytes[i] == b't'
+                && bytes[i + 1] == b'.'
+                && (i == 0
+                    || !(ident(bytes[i - 1]) || bytes[i - 1] == b'.' || bytes[i - 1] == b'"'));
+            if !starts {
+                i += 1;
+                continue;
+            }
+            let mut j = i + 2;
+            let name = if bytes.get(j) == Some(&b'"') {
+                j += 1;
+                let start = j;
+                while j < bytes.len() && bytes[j] != b'"' {
+                    j += 1;
+                }
+                let name = &sql[start..j];
+                j += 1;
+                name
+            } else {
+                let start = j;
+                while j < bytes.len() && ident(bytes[j]) {
+                    j += 1;
+                }
+                &sql[start..j]
+            };
+            if !name.is_empty() {
+                names.insert(name.to_owned());
+            }
+            i = j.max(i + 1);
+        }
+    }
+    names
+}
+
 /// D-521 — one immutable published version of a stored query.
 struct PinnedVersion {
     id: Uuid,
@@ -2584,6 +2628,14 @@ pub async fn execute_stored_query_with_definition(
         )
         .await?;
     }
+    // V2-D1808: how many of `conds` are the single-entity record scope
+    // (filters and search come after), checked against the query's output
+    // once it is described.
+    let scope_conds = if qrow.entity_logical_name.is_some() && !ctx.is_admin {
+        conds.len()
+    } else {
+        0
+    };
 
     // S1-T2: the generic list reads the entity's live attributes, not its
     // seeded default view (which selects only `id`, so every filter, sort
@@ -2719,6 +2771,49 @@ pub async fn execute_stored_query_with_definition(
                 .collect()
         }
     };
+
+    // V2-D1808: the record scope names the rows' own columns (`t.id`, and
+    // `t.organization_ref`, `t.owner_ref`, `t.owner_type` or a grant
+    // condition's field by the reader's access). A query whose output lacks
+    // one, such as an aggregate KPI or a view selecting a few attributes,
+    // cannot be narrowed to this reader: it is refused as forbidden rather
+    // than failing in the database. Administrators and readers no filter
+    // narrows still run it; a pack's KPI is declared as a QuerySpec, which
+    // applies the scope before aggregating.
+    if scope_conds > 0 {
+        let needed = row_columns_named(&conds[..scope_conds]);
+        if !needed.is_empty() {
+            let output: Vec<String> = if td_names.is_none() {
+                whitelist.clone()
+            } else {
+                let discovery_sql = format!("SELECT * FROM ({base_sql}) AS t LIMIT 0");
+                (&mut *tx)
+                    .describe(&discovery_sql)
+                    .await
+                    .map_err(AppError::internal)?
+                    .columns()
+                    .iter()
+                    .map(|column| column.name().to_owned())
+                    .collect()
+            };
+            let missing: Vec<&str> = needed
+                .iter()
+                .map(String::as_str)
+                .filter(|name| !output.iter().any(|o| o == name))
+                .collect();
+            if !missing.is_empty() {
+                tracing::warn!(
+                    query_id = %qrow.id,
+                    user_id = %ctx.user_id,
+                    ?missing,
+                    "records: a stored query does not return the columns the record filter \
+                     needs, so a reader below full read access is refused; declare it as a \
+                     QuerySpec or return these columns (V2-D1808)"
+                );
+                return Err(AppError::Forbidden);
+            }
+        }
+    }
 
     // A system column the SQL selects is always a valid filter and sort
     // identifier: the high-volume date window filters on `created_at` and a
@@ -3572,6 +3667,31 @@ pub fn routes() -> Router<EngineState> {
 
 #[cfg(test)]
 mod contract_tests {
+
+    /// V2-D1808: the row's own columns, not the share subqueries' or a
+    /// parent's, and quoted names unquoted.
+    #[test]
+    fn the_record_scope_names_only_the_rows_own_columns() {
+        let fragments = vec![
+            "(t.organization_ref = ANY($5::uuid[]) OR (t.owner_ref = $2::uuid AND t.owner_type = 0) \
+             OR EXISTS (SELECT 1 FROM record_share s WHERE s.record_id = t.id) \
+             OR EXISTS (SELECT 1 FROM \"account\" rls_parent WHERE rls_parent.id = t.\"account_ref\"))"
+                .to_owned(),
+            "(t.is_confidential = $7::boolean)".to_owned(),
+        ];
+        let names: Vec<String> = super::row_columns_named(&fragments).into_iter().collect();
+        assert_eq!(
+            names,
+            [
+                "account_ref",
+                "id",
+                "is_confidential",
+                "organization_ref",
+                "owner_ref",
+                "owner_type"
+            ]
+        );
+    }
 
     #[test]
     fn a_plan_s_row_estimate_is_read_from_its_top_node() {
