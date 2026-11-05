@@ -245,24 +245,6 @@ async fn record_evidence(
     ))
 }
 
-/// List drills
-///
-/// AB4-T6: recorded drills, newest first, without their evidence;
-/// optionally of one kind. Needs `ops.read`.
-#[utoipa::path(
-    get,
-    path = "/api/v1/ops/drills",
-    tag = "ops",
-    operation_id = "list_ops_drills",
-    params(DrillFilter, OnePageQuery),
-    responses(
-        (status = 200, description = "One page of drills", body = PaginatedResponse<DrillRun>),
-        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 403, description = "Caller lacks ops.read", body = ErrorResponse),
-        (status = 422, description = "An unknown kind", body = ErrorResponse),
-    ),
-    security(("session_cookie" = []), ("api_key" = [])),
-)]
 /// AB9-T9: the latest `limit` drills of `kind` (every kind when `None`),
 /// newest first, for an agent's read.
 pub async fn recent_runs(
@@ -281,6 +263,24 @@ pub async fn recent_runs(
     .map_err(AppError::internal)
 }
 
+/// List drills
+///
+/// AB4-T6: recorded drills, newest first, without their evidence;
+/// optionally of one kind. Needs `ops.read`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/ops/drills",
+    tag = "ops",
+    operation_id = "list_ops_drills",
+    params(DrillFilter, OnePageQuery),
+    responses(
+        (status = 200, description = "One page of drills", body = PaginatedResponse<DrillRun>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks ops.read", body = ErrorResponse),
+        (status = 422, description = "An unknown kind", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
 async fn list_drills(
     State(state): State<EngineState>,
     _ctx: Authorized<Privilege<OpsRead>>,
