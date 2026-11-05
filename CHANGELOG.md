@@ -22,6 +22,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The recovery drills page filters runs by kind, names the fault of a chaos run (`fault` on
+  `GET /api/v1/ops/drills` rows, from the evidence's `extra.fault`) and shows each run passed or
+  failed, oldest first (AB9-T8).
+- An Extensions admin screen lists each extension with its newest version and, for one, its
+  latest runs with time, fuel, result and masked log lines (AE2-T4).
 - `attome new extension <name> --kind hook|job|webhook` writes a Rust extension project that
   `attome dev` builds: the logic in a pure `decide` with unit tests, the calling convention, a
   starting `manifest.json` and a README (M17-T2).
