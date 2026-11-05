@@ -783,10 +783,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
-- A single-entity stored query whose output lacks a column the record filter needs (`id`, the
-  organisation or owner columns, a grant condition's field) answers `403` to a reader below full read
-  access instead of a `500`, with a warning naming the query and the columns (V2-D1808). Administrators
-  and full-read readers still run it.
+- A single-entity stored query whose output lacks a column the record filter needs (the organisation
+  or owner columns, a grant condition's field) no longer fails with a `500` for a reader below full
+  read access (V2-D1808): when it returns `id`, the filter runs on the entity's own rows through it;
+  with no `id` (an aggregate) it answers `403`, with a warning naming the query and the columns.
+  Administrators and full-read readers run it as before.
 - An entity whose pack adds an `owner_ref` lookup (contracts, ITSM, manufacturing, marketing and others) no
   longer selects the column twice: a reader whose role lets owners reach their own records (the Contract
   Requester, say) got a 500 listing it through `POST /api/v1/query/execute`, and the GraphQL schema named the
