@@ -388,26 +388,24 @@ async fn run_to_checkpoint(state: &EngineState, instance: Uuid) -> String {
 
 // feature: E9
 /// The workflow engine's execution claim opens a session-pinned runtime
-/// connection, which outside `APP_ENV=debug` needs `database.runtime`; the
-/// test database has only its bootstrap login, as in `attome-workflow`'s own
-/// suite (`tests/execution.rs`).
-fn debug_app_env() {
-    static ONCE: std::sync::Once = std::sync::Once::new();
-    // SAFETY: called first in the test, before its runtime starts; nextest
-    // runs each test in its own process, and no test here reads `APP_ENV`
-    // concurrently with this write.
-    #[allow(
-        unsafe_code,
-        reason = "the test sets APP_ENV before any thread reads it"
-    )]
-    ONCE.call_once(|| unsafe { std::env::set_var("APP_ENV", "debug") });
+/// connection, which needs `database.runtime`: here the test database's own
+/// bootstrap login. (`APP_ENV=debug` would also allow it, but makes the pool
+/// honor `DATABASE_URL`, which on CI names the shared base database rather
+/// than this test's throwaway one.)
+async fn start_with_runtime_login() -> Option<TestApp> {
+    TestApp::start_with(|config| {
+        config.database.runtime = Some(attome_config::RuntimeDbCredentials {
+            user: config.database.user.clone(),
+            password: config.database.password.clone().unwrap_or_default(),
+        });
+    })
+    .await
 }
 
 #[test]
 fn done_event_resumes_instance() {
-    debug_app_env();
     attome_testkit::run_shared(async {
-        let Some(app) = TestApp::start().await else {
+        let Some(app) = start_with_runtime_login().await else {
             return;
         };
         let _serial = SERIAL.lock().await;

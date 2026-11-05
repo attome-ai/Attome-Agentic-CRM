@@ -89,6 +89,22 @@ async fn drain(f: &Fixture) {
     }
 }
 
+/// Drains until `key`'s counts reach `want`, for up to 60 s: the consumer
+/// sees a change only once every older transaction has finished
+/// (`pg_snapshot_xmin`), which another test's open transaction holds back on
+/// a shared database, so one empty batch does not mean it is all read.
+async fn drain_until(f: &Fixture, key: &str, want: (i64, i64)) -> (i64, i64) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    loop {
+        drain(f).await;
+        let got = counts(f, key).await;
+        if got == want || std::time::Instant::now() > deadline {
+            return got;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    }
+}
+
 /// Sets `status` to `done`, as `session`'s agent when given.
 async fn complete(f: &Fixture, session: Option<Uuid>, record: Uuid) {
     let ctx = attome_security::resolve_uncached(f.db(), f.owner)
@@ -137,9 +153,8 @@ async fn ak3_agent_and_person_completions_split() {
 
     complete(&f, None, by_person).await;
     complete(&f, Some(f.session.id), by_agent).await;
-    drain(&f).await;
 
-    assert_eq!(counts(&f, &key).await, (1, 1), "agent, person");
+    assert_eq!(drain_until(&f, &key, (1, 1)).await, (1, 1), "agent, person");
     assert_eq!(f.record(untouched).await.0.as_deref(), Some("open"));
 }
 
@@ -150,8 +165,7 @@ async fn ak3_consumer_is_exactly_once() {
     let record = f.insert_record("open").await;
     drain(&f).await;
     complete(&f, None, record).await;
-    drain(&f).await;
-    let once = counts(&f, &key).await;
+    let once = drain_until(&f, &key, (0, 1)).await;
     drain(&f).await;
     assert_eq!(counts(&f, &key).await, once, "counted once");
     assert_eq!(once, (0, 1));

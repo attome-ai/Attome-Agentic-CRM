@@ -38,3 +38,11 @@ test-group = 'profiler-redis'
 [[profile.default.overrides]]
 filter = 'package(attome-testapp)'
 slow-timeout = { period = "60s", terminate-after = 5 }
+
+# The migration-path test replays the whole migration set ~20 times on
+# empty databases of its own (it also runs migration 0009's cluster-wide
+# roles, so it joins own-migrations).
+[[profile.default.overrides]]
+filter = 'binary(migration_path_independence)'
+test-group = 'own-migrations'
+slow-timeout = { period = "60s", terminate-after = 10 }

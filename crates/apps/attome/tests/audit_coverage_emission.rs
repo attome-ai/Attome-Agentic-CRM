@@ -2128,18 +2128,10 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
     let req = match key {
         // ── J5-T3: a WhatsApp template's variable map (Configuration Update) ─
         "PUT /api/v1/admin/integrations/whatsapp/templates/{template_id}/variables" => {
+            // The route reads only the template; its number (an
+            // `integration_system` row, a pack entity this harness does not
+            // provision) is named by id alone.
             let system = Uuid::now_v7();
-            sqlx::query(
-                "INSERT INTO integration_system \
-                    (id, name, kind, base_url, auth_type, service_principal_ref, status, config, created_at) \
-                 VALUES ($1, 'WhatsApp emission', 'channel', 'https://graph.facebook.com', 'api_key', $2, \
-                         'active', '{\"social\": \"whatsapp\", \"waba_id\": \"1\"}', NOW())",
-            )
-            .bind(system)
-            .bind(fx.admin_id.to_string())
-            .execute(&fx.base.db)
-            .await
-            .expect("seed a WhatsApp number");
             let template: Uuid = sqlx::query_scalar(
                 "INSERT INTO whatsapp_template (system_id, name, language, category, components, variables) \
                  VALUES ($1, 'order_ready', 'en', 'UTILITY', '[]', ARRAY['body.1']) RETURNING id",

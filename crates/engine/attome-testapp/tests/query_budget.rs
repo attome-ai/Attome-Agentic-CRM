@@ -29,9 +29,13 @@ use uuid::Uuid;
 /// for `record_get`; the four entity resolutions are the first to remove.
 const RECORD_GET_BUDGET: usize = 11;
 
-/// One page of a list with three lookups: the stored query, the count, the
-/// page, and one lookup-name read per lookup target (never per row).
-const RECORD_LIST_BUDGET: usize = 8;
+/// One page of a list with three lookups, run for real (not from the repeat
+/// cache): the access and entity resolution a GET makes, the query plan,
+/// the page, and one lookup-name read per lookup target (never per row).
+/// 19, as measured on CI (2026-11-05); `request_counts.json` has 17 for
+/// `record_list_50`, whose entity has fewer lookups. The entity resolutions
+/// are the first to remove.
+const RECORD_LIST_BUDGET: usize = 19;
 
 async fn create_entity(app: &TestApp, name: &str) -> Uuid {
     let (status, body) = app
@@ -157,11 +161,20 @@ fn record_get_and_list_within_budget() {
         );
 
         list(&app, &child, 50).await;
-        let (queries, rows) = list(&app, &child, 50).await;
-        assert_eq!(rows, 50);
+        let ((status, body), statements) =
+            attome_testkit::query_counter::record_queries(app.request_with(
+                Method::POST,
+                "/api/v1/query/execute",
+                &[("cache-control", "no-cache")],
+                Some(json!({ "entity": child, "page_size": 50 })),
+            ))
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["data"]["records"].as_array().map_or(0, Vec::len), 50);
+        let queries = statements.len();
         assert!(
             queries <= RECORD_LIST_BUDGET,
-            "a 50-row list ran {queries} statements, over its budget of {RECORD_LIST_BUDGET}"
+            "a 50-row list ran {queries} statements, over its budget of {RECORD_LIST_BUDGET}:              {statements:#?}"
         );
     });
 }

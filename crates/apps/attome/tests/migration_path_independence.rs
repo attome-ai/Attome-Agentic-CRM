@@ -65,10 +65,11 @@ const DEPLOYMENT_SCHEMA: &str = "attome_dev";
 /// stops working when a reconnect lands between them.
 ///
 /// That makes the choice of cut a real design decision rather than a detail.
-/// v1 carried 130+ migrations, so it replayed two cuts. v2's baseline is ten
-/// migrations, so this replays a cut after **every** migration but the last:
-/// every boundary where a session-scoped construct could leave state for a
-/// later migration is then covered, with no maintained list of special files.
+/// A cut after every migration is one full replay each, which at ~380
+/// migrations outruns any test timeout. So this cuts after each of the
+/// newest [`NEWEST_CUTS`] migrations, where a new session-scoped construct
+/// lands, and after every [`SPACED_CUT`]th one before them, with no
+/// maintained list of special files.
 #[tokio::test]
 async fn schema_does_not_depend_on_the_migration_path() {
     let single = attome_testkit::skip_if_no_db!(
@@ -89,7 +90,7 @@ async fn schema_does_not_depend_on_the_migration_path() {
     let reference = schema_snapshot(&single_pool).await;
     let reference_versions = applied_versions(&single_pool).await;
 
-    for &cut in &versions[..versions.len() - 1] {
+    for cut in cuts(&versions) {
         // What an upgrading customer deployment does: land on an older
         // release, reconnect, then take the rest later.
         let staged = attome_testkit::skip_if_no_db!(
@@ -120,6 +121,25 @@ async fn schema_does_not_depend_on_the_migration_path() {
             );
         }
     }
+}
+
+/// The newest migrations each get a cut after them.
+const NEWEST_CUTS: usize = 12;
+/// Older migrations get a cut after every this many.
+const SPACED_CUT: usize = 50;
+
+/// The versions to cut after: every [`SPACED_CUT`]th of the older ones and
+/// each of the [`NEWEST_CUTS`] newest, never the last (a cut there is the
+/// single pass).
+fn cuts(versions: &[i64]) -> Vec<i64> {
+    let cuttable = &versions[..versions.len() - 1];
+    let newest_from = cuttable.len().saturating_sub(NEWEST_CUTS);
+    cuttable
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i >= newest_from || i % SPACED_CUT == 0)
+        .map(|(_, v)| *v)
+        .collect()
 }
 
 /// A pool whose every connection lands on the deployment schema, matching what

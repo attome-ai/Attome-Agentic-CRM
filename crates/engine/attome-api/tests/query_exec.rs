@@ -1727,6 +1727,9 @@ fn stored_query_over_a_single_entity_respects_record_level_scoping() {
     .execute(&db)
     .await
     .expect("insert entity default share");
+        // As the share route does: the reader's next request resolves anew
+        // (and misses the repeat cache, keyed on the authz epoch).
+        security.invalidate(reader_id).await;
 
         let body = execute_query_body(app, &reader_cookie, qid).await;
         let rows = body["data"]["records"].as_array().expect("records array");
@@ -3688,8 +3691,11 @@ fn changes_since_permission_removal_lists_removed_only() {
             .await
             .unwrap();
 
-        let (status, page) = changes(&app, &reader_cookie, &logicalname, Some(&cursor)).await;
-        assert_eq!(status, StatusCode::OK, "{page}");
+        let wanted = record.to_string();
+        let page = changes_until(&app, &reader_cookie, &logicalname, &cursor, |page| {
+            removed_ids(page).contains(&wanted)
+        })
+        .await;
         assert!(removed_ids(&page).contains(&record.to_string()), "{page}");
         assert!(!upserted_ids(&page).contains(&record.to_string()), "{page}");
         assert!(

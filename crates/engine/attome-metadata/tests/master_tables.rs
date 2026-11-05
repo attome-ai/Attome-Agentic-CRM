@@ -74,6 +74,7 @@ async fn ensure_master_tables_is_idempotent() {
         vec![
             "external_id",
             "golden_id",
+            "held_payload",
             "held_reason",
             "id",
             "payload",
