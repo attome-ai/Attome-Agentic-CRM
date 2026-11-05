@@ -77,6 +77,53 @@ fn used_in(source: &str, path: &str) -> bool {
     })
 }
 
+/// The web source's lines, indexed by every word they hold (letters,
+/// digits, `_` and `-`), so a path is checked against the few lines naming
+/// its last segment instead of the whole source once per operation: that
+/// rescan took over a minute on Linux and stalled the Windows runner.
+struct WebIndex<'a> {
+    lines: Vec<&'a str>,
+    by_word: std::collections::HashMap<&'a str, Vec<usize>>,
+}
+
+impl<'a> WebIndex<'a> {
+    fn new(source: &'a str) -> Self {
+        let lines: Vec<&str> = source.lines().collect();
+        let mut by_word: std::collections::HashMap<&str, Vec<usize>> =
+            std::collections::HashMap::new();
+        for (i, line) in lines.iter().enumerate() {
+            for word in line
+                .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
+                .filter(|w| !w.is_empty())
+            {
+                let at = by_word.entry(word).or_default();
+                if at.last() != Some(&i) {
+                    at.push(i);
+                }
+            }
+        }
+        Self { lines, by_word }
+    }
+
+    /// [`used_in`] over the lines that name the path's last segment.
+    fn uses(&self, path: &str) -> bool {
+        let Some(last) = fixed_segments(path).last().copied() else {
+            return true;
+        };
+        // A segment such as `schedules:build` holds two words; its last one
+        // finds the candidate lines, which `used_in` then checks in full.
+        let word = last
+            .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
+            .rfind(|w| !w.is_empty())
+            .unwrap_or(last);
+        self.by_word
+            .get(word)
+            .into_iter()
+            .flatten()
+            .any(|&i| used_in(self.lines[i], path))
+    }
+}
+
 #[test]
 fn parity_report() {
     let Ok(text) = std::fs::read_to_string(repo().join("openapi.json")) else {
@@ -93,6 +140,7 @@ fn parity_report() {
         .filter_map(|d| d.id.0.split('.').next().map(str::to_owned))
         .collect();
 
+    let index = WebIndex::new(&web);
     let mut by_tag: BTreeMap<String, usize> = BTreeMap::new();
     let mut no_ui: Vec<String> = Vec::new();
     let methods = ["get", "post", "put", "patch", "delete"];
@@ -103,7 +151,7 @@ fn parity_report() {
             };
             let tag = op["tags"][0].as_str().unwrap_or("untagged").to_owned();
             *by_tag.entry(tag).or_default() += 1;
-            if !web.is_empty() && !used_in(&web, path) {
+            if !web.is_empty() && !index.uses(path) {
                 no_ui.push(format!("{} {path}", method.to_uppercase()));
             }
         }
@@ -141,4 +189,7 @@ fn parity_path_matching() {
     assert!(used_in(source, "/api/v1/billing/subscriptions/{id}"));
     assert!(!used_in(source, "/api/v1/billing/usage"));
     assert_eq!(fixed_segments("/api/v1/x/{id}/y"), ["api", "v1", "x", "y"]);
+    let index = WebIndex::new(source);
+    assert!(index.uses("/api/v1/billing/subscriptions/{id}"));
+    assert!(!index.uses("/api/v1/billing/usage"));
 }
