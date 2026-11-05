@@ -1,6 +1,7 @@
 /// Q11-T2: access review populations of machine identities.
 pub mod access_review_populations;
 pub mod accounts;
+pub mod acting_for;
 pub mod admin;
 /// AH3-T5: an agent principal narrowed to its sponsor and scope.
 pub mod agent_scope;

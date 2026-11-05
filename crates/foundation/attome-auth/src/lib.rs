@@ -110,7 +110,7 @@ pub mod webauthn;
 pub use apikey_hash::{PepperRing, VerifyOutcome, dummy_hmac_hash, verify_api_key_secret};
 pub use jwt::{create_token, validate_session_token, validate_token};
 pub use password::{NewPassword, hash_password_async, verify_password_async};
-pub use session::{SessionClaims, SessionId, TokenType};
+pub use session::{ActorClaim, SessionClaims, SessionId, TokenType};
 
 /// Advisory-lock namespace for every key taken under the `"attome-auth/…"`
 /// prefix (guidelines §2's `"{crate}/{operation}:{resource}"` convention) —

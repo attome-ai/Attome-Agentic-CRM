@@ -22,6 +22,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- An agent session token may carry the person the agent acts for (`act`, RFC 8693); a staff or portal
+  session carrying one is refused. Acting for a person, the agent gets only what both may do: the
+  person's record reach, the grants both hold, the lower access level per entity, never admin
+  (Z4-T8, `docs/access-model.md`).
 - `POST /api/v1/query/execute` runs a spec-only stored query (a saved QuerySpec, S4-T9) through the
   QuerySpec engine instead of answering 422, so a query widget, a metric, an agent or a document can
   use one; the record scope and field security apply before it aggregates. Filters narrow it; search,

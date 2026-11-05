@@ -219,6 +219,16 @@ Every audit row it writes names both people: the person's access was used (`acti
 (initiator `impersonation`, the session, and `impersonator:<administrator id>`), all in the v2 hash. The
 person sees every session about them at `GET /api/v1/me/impersonation-sessions`.
 
+## An agent acting for a person
+
+An agent session token may name the person the agent acts for (`sub`) and the agent (`act`, as in
+RFC 8693); a staff or portal session that carries `act` is refused. Such a request gets only what
+both may do: the records are reached through the person's own teams, units, subordinates and
+ownership; privileges and field read and write grants are those both hold; a field masked for either
+stays masked, and a grant condition of either must hold; each entity's access level is the lower of
+the two; and it is never an administrator, even when both are (Z4-T8, V2-D1812,
+`attome_security::acting_for`).
+
 ## Second factors by role
 
 Each role can set what it asks of a person signing in: a second factor `required`, `optional` or

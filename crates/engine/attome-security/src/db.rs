@@ -1033,9 +1033,18 @@ pub async fn resolve_entity_access_level(
     entity_name: &str,
     action: RecordAction,
 ) -> Result<AccessLevel, AppError> {
-    match crate::parent_access::link_for(entity_ref) {
-        Some(link) => entity_level(db, user_id, link.parent, &link.parent_name, action).await,
-        None => entity_level(db, user_id, entity_ref, entity_name, action).await,
+    let (entity_ref, entity_name) = match crate::parent_access::link_for(entity_ref) {
+        Some(link) => (link.parent, link.parent_name.clone()),
+        None => (entity_ref, entity_name.to_owned()),
+    };
+    let level = entity_level(db, user_id, entity_ref, &entity_name, action).await?;
+    // Z4-T8: an agent acting for this user reaches no further than itself.
+    match crate::acting_for::acting_agent().filter(|agent| *agent != user_id) {
+        Some(agent) => {
+            let agent_level = entity_level(db, agent, entity_ref, &entity_name, action).await?;
+            Ok(crate::acting_for::lower(level, agent_level))
+        }
+        None => Ok(level),
     }
 }
 
@@ -1467,6 +1476,26 @@ async fn resolve_hop(
 /// itself, with absolute values asserted alongside, so a matching pair of
 /// wrong answers still fails.
 pub async fn resolve_all_entity_access_levels(
+    db: &DbPool,
+    user_id: Uuid,
+    action: RecordAction,
+) -> Result<HashMap<String, (Uuid, AccessLevel)>, AppError> {
+    let mut levels = all_entity_access_levels(db, user_id, action).await?;
+    // Z4-T8: an agent acting for this user reaches no further than itself
+    // on any entity; one it has no level on is `None`.
+    if let Some(agent) = crate::acting_for::acting_agent().filter(|agent| *agent != user_id) {
+        let agent_levels = all_entity_access_levels(db, agent, action).await?;
+        for (name, (_, level)) in &mut levels {
+            let agent_level = agent_levels
+                .get(name)
+                .map_or(AccessLevel::None, |(_, level)| *level);
+            *level = crate::acting_for::lower(*level, agent_level);
+        }
+    }
+    Ok(levels)
+}
+
+async fn all_entity_access_levels(
     db: &DbPool,
     user_id: Uuid,
     action: RecordAction,

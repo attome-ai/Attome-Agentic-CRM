@@ -32,6 +32,14 @@ pub enum TokenType {
     S2sAccess,
 }
 
+/// Z4-T8: the RFC 8693 `act` claim an agent session token carries when the
+/// agent acts for a user: `sub` is then the user, `act.sub` the agent. Only
+/// an [`TokenType::AgentSession`] token may carry it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActorClaim {
+    pub sub: Uuid,
+}
+
 /// JWT claims embedded in the `session_token` HttpOnly cookie.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionClaims {

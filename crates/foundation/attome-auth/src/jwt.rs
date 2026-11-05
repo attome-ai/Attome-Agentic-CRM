@@ -17,7 +17,7 @@
 
 use std::sync::{Arc, PoisonError, RwLock};
 
-use crate::session::{SessionClaims, SessionId, TokenType};
+use crate::session::{ActorClaim, SessionClaims, SessionId, TokenType};
 use attome_config::KeyRing;
 use attome_types::AppError;
 use jsonwebtoken::{
@@ -243,6 +243,9 @@ struct SessionTokenClaims {
     #[serde(flatten)]
     claims: SessionClaims,
     sid: Uuid,
+    /// Z4-T8: the agent acting for `claims.sub`, on an agent session only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    act: Option<ActorClaim>,
 }
 
 /// Mints a session token whose `sid` names the refresh family `family_id`.
@@ -256,9 +259,52 @@ pub fn create_session_token(
         &SessionTokenClaims {
             claims: claims.clone(),
             sid: family_id,
+            act: None,
         },
         ring,
     )
+}
+
+/// Z4-T8: mints an agent session token (`typ` [`TokenType::AgentSession`])
+/// for `claims.sub`, carrying `act` when the agent acts for that user. Any
+/// other `typ` is refused: only an agent session names an actor.
+pub fn create_agent_session_token(
+    claims: &SessionClaims,
+    family_id: Uuid,
+    act: Option<ActorClaim>,
+    ring: &KeyRing,
+) -> Result<String, AppError> {
+    if claims.typ != TokenType::AgentSession {
+        return Err(AppError::internal(
+            "only an agent session token names an actor",
+        ));
+    }
+    encode_claims(
+        &SessionTokenClaims {
+            claims: claims.clone(),
+            sid: family_id,
+            act,
+        },
+        ring,
+    )
+}
+
+/// Z4-T8: validates an agent session token and answers its actor: `Some`
+/// when the agent acts for `claims.sub`. The caller resolves the context
+/// with `attome_security::acting_for` and serves the request inside its
+/// scope.
+pub fn validate_agent_session_token(
+    token: &str,
+    ring: &KeyRing,
+    issuer: &str,
+    audience: &str,
+) -> Result<(SessionClaims, SessionId, Option<ActorClaim>), AppError> {
+    let token_claims: SessionTokenClaims = decode_claims(token, ring)?;
+    let claims = token_claims.claims;
+    if claims.typ != TokenType::AgentSession || claims.iss != issuer || claims.aud != audience {
+        return Err(AppError::Unauthorized);
+    }
+    Ok((claims, SessionId(token_claims.sid), token_claims.act))
 }
 
 /// Validates a session-shaped token of an exact type `typ` whose `iss` and
@@ -273,6 +319,11 @@ pub fn validate_typed_session_token(
     audience: &str,
 ) -> Result<(SessionClaims, SessionId), AppError> {
     let token_claims: SessionTokenClaims = decode_claims(token, ring)?;
+    // Z4-T8: an actor is an agent session's only, and this validator does
+    // not hand it on; `validate_agent_session_token` does.
+    if token_claims.act.is_some() {
+        return Err(AppError::Unauthorized);
+    }
     let claims = token_claims.claims;
     if claims.typ != typ || claims.iss != issuer || claims.aud != audience {
         return Err(AppError::Unauthorized);
@@ -318,6 +369,10 @@ pub fn validate_session_token_with(
     audience: &str,
 ) -> Result<(SessionClaims, SessionId), AppError> {
     let token_claims: SessionTokenClaims = decode_claims_with(token, ring, eddsa)?;
+    // Z4-T8: a staff session never names an actor.
+    if token_claims.act.is_some() {
+        return Err(AppError::Unauthorized);
+    }
     let sid = SessionId(token_claims.sid);
     let claims = token_claims.claims;
     if claims.typ != TokenType::Session {
@@ -327,6 +382,80 @@ pub fn validate_session_token_with(
         return Err(AppError::Unauthorized);
     }
     Ok((claims, sid))
+}
+
+#[cfg(test)]
+mod act_tests {
+    use super::*;
+
+    fn ring() -> KeyRing {
+        KeyRing::single("test-only-hs256-secret-32-bytes-minimum".into())
+    }
+
+    fn claims(typ: TokenType) -> SessionClaims {
+        let now = chrono::Utc::now().timestamp();
+        SessionClaims {
+            sub: Uuid::now_v7(),
+            iat: now,
+            exp: now + 900,
+            jti: Uuid::now_v7(),
+            epoch: 0,
+            iss: "attome-test".into(),
+            aud: "attome-test".into(),
+            typ,
+        }
+    }
+
+    /// Z4-T8: only an agent session names an actor; a staff or portal
+    /// session token that carries one is refused.
+    #[test]
+    fn act_claim_on_session_token_is_refused() {
+        let act = Some(ActorClaim {
+            sub: Uuid::now_v7(),
+        });
+        assert!(
+            create_agent_session_token(&claims(TokenType::Session), Uuid::now_v7(), act, &ring())
+                .is_err()
+        );
+        // A forged staff session carrying `act` is refused by both validators.
+        let forged = encode_claims(
+            &SessionTokenClaims {
+                claims: claims(TokenType::Session),
+                sid: Uuid::now_v7(),
+                act,
+            },
+            &ring(),
+        )
+        .unwrap();
+        assert!(validate_session_token(&forged, &ring(), "attome-test", "attome-test").is_err());
+        assert!(
+            validate_typed_session_token(
+                &forged,
+                &ring(),
+                TokenType::Session,
+                "attome-test",
+                "attome-test"
+            )
+            .is_err()
+        );
+        // An agent session hands its actor on.
+        let agent = create_agent_session_token(
+            &claims(TokenType::AgentSession),
+            Uuid::now_v7(),
+            act,
+            &ring(),
+        )
+        .unwrap();
+        let (_, _, seen) =
+            validate_agent_session_token(&agent, &ring(), "attome-test", "attome-test").unwrap();
+        assert_eq!(seen, act);
+        // A staff session is not an agent session.
+        let staff =
+            create_session_token(&claims(TokenType::Session), Uuid::now_v7(), &ring()).unwrap();
+        assert!(
+            validate_agent_session_token(&staff, &ring(), "attome-test", "attome-test").is_err()
+        );
+    }
 }
 
 #[cfg(test)]
@@ -423,6 +552,7 @@ mod eddsa_tests {
                     typ: TokenType::Session,
                 },
                 sid: uuid::Uuid::now_v7(),
+                act: None,
             },
             &hs256(),
             Some(ring),
