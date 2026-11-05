@@ -233,13 +233,20 @@ jobs:
     steps:
       # The gate's test binaries outgrow the runner's free disk ("No space left
       # on device"); the preinstalled SDKs this job never uses free ~25 GB.
+      # 2026-11-05: shard 3 still ran out while linking the attome-testapp
+      # binaries, so this job also drops the whole tool cache (Go, Node,
+      # Python, Ruby, PyPy: this job runs none of them; the runner's own
+      # actions bring their Node), the JVMs, browsers and cloud CLIs other than
+      # aws, which the bucket step uses.
       - name: free disk space
         shell: bash
         run: |
           df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
-            /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell \
-            /usr/local/share/chromium
+            /opt/hostedtoolcache /usr/share/swift /usr/local/share/powershell \
+            /usr/local/share/chromium /usr/lib/jvm /usr/local/share/boost \
+            /usr/share/miniconda /usr/local/julia* /opt/google /opt/microsoft /opt/az \
+            /usr/lib/google-cloud-sdk /usr/local/lib/node_modules
           df -h /
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
