@@ -15,6 +15,8 @@ pub const DATE_OPS: &[&str] = &[
     "next_n_days",
     "this_week",
     "last_week",
+    "after_today",
+    "before_today",
     "this_month",
     "last_month",
     "this_quarter",
@@ -75,6 +77,9 @@ pub fn date_range(
         "today" => (today, today + Duration::days(1)),
         "last_n_days" => (today - Duration::days(days()?), today + Duration::days(1)),
         "next_n_days" => (today, today + Duration::days(days()? + 1)),
+        // Every day after today, or before it: `expires_on > CURRENT_DATE`.
+        "after_today" => (today + Duration::days(1), far_date(9999, 12, 31)?),
+        "before_today" => (far_date(1, 1, 1)?, today),
         // Weeks start on Monday, as PostgreSQL's `date_trunc('week', ...)`.
         "this_week" | "last_week" => {
             let monday = today - Duration::days(i64::from(today.weekday().num_days_from_monday()));
@@ -102,6 +107,12 @@ pub fn date_range(
         }
     };
     Ok((midnight(start, tz), midnight(end, tz)))
+}
+
+/// A fixed far date bounding an open-ended range.
+fn far_date(year: i32, month: u32, day: u32) -> Result<NaiveDate, AppError> {
+    NaiveDate::from_ymd_opt(year, month, day)
+        .ok_or_else(|| AppError::Validation("date out of range".into()))
 }
 
 /// The first day of the month `index` months after year 0's January.
@@ -142,6 +153,18 @@ mod tests {
             date_range("last_week", None, now, Tz::UTC, 1).unwrap(),
             (monday - Duration::days(7), monday)
         );
+    }
+
+    #[test]
+    fn after_and_before_today_leave_today_out() {
+        let now = "2026-11-05T10:00:00Z".parse::<DateTime<Utc>>().unwrap();
+        let today = "2026-11-05T00:00:00Z".parse::<DateTime<Utc>>().unwrap();
+        let (start, end) = date_range("after_today", None, now, Tz::UTC, 1).unwrap();
+        assert_eq!(start, today + Duration::days(1));
+        assert_eq!(end.year(), 9999);
+        let (start, end) = date_range("before_today", None, now, Tz::UTC, 1).unwrap();
+        assert_eq!(start.year(), 1);
+        assert_eq!(end, today);
     }
 
     fn at(s: &str) -> DateTime<Utc> {

@@ -358,6 +358,7 @@ reader's record scope and field security before it aggregates (V2-D1808). A sum 
 empty rather than `0`. A measure may carry its own `filter` (`FILTER (WHERE ...)`), which CS SLA
 Compliance, the contract playbook deviation count and retail visit compliance use; `this_week`
 and `last_week` take a week from Monday, as healthcare appointments and retail visit compliance do
-(healthcare `0002`). Queries QuerySpec cannot yet express stay SQL and run for administrators and
-full-read readers only: averages of a time difference (partner lead accept hours) and
-`expires_on > CURRENT_DATE` (partner certifications).
+(healthcare `0002`), and `after_today`/`before_today` every day after or before today, as partner
+certifications do for `expires_on`. One query stays SQL, as QuerySpec cannot average a time
+difference yet: partner lead accept hours, which runs for administrators and full-read readers
+only.

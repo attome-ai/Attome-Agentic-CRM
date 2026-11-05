@@ -35,6 +35,8 @@ pub const OPERATORS: &[&str] = &[
     "next_n_days",
     "this_week",
     "last_week",
+    "after_today",
+    "before_today",
     "this_month",
     "last_month",
     "this_quarter",
