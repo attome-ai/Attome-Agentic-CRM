@@ -4028,6 +4028,12 @@ pub const MIGRATION_WAVE: attome_jobs::JobType =
 pub const MIGRATION_FILES: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_api::migration_files::FILES_JOB, 1);
 
+/// A1-T5: one base's index rebuilt from its children's tables (payload
+/// `attome_records::base_index::ReindexJob`), queued by
+/// `POST /api/v1/admin/bases/{base}/reindex`.
+pub const BASE_REINDEX: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_records::base_index::JOB, 1);
+
 /// P13-T1: the warehouse export, every five minutes when entities are named.
 pub const WAREHOUSE_EXPORT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_integration::warehouse_export::JOB, 1);
@@ -6298,6 +6304,20 @@ pub fn register_job_types() {
                 let payload: attome_api::migration_files::FilesJob = job.payload()?;
                 attome_api::migration_files::run_files(&state, payload)
                     .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        // A1-T5: a base's index rebuild. Without this the reindex route
+        // answered 500 unknown_job_type (audit_coverage_emission found it).
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            BASE_REINDEX,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_records::base_index::ReindexJob = job.payload()?;
+                attome_records::base_index::reindex(&state, &payload.base)
+                    .await
+                    .map(|_| ())
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
             },
         ) {

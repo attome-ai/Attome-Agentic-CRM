@@ -82,6 +82,12 @@ ignore = [
     # moves to crypto-bigint 0.7 yet, so nothing to upgrade to. A timing leak
     # needs an attacker able to measure the signing host. Short revisit date:
     # move k256/p256 to their 0.14 line as soon as it is stable.
+    # pin-utils 0.1.1 — its repository was archived on 2026-10-01; no
+    # vulnerability, and no release replaces it. Reached only through
+    # async-imap (attome-integration's IMAP inbox); every async-imap release,
+    # 0.12.0 included, still depends on it (checked in the crates.io index on
+    # 2026-11-05), so the fix is an async-imap release that drops it.
+    { id = "RUSTSEC-2026-0441", reason = "Owner: @attome-ai/seniors — unmaintained, no vulnerability; only path is async-imap (IMAP inbox), whose every release incl. 0.12.0 still needs it; triaged 2026-11-05; fix = an async-imap release without it — revisit 2027-02-05" },
     { id = "RUSTSEC-2026-0387", reason = "Owner: @attome-ai/seniors — no fixed release on the crypto-bigint 0.5 line; reached via elliptic-curve 0.13 (k256 e-invoice signing, p256 WebAuthn verify); triaged 2026-10-28; fix = k256/p256 0.14 once stable — revisit 2026-11-28" },
 ]
 
