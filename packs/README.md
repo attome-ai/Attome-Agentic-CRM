@@ -342,3 +342,21 @@ in hours) and SLA attainment by customer. The pack's pages `service-manager` (op
 tickets, first contact resolution, average CSAT, backlog age, SLA attainment by customer, handle time,
 tickets past their SLA) and `service-agent` (the team's open tickets, those past their SLA first) open a
 ticket from any list, and its **Service** menu lands each role on its page.
+
+## KPI queries as QuerySpecs
+
+The KPI and summary queries several packs ship were plain SQL over one entity (`CRM: Open Pipeline
+Value`, `CRM: Lead Funnel`, `Education: Admissions Funnel` and the like). The record filter that
+narrows a stored query to its reader works on the query's output, and an aggregate's output has no
+`id`, organisation or owner column to narrow, so a reader below full read access was refused. Each
+pack's `*-kpi-queryspec` changeset (crm `0014`, contract-management `0009`, customer-service
+`0006`, marketing `0021`, partner `0010`, and `0002` or `0003` in education,
+enterprise-architecture, financial-services, government, manufacturing, nonprofit, retail and
+telecom-energy) re-declares those that QuerySpec can express as spec-only stored queries: same
+name, entity, privilege and output columns, run through the QuerySpec engine, which applies the
+reader's record scope and field security before it aggregates (V2-D1808). A sum over no rows is now
+empty rather than `0`. Queries QuerySpec cannot yet express stay SQL and run for administrators and
+full-read readers only: per-aggregate `FILTER` counts (CS SLA Compliance, contract playbook
+deviation count, retail visit compliance), averages of a time difference (partner lead accept
+hours), "this week" (healthcare appointments) and `expires_on > CURRENT_DATE` (partner
+certifications).

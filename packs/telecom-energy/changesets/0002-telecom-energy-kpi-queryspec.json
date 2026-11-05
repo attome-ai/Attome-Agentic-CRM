@@ -1,0 +1,71 @@
+{
+  "author": "packs",
+  "checksum": "sha256:7c111a4a05ca49b98d0a082e001ef3a93c6d0c4c71f595b25eacba032f5eb5f2",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "Pack KPIs as QuerySpecs (V2-D1808): Telecom and Energy: Requests by Stage are declared as spec-only stored queries, so query/execute runs them through the QuerySpec engine, which scopes them to each reader before it aggregates (their SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa86-c990-7a95-b658-5fbec5126889",
+  "layer": "product",
+  "name": "telecom-energy-kpi-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "tel_connection_request",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Telecom and Energy: Requests by Stage",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "requests",
+                "func": "count"
+              }
+            ],
+            "entity": "tel_connection_request",
+            "group_by": [
+              {
+                "field": "kind"
+              },
+              {
+                "field": "status"
+              }
+            ],
+            "sort": [
+              {
+                "field": "kind"
+              },
+              {
+                "field": "status"
+              }
+            ]
+          },
+          "required_privilege": "tel_connection_request.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "tel_connection_request",
+        "query": "Telecom and Energy: Requests by Stage"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "state",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "telecom-energy",
+  "seq": 2,
+  "title": "Pack: KPI queries as QuerySpecs"
+}

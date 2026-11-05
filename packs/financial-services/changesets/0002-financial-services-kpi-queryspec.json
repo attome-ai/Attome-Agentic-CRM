@@ -1,0 +1,70 @@
+{
+  "author": "packs",
+  "checksum": "sha256:7ec3d88e4a647cb5bffcc233b2c609240587544210d3f8263f94e1ae665c87ed",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "Pack KPIs as QuerySpecs (V2-D1808): Financial Services: Pipeline by Stage are declared as spec-only stored queries, so query/execute runs them through the QuerySpec engine, which scopes them to each reader before it aggregates (their SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa86-c983-7916-87ad-cd7dac3d3d24",
+  "layer": "product",
+  "name": "financial-services-kpi-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "fs_financing_application",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Financial Services: Pipeline by Stage",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "applications",
+                "func": "count"
+              },
+              {
+                "alias": "amount",
+                "field": "amount",
+                "func": "sum"
+              }
+            ],
+            "entity": "fs_financing_application",
+            "group_by": [
+              {
+                "field": "status"
+              }
+            ],
+            "sort": [
+              {
+                "field": "status"
+              }
+            ]
+          },
+          "required_privilege": "fs_financing_application.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "fs_financing_application",
+        "query": "Financial Services: Pipeline by Stage"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "state",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "financial-services",
+  "seq": 2,
+  "title": "Pack: KPI queries as QuerySpecs"
+}

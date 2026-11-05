@@ -1,0 +1,83 @@
+{
+  "author": "packs",
+  "checksum": "sha256:117a20a5d7cce6b1760aa01941e7830c0aa788f59f653bfba43e49d30e4c11c8",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "Pack KPIs as QuerySpecs (V2-D1808): Retail: Out of Stock Findings are declared as spec-only stored queries, so query/execute runs them through the QuerySpec engine, which scopes them to each reader before it aggregates (their SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa86-c98f-7f6e-a83c-cd46a933481a",
+  "layer": "product",
+  "name": "retail-kpi-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "rtl_store_audit",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Retail: Out of Stock Findings",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "outlets_out",
+                "func": "count"
+              }
+            ],
+            "entity": "rtl_store_audit",
+            "group_by": [
+              {
+                "field": "product_ref"
+              }
+            ],
+            "sort": [
+              {
+                "desc": true,
+                "field": "outlets_out"
+              }
+            ],
+            "where": {
+              "all": [
+                {
+                  "field": "on_shelf",
+                  "kind": "compare",
+                  "op": "eq",
+                  "value": false
+                },
+                {
+                  "field": "created_at",
+                  "kind": "compare",
+                  "op": "last_n_days",
+                  "value": 14
+                }
+              ],
+              "kind": "and"
+            }
+          },
+          "required_privilege": "rtl_store_audit.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "rtl_store_audit",
+        "query": "Retail: Out of Stock Findings"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "state",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "retail",
+  "seq": 2,
+  "title": "Pack: KPI queries as QuerySpecs"
+}

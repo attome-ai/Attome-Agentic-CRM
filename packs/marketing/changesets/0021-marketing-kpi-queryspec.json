@@ -1,0 +1,136 @@
+{
+  "author": "packs",
+  "checksum": "sha256:85ef7488d066bbe47821ae7f8f8c389b79262287fc93943fb942109275a93047",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "Pack KPIs as QuerySpecs (V2-D1808): Marketing: Leads per Lifecycle Stage, Leads per lifecycle stage, Contacts per lifecycle stage are declared as spec-only stored queries, so query/execute runs them through the QuerySpec engine, which scopes them to each reader before it aggregates (their SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa86-c98d-78fc-ab56-56069938430d",
+  "layer": "product",
+  "name": "marketing-kpi-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "lead",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Marketing: Leads per Lifecycle Stage",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "leads",
+                "func": "count"
+              }
+            ],
+            "entity": "lead",
+            "group_by": [
+              {
+                "field": "lifecycle_stage"
+              }
+            ],
+            "sort": [
+              {
+                "field": "lifecycle_stage"
+              }
+            ]
+          },
+          "required_privilege": "lead.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "lead",
+        "query": "Marketing: Leads per Lifecycle Stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "lead",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": true,
+          "name": "Leads per lifecycle stage",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "people",
+                "func": "count"
+              }
+            ],
+            "entity": "lead",
+            "group_by": [
+              {
+                "field": "lifecycle_stage"
+              }
+            ]
+          },
+          "required_privilege": "lead.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "lead",
+        "query": "Leads per lifecycle stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contact",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": true,
+          "name": "Contacts per lifecycle stage",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "people",
+                "func": "count"
+              }
+            ],
+            "entity": "contact",
+            "group_by": [
+              {
+                "field": "lifecycle_stage"
+              }
+            ]
+          },
+          "required_privilege": "contact.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "contact",
+        "query": "Contacts per lifecycle stage"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 21,
+  "title": "Pack: KPI queries as QuerySpecs"
+}

@@ -2,7 +2,7 @@
   "format": "attome-pack/v1",
   "name": "partner",
   "title": "Partner",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "level": "standard",
   "depends": [
     "contract-management",

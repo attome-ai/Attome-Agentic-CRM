@@ -1,0 +1,122 @@
+{
+  "author": "packs",
+  "checksum": "sha256:493a87468acc86af8f612865d389c39b315045691e69e68d185d346cbb06d97f",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "Pack KPIs as QuerySpecs (V2-D1808): Nonprofit: Giving by Fund This Year, Nonprofit: Aid Cases by Status are declared as spec-only stored queries, so query/execute runs them through the QuerySpec engine, which scopes them to each reader before it aggregates (their SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa86-c98e-757e-98b3-fba7c9f47858",
+  "layer": "product",
+  "name": "nonprofit-kpi-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "npo_gift",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Nonprofit: Giving by Fund This Year",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "gifts",
+                "func": "count"
+              },
+              {
+                "alias": "amount",
+                "field": "amount",
+                "func": "sum"
+              }
+            ],
+            "entity": "npo_gift",
+            "group_by": [
+              {
+                "field": "fund_ref"
+              }
+            ],
+            "sort": [
+              {
+                "desc": true,
+                "field": "amount"
+              }
+            ],
+            "where": {
+              "field": "received_on",
+              "kind": "compare",
+              "op": "this_year"
+            }
+          },
+          "required_privilege": "npo_gift.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "npo_gift",
+        "query": "Nonprofit: Giving by Fund This Year"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "npo_aid_case",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Nonprofit: Aid Cases by Status",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "cases",
+                "func": "count"
+              },
+              {
+                "alias": "approved",
+                "field": "approved_amount",
+                "func": "sum"
+              }
+            ],
+            "entity": "npo_aid_case",
+            "group_by": [
+              {
+                "field": "status"
+              }
+            ],
+            "sort": [
+              {
+                "field": "status"
+              }
+            ]
+          },
+          "required_privilege": "npo_aid_case.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "npo_aid_case",
+        "query": "Nonprofit: Aid Cases by Status"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "state",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "nonprofit",
+  "seq": 2,
+  "title": "Pack: KPI queries as QuerySpecs"
+}

@@ -1,0 +1,179 @@
+{
+  "author": "packs",
+  "checksum": "sha256:f64d6aaea85758ab10d69888de2a8d74e25a7993d910d6fafca8ce833e688fe2",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "Pack KPIs as QuerySpecs (V2-D1808): CRM: Active Accounts Count, CRM: Lead Funnel, CRM: Open Pipeline Value, CRM: Opportunities by Stage are declared as spec-only stored queries, so query/execute runs them through the QuerySpec engine, which scopes them to each reader before it aggregates (their SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa86-c97e-7e6a-8179-00fae4a0ea73",
+  "layer": "product",
+  "name": "crm-kpi-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "account",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CRM: Active Accounts Count",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "value",
+                "func": "count"
+              }
+            ],
+            "entity": "account"
+          },
+          "required_privilege": null,
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "account",
+        "query": "CRM: Active Accounts Count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "lead",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CRM: Lead Funnel",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "count",
+                "func": "count"
+              }
+            ],
+            "entity": "lead",
+            "group_by": [
+              {
+                "field": "lead_status"
+              }
+            ]
+          },
+          "required_privilege": null,
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "lead",
+        "query": "CRM: Lead Funnel"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CRM: Open Pipeline Value",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "value",
+                "field": "amount",
+                "func": "sum"
+              }
+            ],
+            "entity": "opportunity",
+            "where": {
+              "field": "stage",
+              "kind": "compare",
+              "op": "not_in",
+              "value": [
+                "closed_won",
+                "closed_lost"
+              ]
+            }
+          },
+          "required_privilege": null,
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "opportunity",
+        "query": "CRM: Open Pipeline Value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CRM: Opportunities by Stage",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "count",
+                "func": "count"
+              },
+              {
+                "alias": "total_amount",
+                "field": "amount",
+                "func": "sum"
+              }
+            ],
+            "entity": "opportunity",
+            "group_by": [
+              {
+                "field": "stage"
+              }
+            ],
+            "sort": [
+              {
+                "field": "stage"
+              }
+            ]
+          },
+          "required_privilege": null,
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "opportunity",
+        "query": "CRM: Opportunities by Stage"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "dashboard",
+      "state",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "crm",
+  "seq": 14,
+  "title": "Pack: KPI queries as QuerySpecs"
+}

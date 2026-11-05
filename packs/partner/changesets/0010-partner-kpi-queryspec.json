@@ -1,0 +1,172 @@
+{
+  "author": "packs",
+  "checksum": "sha256:938bd3cc2b0c85befd5a89a7248da3f5ab1401255f537d0514e4e791dcf395ad",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "Pack KPIs as QuerySpecs (V2-D1808): partner_pipeline, partner_won_revenue, partner_mdf_return are declared as spec-only stored queries, so query/execute runs them through the QuerySpec engine, which scopes them to each reader before it aggregates (their SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa86-c98e-7576-a3e8-0e2e4a8c51aa",
+  "layer": "product",
+  "name": "partner-kpi-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "partner_pipeline",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "pipeline",
+                "field": "amount",
+                "func": "sum"
+              }
+            ],
+            "entity": "opportunity",
+            "group_by": [
+              {
+                "field": "partner_account_ref"
+              }
+            ],
+            "where": {
+              "all": [
+                {
+                  "field": "partner_account_ref",
+                  "kind": "compare",
+                  "op": "is_not_null"
+                },
+                {
+                  "field": "stage",
+                  "kind": "compare",
+                  "op": "not_in",
+                  "value": [
+                    "closed_won",
+                    "closed_lost"
+                  ]
+                }
+              ],
+              "kind": "and"
+            }
+          },
+          "required_privilege": "partner_performance_snapshot.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "opportunity",
+        "query": "partner_pipeline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "partner_won_revenue",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "won_revenue",
+                "field": "amount",
+                "func": "sum"
+              }
+            ],
+            "entity": "opportunity",
+            "group_by": [
+              {
+                "field": "partner_account_ref"
+              }
+            ],
+            "where": {
+              "all": [
+                {
+                  "field": "partner_account_ref",
+                  "kind": "compare",
+                  "op": "is_not_null"
+                },
+                {
+                  "field": "stage",
+                  "kind": "compare",
+                  "op": "eq",
+                  "value": "closed_won"
+                }
+              ],
+              "kind": "and"
+            }
+          },
+          "required_privilege": "partner_performance_snapshot.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "opportunity",
+        "query": "partner_won_revenue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "partner_performance_snapshot",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "partner_mdf_return",
+          "parameters": [],
+          "query_spec": {
+            "entity": "partner_performance_snapshot",
+            "select": [
+              "partner_account_ref",
+              "as_of",
+              "mdf_spent",
+              "mdf_attributed_revenue"
+            ],
+            "sort": [
+              {
+                "field": "partner_account_ref"
+              },
+              {
+                "desc": true,
+                "field": "as_of"
+              }
+            ]
+          },
+          "required_privilege": "partner_performance_snapshot.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "query": "partner_mdf_return"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "partner",
+  "seq": 10,
+  "title": "Pack: KPI queries as QuerySpecs"
+}
