@@ -422,7 +422,9 @@ mod tests {
         let misses = check_targets(&map, &missed);
         assert_eq!(misses.len(), 4, "{misses:?}");
         assert!(
-            misses.iter().any(|m| m.starts_with("browser_journeys_min: 7")),
+            misses
+                .iter()
+                .any(|m| m.starts_with("browser_journeys_min: 7")),
             "{misses:?}"
         );
         assert!(misses.iter().any(|m| m.contains("no mutation score")));

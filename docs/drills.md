@@ -43,6 +43,9 @@ and when injecting it failed part way.
 | `queue-flood` | Interactive requests keep their latency while background jobs drain at the throttled pace; the backlog alert fires and clears. | Let the flood drain or cancel the flood jobs. | 300 s |
 | `network-delay` | Requests slow by the added delay but stay within their deadlines or fail at them; no retry storm (retries keep their budget). | Remove the netem delay. | 120 s (needs `--allow-net-admin`) |
 
+Before a release, `attome release --check --chaos` runs the suite against the release candidate
+on a rig (see [cutting a release](release.md)).
+
 ## Evidence
 
 Each report is `attome-evidence/v1`, described by

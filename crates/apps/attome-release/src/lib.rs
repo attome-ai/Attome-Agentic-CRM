@@ -93,6 +93,9 @@ pub struct Options {
     /// AA14-T6: also run the Core Web Vitals check on three key screens
     /// (`--web-vitals`; needs `e2e/node_modules` and its browsers).
     pub web_vitals: bool,
+    /// AB9-T10: also run the chaos suite against a test rig (`--chaos`;
+    /// the rig's flags in `ATTOME_CHAOS_SUITE_ARGS`).
+    pub chaos: bool,
 }
 
 /// One override: the step and why its failure may be accepted.
@@ -198,6 +201,10 @@ pub fn check_with(options: &Options) -> ExitCode {
     // AA14-T5: after the evidence is recorded, against the previous release.
     if options.perf {
         steps.push(("perf_compare", perf::step as Step));
+    }
+    // AB9-T10: every catalogue fault against the release candidate on a rig.
+    if options.chaos {
+        steps.push(("chaos_suite", chaos_suite as Step));
     }
     if let Some(unknown) = options
         .skip
@@ -523,6 +530,7 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
                     "--reproducible" => options.reproducible = true,
                     "--perf" => options.perf = true,
                     "--web-vitals" => options.web_vitals = true,
+                    "--chaos" => options.chaos = true,
                     "--by" => options.by = Some(rest.next()?.clone()),
                     "--skip" => options.skip.push(rest.next()?.clone()),
                     "--customer-tests" => {
@@ -1075,6 +1083,36 @@ fn clippy(root: &Path) -> Result<(), String> {
 /// server's 7865.
 const SMOKE_PORT: &str = "17865";
 
+/// AB9-T10: `attome drill chaos suite` against the release candidate on a
+/// test rig, with the rig's flags from `ATTOME_CHAOS_SUITE_ARGS` (space
+/// separated: `--key <drill key>`, the services, the steady state, ...);
+/// the signed reports go to `target/release-gate/chaos` unless the flags
+/// name `--out`. A fault that is not ok fails the step, so it blocks the tag.
+/// The suite itself refuses a production deployment.
+fn chaos_suite(root: &Path) -> Result<(), String> {
+    let flags = std::env::var(CHAOS_SUITE_ARGS).map_err(|_| {
+        format!(
+            "--chaos needs {CHAOS_SUITE_ARGS}: the rig's `attome drill chaos suite` flags \
+             (--key <drill key> and its services)"
+        )
+    })?;
+    let exe = root.join("target").join("debug").join(if cfg!(windows) {
+        "attome.exe"
+    } else {
+        "attome"
+    });
+    let mut command = Command::new(&exe);
+    command.args(["drill", "chaos", "suite"]);
+    command.args(flags.split_whitespace());
+    if !flags.split_whitespace().any(|flag| flag == "--out") {
+        command.arg("--out").arg(gate_dir(root).join("chaos"));
+    }
+    run(&mut command, root, "attome drill chaos suite")
+}
+
+/// The variable `--chaos` reads the rig's suite flags from.
+pub const CHAOS_SUITE_ARGS: &str = "ATTOME_CHAOS_SUITE_ARGS";
+
 /// AC4-T8 (D-764): the server the gate just installed boots. `attome
 /// preflight` must pass on its configuration, `attome serve` must answer
 /// `/health/ready` with 200 within two minutes, and the server is stopped on
@@ -1469,6 +1507,7 @@ mod tests {
             skip: Vec::new(),
             customer_tests: None,
             web_vitals: false,
+            chaos: false,
             overrides: overrides
                 .iter()
                 .map(|(step, reason)| Override {
