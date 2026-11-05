@@ -6,7 +6,7 @@
 //! these kinds only answer "does it exist" (via [`Kind::adapter_table`]) and
 //! describe themselves; they have no document shape of their own to edit.
 
-use attome_model::kinds::{ATTRIBUTE, ENTITY};
+use attome_model::kinds::{ATTRIBUTE, ENTITY, QUERY};
 use attome_model::{Artefact, CookInput, Issue, Kind, KindName, Reference, ValidationCtx};
 use attome_types::AppError;
 use serde_json::{Value, json};
@@ -54,13 +54,21 @@ pub const RELATIONSHIP_KIND: AdapterKind = AdapterKind {
     description: "A relationship: a many-to-many link between two entities. Change it through the schema API.",
 };
 
+/// V2-D1815: stored queries, over `sql_query`, which a view reads.
+pub const QUERY_KIND: AdapterKind = AdapterKind {
+    name: QUERY,
+    table: "sql_query",
+    description: "A stored query: the rows a view or report reads. Change it through the query API.",
+};
+
 /// Every adapter kind, in registration order.
-pub const ADAPTER_KINDS: [AdapterKind; 5] = [
+pub const ADAPTER_KINDS: [AdapterKind; 6] = [
     ENTITY_KIND,
     ATTRIBUTE_KIND,
     RULE_KIND,
     STATE_MODEL_KIND,
     RELATIONSHIP_KIND,
+    QUERY_KIND,
 ];
 
 impl Kind for AdapterKind {
@@ -122,7 +130,14 @@ mod tests {
         let names: Vec<&str> = ADAPTER_KINDS.iter().map(|k| k.name().as_str()).collect();
         assert_eq!(
             names,
-            ["entity", "attribute", "rule", "state_model", "relationship"]
+            [
+                "entity",
+                "attribute",
+                "rule",
+                "state_model",
+                "relationship",
+                "query"
+            ]
         );
         assert_eq!(RELATIONSHIP_KIND.adapter_table(), Some("relationship_info"));
     }

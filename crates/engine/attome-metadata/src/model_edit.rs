@@ -46,6 +46,8 @@ fn registered_kinds() -> Vec<Arc<dyn Kind>> {
         Arc::new(attome_model::kinds::DecisionTableKind),
         // Q14-T2: sharing rules, applied in the record filter.
         Arc::new(attome_model::kinds::SharingRuleKind),
+        // V2-D1815: views, before their reads move to the model.
+        Arc::new(attome_model::kinds::ViewKind),
     ];
     for adapter in crate::kinds::ADAPTER_KINDS {
         kinds.push(Arc::new(adapter));

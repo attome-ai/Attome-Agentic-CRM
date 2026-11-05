@@ -25,6 +25,7 @@ pub mod sharing_rule;
 pub mod stage_process;
 pub mod survey;
 pub mod tour;
+pub mod view;
 
 pub use agent::{AGENT, AgentKind};
 pub use business_event::{BUSINESS_EVENT, BusinessEventKind};
@@ -50,3 +51,4 @@ pub use sharing_rule::{CookedSharingRule, SHARING_RULE, SharingRuleKind};
 pub use stage_process::{STAGE_PROCESS, StageProcessKind};
 pub use survey::{SURVEY, SurveyKind};
 pub use tour::{TOUR, TourKind};
+pub use view::{QUERY, VIEW, ViewKind};

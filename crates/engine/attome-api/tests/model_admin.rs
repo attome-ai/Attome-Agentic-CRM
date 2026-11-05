@@ -306,6 +306,7 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
                 "option_set",
                 "page",
                 "prompt_override",
+                "query",
                 "record_template",
                 "record_type",
                 "relationship",
@@ -316,7 +317,8 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
                 "stage_process",
                 "state_model",
                 "survey",
-                "tour"
+                "tour",
+                "view"
             ]
         );
         let resp = app
