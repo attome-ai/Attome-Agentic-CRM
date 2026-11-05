@@ -158,6 +158,26 @@ To start from a real case, `POST /api/v1/admin/customer-tests/from-record` (or *
 on the screen) drafts a test that re-creates a record and checks each field still holds its value
 once saved, so a rule, default or flow that changes it shows; edit it from there.
 
+## Performance guards
+
+Each guard fails a run when a measured number passes its recorded limit; none is skipped by
+default where its inputs exist.
+
+| Guard | What it holds | Command | Baseline |
+|---|---|---|---|
+| Plan guards (`perf_plans` gate step) | the audit and record queries keep using their indexes on a seeded table | `cargo test -p attome-audit --test explain_evidence` and `-p attome-records --test query_plan_evidence` (need `DATABASE_URL`) | the plans asserted in those tests |
+| Query budgets | SQL statements per hot record request, so an N+1 shows | `cargo test -p attome-testapp --test query_budget` | the counts in the test |
+| Request counts | SQL statements and Redis commands for get, list 50, update, search and sign-in | `cargo test -p attome --test request_counts` | `crates/apps/attome/tests/request_counts.json` |
+| Bundle budgets | the eager bundle (Angular `budgets` in `web/angular.json`) and each lazy chunk | `npm run build` then `npm run check:chunks` in `web/` | `web/angular.json`, `web/scripts/chunk-budget.mjs` |
+| Core Web Vitals (`web_vitals`, with `--web-vitals`) | largest paint within 2.5 s and interaction within 200 ms on three screens over a throttled link | `attome release --check --web-vitals` (needs `e2e/node_modules` and a production build) | the limits in `e2e/perf/web-vitals.spec.ts`; numbers kept as `target/release-gate/web-vitals.json` |
+| Load-test regression (`perf_compare`, with `--perf`) | each SLO class's median p95 against the previous release on the same machine | `attome perf record --release <v>` then `attome perf compare` | `docs/perf-history/` and each class's `regression_threshold_pct` in `observability/slo-catalogue.json` |
+
+Reading a failure: a plan guard prints the `EXPLAIN` it got, so the index it stopped using is named;
+a budget failure prints the request, its count and its budget; a chunk failure names the chunk and
+its size; `perf_compare` prints each class's previous and new p95. Fix the code first. A limit is
+raised only on purpose, in the same commit as the change that needs it and with the reason; a count
+that drops below its budget is printed, and that commit lowers the budget too.
+
 ## Mutation testing
 
 `attome test mutants` runs `cargo mutants` (install it with `cargo install cargo-mutants --locked`)
