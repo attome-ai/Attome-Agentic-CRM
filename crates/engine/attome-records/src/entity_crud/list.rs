@@ -336,9 +336,14 @@ fn default_select(
         .iter()
         .filter(|c| attome_core::data_definition::system_column_type(c).is_some())
         .map(|c| (*c).to_owned());
+    // An attribute named like a system column (a pack's `owner_ref` lookup)
+    // is that column, already selected above.
     let attrs = meta
         .attrs
         .iter()
+        .filter(|attr| {
+            attome_core::data_definition::system_column_type(&attr.logicalname).is_none()
+        })
         .filter(|attr| {
             !matches!(
                 field_gate::projection(ctx, &meta.logicalname, attr, primary, Surface::Interactive),

@@ -229,11 +229,20 @@ fn shapes(state: &EngineState, ctx: &SecurityContext) -> Vec<EntityShape> {
                     .and_then(|id| registry.get_by_id(id))
                     .map(|t| t.logicalname.clone())
                     .filter(|t| readable.contains(t) && is_graphql_name(t));
-                fields.push(FieldShape {
-                    name: attr.logicalname.clone(),
-                    kind: attr.field_type(),
-                    target,
-                });
+                // A pack's `owner_ref` lookup over the system column is that
+                // field: it gains the attribute's target, never a second
+                // field of the same name.
+                match fields.iter_mut().find(|f| f.name == attr.logicalname) {
+                    Some(existing) => {
+                        existing.kind = attr.field_type();
+                        existing.target = target;
+                    }
+                    None => fields.push(FieldShape {
+                        name: attr.logicalname.clone(),
+                        kind: attr.field_type(),
+                        target,
+                    }),
+                }
             }
             EntityShape {
                 name: meta.logicalname.clone(),
