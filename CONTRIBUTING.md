@@ -76,6 +76,21 @@ request whose gate is not green is not reviewed. Add `--web` when you changed th
   CHANGELOG line.
 - Never commit a secret, a real customer's data or a deployment's configuration.
 
+### Rules the lints and checks enforce
+
+- `unwrap()` is denied by clippy outside tests (`unwrap_used = "deny"` in the workspace
+  `Cargo.toml`); `expect()` warns, and the release gate makes a warning an error. Production code
+  returns a typed error instead.
+- Blocking calls are refused in server code: `clippy.toml` disallows `std::thread::sleep` (wait with
+  `tokio::time::sleep`) and `Pool::begin` (open a transaction through `attome_db::tx::begin`). A
+  genuinely synchronous thread carries an `#[expect(clippy::disallowed_methods, reason = "...")]`.
+- `unsafe` code is denied workspace-wide.
+- Every in-process queue and cache has a size bound: `crates/apps/attome/tests/bounded_state.rs`
+  fails on an unbounded channel or a moka cache without `max_capacity`; a reviewed exception goes in
+  `bounded_state_allow.txt` with its reason.
+- Parsers of outside input have fuzz targets; `scripts/fuzz-all.ps1` runs each one for a set time
+  (nightly cargo-fuzz, under WSL on Windows) and fails on a crash.
+
 ## Opening the pull request
 
 - Describe what changed and why, and link the issue.

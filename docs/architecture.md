@@ -62,3 +62,11 @@ cooked artefacts, never the store. Administrators reach it under `/api/v1/admin/
 
 `attome release --check` runs formatting, clippy (warnings are errors) and the tests, the same way on
 Windows and Linux. A change is ready only when it passes.
+
+### Safety rules the gate enforces
+
+- Lints: `unsafe_code` and clippy's `unwrap_used` are denied outside tests; `clippy.toml` disallows
+  `std::thread::sleep` and `Pool::begin` in favour of `tokio::time::sleep` and `attome_db::tx::begin`.
+- Bounded state: `crates/apps/attome/tests/bounded_state.rs` refuses an unbounded in-process queue or
+  cache, with reviewed exceptions in `bounded_state_allow.txt`.
+- Fuzzing: `scripts/fuzz-all.ps1` runs every cargo-fuzz target of the parsers that read outside input.

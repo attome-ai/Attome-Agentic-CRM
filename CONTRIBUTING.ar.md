@@ -68,6 +68,19 @@ cargo run -p attome-release --target-dir target/gate -- --check
   البرمجية يُذكر تحت `### Breaking` في [`CHANGELOG.md`](CHANGELOG.md)، وكل تغيير ظاهر للمستخدم يحصل على سطر فيه.
 - لا تودِع سرًّا أو بيانات عميل حقيقي أو إعدادات نشر أبدًا.
 
+### قواعد تفرضها أدوات الفحص
+
+- `unwrap()` ممنوع بـ clippy خارج الاختبارات (`unwrap_used = "deny"` في `Cargo.toml` الخاص بمساحة العمل)؛ و`expect()`
+  يُطلق تحذيرًا، وبوابة الإصدار تعامل التحذير كخطأ. الشيفرة الإنتاجية تُرجع خطأً محدد النوع بدلًا من ذلك.
+- الاستدعاءات الحاجبة مرفوضة في شيفرة الخادم: يمنع `clippy.toml` استخدام `std::thread::sleep` (انتظر بـ
+  `tokio::time::sleep`) و`Pool::begin` (افتح المعاملة عبر `attome_db::tx::begin`). الخيط المتزامن فعلًا يحمل
+  `#[expect(clippy::disallowed_methods, reason = "...")]`.
+- الشيفرة `unsafe` ممنوعة في مساحة العمل كلها.
+- لكل طابور وذاكرة مؤقتة داخل العملية حدٌّ للحجم: يفشل `crates/apps/attome/tests/bounded_state.rs` عند قناة بلا حد أو
+  ذاكرة moka بلا `max_capacity`؛ والاستثناء المُراجَع يوضع في `bounded_state_allow.txt` مع سببه.
+- لمحلِّلات المدخلات الخارجية أهداف fuzz؛ يشغّل `scripts/fuzz-all.ps1` كل هدف لمدة محددة (cargo-fuzz على nightly، وتحت
+  WSL على Windows) ويفشل عند أي انهيار.
+
 ## فتح طلب الدمج
 
 - صِف ما تغيّر ولماذا، واربط المسألة. يوجد قالب لطلب الدمج.
