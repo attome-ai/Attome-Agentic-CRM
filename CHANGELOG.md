@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Test targets (AC5-T10): `docs/test-targets.json` sets the floors for negative-path coverage of
+  mutating operations (7 percent today) and browser tests (6); `attome test map --check-targets`
+  and the release gate's new `test_targets` step fail naming a missed one.
 - `docs/enrichment.md` states the no-bundled-dataset rule (V2-D367), what is on by default, and
   what each enrichment source is sent and where it is processed (D24-T13).
 - Bulk operations take JSON lines and give a result file (S5-T1): `POST /api/v1/{entity}/bulk/lines`

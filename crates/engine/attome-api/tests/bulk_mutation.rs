@@ -1672,6 +1672,8 @@ async fn process_partial_failure_marks_one_item_failed_and_completes_the_rest() 
 /// file carries one line per record: `ok` with the written record for the
 /// row that applied, `problem` for the stale one. Another user cannot read
 /// the results, and a bad line is refused naming it.
+// op: POST /api/v1/{entity}/bulk/lines, GET /api/v1/{entity}/bulk/{id}/results
+// negative: POST /api/v1/{entity}/bulk/lines
 #[tokio::test]
 async fn json_lines_bulk_runs_and_its_result_file_has_a_line_per_record() {
     let system = skip_if_no_db!(test_system().await);

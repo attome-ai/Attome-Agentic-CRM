@@ -168,6 +168,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("format", format as Step),
         ("clippy", clippy as Step),
         ("tests", tests as Step),
+        ("test_targets", test_targets as Step),
         ("perf_plans", perf_plans as Step),
         ("packs", packs::step as Step),
         ("contract", contract_step as Step),
@@ -378,6 +379,32 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             _ => None,
         },
         Some("test") if args.get(1).map(String::as_str) == Some("map") => {
+            // AC5-T10: `--check-targets <file>` writes the map, then exits 2
+            // naming every target it misses.
+            if let Some([flag, file]) = args.get(2..)
+                && flag == "--check-targets"
+            {
+                return Some(
+                    match workspace_root()
+                        .and_then(|root| test_map::run_check(&root, &root.join(file)))
+                    {
+                        Ok(misses) if misses.is_empty() => {
+                            say("test targets: all met");
+                            ExitCode::SUCCESS
+                        }
+                        Ok(misses) => {
+                            for miss in misses {
+                                eprintln!("test target missed: {miss}");
+                            }
+                            ExitCode::from(2)
+                        }
+                        Err(error) => {
+                            eprintln!("attome test map: {error}");
+                            ExitCode::FAILURE
+                        }
+                    },
+                );
+            }
             let scan_only = match args.get(2..) {
                 Some([]) => false,
                 Some([flag]) if flag == "--scan-only" => true,
@@ -1230,6 +1257,31 @@ fn cargo_deny(root: &Path) -> Result<(), String> {
         root,
         "cargo deny check",
     )
+}
+
+/// AC5-T10: the coverage map against `docs/test-targets.json`; a missed
+/// target fails the step, naming it. The targets file and the map are copied
+/// into `target/release-gate/` for the release notes.
+fn test_targets(root: &Path) -> Result<(), String> {
+    let targets = root.join(test_map::TARGETS_FILE);
+    let misses = test_map::run_check(root, &targets)?;
+    let out = root.join("target").join("release-gate");
+    std::fs::create_dir_all(&out).map_err(|error| format!("{}: {error}", out.display()))?;
+    for (from, name) in [
+        (targets.clone(), "test-targets.json"),
+        (
+            root.join("target").join("coverage-map").join("map.json"),
+            "coverage-map.json",
+        ),
+    ] {
+        std::fs::copy(&from, out.join(name))
+            .map_err(|error| format!("{}: {error}", from.display()))?;
+    }
+    if misses.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("test targets missed: {}", misses.join("; ")))
+    }
 }
 
 fn tests(root: &Path) -> Result<(), String> {

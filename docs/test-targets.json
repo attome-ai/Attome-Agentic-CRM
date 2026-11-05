@@ -1,0 +1,5 @@
+{
+  "$comment": "AC5-T10: the floors the release gate's test_targets step holds the coverage map to (attome test map --check-targets docs/test-targets.json). Measured on 2026-11-05: 79 of 1111 mutating operations carry a negative: test (7 percent, rounded down) and 13 browser tests. Raise a floor when coverage rises; lower one only with the owner's agreement. mutation_score_min joins when AC5-T9 records the first mutation baselines.",
+  "mutating_ops_with_negative_pct": 7,
+  "browser_journeys_min": 6
+}

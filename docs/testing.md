@@ -45,6 +45,14 @@ The same comments work above `it(`/`test(` in `.spec.ts` files. `attome test map
 is a gap), and per API operation, whether a test tags it and, for a mutating one, whether a
 `negative:` test does. `attome test map --scan-only` prints the test count per tier.
 
+`docs/test-targets.json` holds the floors the coverage map must meet: the percentage of mutating
+operations a `negative:` test tags (`mutating_ops_with_negative_pct`) and the number of browser
+tests (`browser_journeys_min`); per-crate mutation scores (`mutation_score_min`) join once mutation
+baselines are recorded. `attome test map --check-targets docs/test-targets.json` writes the map and
+exits 2 naming each missed target; the release gate's `test_targets` step runs the same check and
+copies the targets and the map into `target/release-gate/` for the release notes. Raise a floor when
+coverage rises; a new mutating route without a `negative:` test lowers the percentage.
+
 Tests that need PostgreSQL, Redis or an object store skip without them, printing `SKIP`; the
 `ATTOME_TEST_REQUIRE_DB`, `ATTOME_TEST_REQUIRE_REDIS` and `ATTOME_TEST_REQUIRE_S3` switches (set
 by `--release` and by CI) turn a skip into a failure.

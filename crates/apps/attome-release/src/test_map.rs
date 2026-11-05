@@ -315,9 +315,124 @@ pub fn run(root: &Path, scan_only: bool) -> Result<Vec<PathBuf>, String> {
     Ok(vec![json_path, html_path])
 }
 
+/// The repository's test targets (roadmap AC5-T10), checked by
+/// `attome test map --check-targets` and the gate's `test_targets` step.
+pub const TARGETS_FILE: &str = "docs/test-targets.json";
+
+/// The share of mutating operations a `negative:` test tags, in whole
+/// percent rounded down; 100 when there are none.
+pub fn negative_pct(map: &Value) -> u64 {
+    let mutating = map["operations"]["mutating"].as_u64().unwrap_or(0);
+    let missing = map["operations"]["no_negative"]
+        .as_array()
+        .map_or(0, Vec::len) as u64;
+    if mutating == 0 {
+        return 100;
+    }
+    mutating.saturating_sub(missing) * 100 / mutating
+}
+
+/// Every target `map` misses, each naming the target, its floor and the
+/// measured value; empty when all are met. A target the map cannot measure
+/// (an unknown key, or a mutation score with no result) is a miss too, so a
+/// typo never passes silently.
+pub fn check_targets(map: &Value, targets: &Value) -> Vec<String> {
+    let mut misses = Vec::new();
+    let Some(targets) = targets.as_object() else {
+        return vec!["the targets file is not a JSON object".to_owned()];
+    };
+    for (key, floor) in targets {
+        if key.starts_with('$') || key == "format" {
+            continue;
+        }
+        match key.as_str() {
+            "mutating_ops_with_negative_pct" | "browser_journeys_min" => {
+                let Some(floor) = floor.as_u64() else {
+                    misses.push(format!("{key}: the target is not a whole number"));
+                    continue;
+                };
+                let measured = if key == "browser_journeys_min" {
+                    map["totals"]["browser"].as_u64().unwrap_or(0)
+                } else {
+                    negative_pct(map)
+                };
+                if measured < floor {
+                    misses.push(format!("{key}: {measured} is below the target {floor}"));
+                }
+            }
+            "mutation_score_min" => {
+                for (krate, floor) in floor.as_object().into_iter().flatten() {
+                    let floor = floor.as_f64().unwrap_or(f64::INFINITY);
+                    match map["mutation"][krate.as_str()].as_f64() {
+                        Some(score) if score >= floor => {}
+                        Some(score) => misses.push(format!(
+                            "mutation_score_min.{krate}: {score} is below the target {floor}"
+                        )),
+                        None => misses.push(format!(
+                            "mutation_score_min.{krate}: no mutation score was measured"
+                        )),
+                    }
+                }
+            }
+            other => misses.push(format!("{other}: not a target the map measures")),
+        }
+    }
+    misses
+}
+
+/// `attome test map --check-targets <file>`: writes the map, then checks it
+/// against the targets. `Ok` with the misses (empty when every target is met).
+pub fn run_check(root: &Path, targets_file: &Path) -> Result<Vec<String>, String> {
+    run(root, false)?;
+    let map_path = root.join("target").join("coverage-map").join("map.json");
+    let map: Value = std::fs::read_to_string(&map_path)
+        .map_err(|error| format!("{}: {error}", map_path.display()))
+        .and_then(|text| {
+            serde_json::from_str(&text).map_err(|error| format!("{}: {error}", map_path.display()))
+        })?;
+    let targets: Value = std::fs::read_to_string(targets_file)
+        .map_err(|error| format!("{}: {error}", targets_file.display()))
+        .and_then(|text| {
+            serde_json::from_str(&text)
+                .map_err(|error| format!("{}: {error}", targets_file.display()))
+        })?;
+    Ok(check_targets(&map, &targets))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn below_target_fails_check() {
+        let map = json!({
+            "totals": { "browser": 7 },
+            "operations": { "mutating": 10, "no_negative": ["a", "b", "c", "d"] },
+        });
+        assert_eq!(negative_pct(&map), 60);
+        let met = json!({ "mutating_ops_with_negative_pct": 60, "browser_journeys_min": 6 });
+        assert!(check_targets(&map, &met).is_empty());
+
+        let missed = json!({
+            "mutating_ops_with_negative_pct": 61,
+            "browser_journeys_min": 8,
+            "mutation_score_min": { "attome-security": 0.5 },
+            "mutating_ops_negative": 1,
+        });
+        let misses = check_targets(&map, &missed);
+        assert_eq!(misses.len(), 4, "{misses:?}");
+        assert!(
+            misses.iter().any(|m| m.starts_with("browser_journeys_min: 7")),
+            "{misses:?}"
+        );
+        assert!(misses.iter().any(|m| m.contains("no mutation score")));
+        assert!(misses.iter().any(|m| m.contains("not a target")));
+        assert!(
+            misses
+                .iter()
+                .any(|m| m.contains("60 is below the target 61"))
+        );
+    }
 
     fn tref(name: &str, tier: Tier, features: &[&str], ops: &[&str], negative: &[&str]) -> TestRef {
         let owned = |items: &[&str]| items.iter().map(|s| (*s).to_owned()).collect();
