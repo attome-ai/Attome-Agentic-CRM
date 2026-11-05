@@ -48,7 +48,7 @@ uuid.workspace = true
 
 [dev-dependencies]
 attome-metadata.workspace = true
-attome-testkit.workspace = true
+attome-testkit = { workspace = true, features = ["app-config"] }
 
 [lints]
 workspace = true

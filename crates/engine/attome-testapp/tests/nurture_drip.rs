@@ -455,7 +455,9 @@ fn done_event_resumes_instance() {
             nurture_run::finished(app.db(), 500)
                 .await
                 .unwrap()
-                .is_empty()
+                .iter()
+                .all(|f| f.0 != program),
+            "nothing of this programme waits to be signalled"
         );
 
         // The person is handed to sales: the state leaves `active`, and the
@@ -469,7 +471,13 @@ fn done_event_resumes_instance() {
         .execute(app.db())
         .await
         .unwrap();
-        let finished = nurture_run::finished(app.db(), 500).await.unwrap();
+        // Other tests share this app, so only this programme's rows count.
+        let finished: Vec<_> = nurture_run::finished(app.db(), 500)
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|f| f.0 == program)
+            .collect();
         assert_eq!(
             finished,
             vec![(program, person, instance, "handed_off".to_owned())]
@@ -490,7 +498,9 @@ fn done_event_resumes_instance() {
             nurture_run::finished(app.db(), 500)
                 .await
                 .unwrap()
-                .is_empty()
+                .iter()
+                .all(|f| f.0 != program),
+            "nothing of this programme waits to be signalled"
         );
         assert_eq!(run_to_checkpoint(&state, instance).await, "completed");
     });
