@@ -22,6 +22,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The grc pack's `0002` adds NCA's Essential Cybersecurity Controls (ECC-2:2024): the regulation and
+  its 108 main controls as requirements, in English (AG5-T1).
 - `GET /api/v1/admin/model/{kind}/{id}/impact` answers one publish impact report for an object's
   draft: its changes against the published version, the publish checks it fails, the objects that
   read it, the entities and flows its customer tests watch, the gates' refusals and warnings, and

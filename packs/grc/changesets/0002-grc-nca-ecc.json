@@ -1,0 +1,3659 @@
+{
+  "author": "packs",
+  "checksum": "sha256:5e93084f12e1f9efd80e5d074f08ea6746673ef6d014da37a04c406ca7f86d5b",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "NCA Essential Cybersecurity Controls, ECC-2:2024 (AG5-T1, part): the regulation and its 108 main controls as requirements, each with its sub-controls, in the English text NCA publishes (TLP: White, public). The Arabic text is the binding one and is not here yet: NCA's Arabic files are scanned images or an earlier revision. Declares the business keys the rows need: a regulation by name and version, a requirement by its regulation and clause.",
+  "format": "attome-changeset/v1",
+  "id": "01a1a0c0-7d10-7f11-9a11-11c011c011f2",
+  "layer": "product",
+  "name": "grc-nca-ecc",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "name",
+            "version"
+          ],
+          "display_name": "Regulation",
+          "is_append_only": false,
+          "logicalname": "grc_regulation",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "grc_regulation"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "regulation_id",
+            "clause"
+          ],
+          "display_name": "Requirement",
+          "is_append_only": false,
+          "logicalname": "grc_requirement",
+          "primary_name_attribute": "clause"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "grc_requirement"
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name",
+          "version"
+        ],
+        "values": {
+          "jurisdiction": "SA",
+          "name": "Essential Cybersecurity Controls",
+          "source_url": "https://cdn.nca.gov.sa/api/files/public/upload/86e09090-44e4-481f-bc28-355673607654_ECC--2024-EN.pdf",
+          "status": "active",
+          "version": "ECC-2:2024"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "grc_regulation",
+        "key": {
+          "name": "Essential Cybersecurity Controls",
+          "version": "ECC-2:2024"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-1-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity strategy of the entity shall be identified, documented, and approved, and it shall be supported by the head of the entity or his/her delegate (Hereinafter referred to as the “Authorized Official”). The strategy goals shall be in line with the relevant legislative and regulatory requirements."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-1-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-1-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The entity shall execute an action plan to apply the cybersecurity strategy."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-1-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-1-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity strategy shall be reviewed at planned intervals (or in case of changes to the relevant legislative and regulatory requirements)."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-1-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-2-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "A department for cybersecurity shall be established within the entity. This department shall be independent from the Information Technology and Communications Department (As per High Order No. 37140, dated 14/08/1438H.). It is recommended that the Cybersecurity Department reports directly to the head of the entity or his/her delegate while ensuring that this does not result in a conflict of interests."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-2-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-2-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "All cybersecurity positions shall be filled out with full-time and qualified Saudi cybersecurity professionals."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-2-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-2-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "A cybersecurity supervisory committee shall be established pursuant to the instruction of the entity’s Authorized Official to ensure compliance with, support for, and monitoring of the implementation of the cybersecurity programs and regulations. The committee’s members, responsibilities, and governance framework shall be identified, documented, and approved. The committee shall include the head of the cybersecurity\ndepartment as a member. It is recommended that the committee reports directly to the head of the entity or his/her delegate while ensuring that this does not result in a conflict of interests."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-2-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-3-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity department of the entity shall identify and document cybersecurity policies and procedures, including the cybersecurity controls and requirements, and have them approved by the entity’s Authorized Official, and communicate them to the relevant personnel and parties inside the entity."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-3-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-3-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity department shall ensure that the cybersecurity policies and procedures, including the relevant controls and requirements, are implemented at the entity."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-3-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-3-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity policies and procedures shall be supported by technical security standards (e.g. technical security standards for firewall, databases, operating systems, etc.)."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-3-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-3-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity policies and procedures shall be reviewed and updated at planned intervals (or in case of changes to the relevant legislative and regulatory requirements and standards). Changes shall be documented and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-3-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-4-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The Authorized Official shall identify, document, and approve the governance organizational structure, roles, and responsibilities of the entity’s cybersecurity, and assign the persons concerned therewith. The necessary support shall be provided for the implementation thereof while ensuring that this does not result in a conflict of interests."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-4-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-4-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity roles and responsibilities within the entity shall be reviewed and updated at planned intervals (or in case of changes to the relevant legislative and regulatory requirements)."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-4-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-5-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity department of the entity shall identify, document, and approve the cybersecurity risk management methodology and procedures within the entity, in accordance with considerations of confidentiality, and the integrity and availability of information and technology assets."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-5-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-5-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity department shall implement the cybersecurity risk management methodology and procedures within the entity."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-5-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-5-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity risk assessment procedures shall be implemented at least in the following cases:\n1.5.3.1 At early stage of technology projects.\n1.5.3.2 Before making major changes to technology infrastructure.\n1.5.3.3 During planning to obtain third party services.\n1.5.3.4 During planning and before the release of new technology services and products."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-5-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-5-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity risk management methodology and procedures shall be reviewed and updated at planned intervals (or in case of changes to the relevant legislative and regulatory requirements and standards). Changes shall be documented and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-5-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-6-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements shall be included in the project management methodology and procedures and in the information and technology asset change management within the entity to ensure identifying and managing cybersecurity risks as part of the technology project lifecycle. The cybersecurity requirements shall be a key part of the requirements for technology projects."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-6-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-6-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity requirements for project management and information and technology asset changes within the entity shall include the following as a minimum:\n1.6.2.1 Vulnerability assessment and remediation.\n1.6.2.2 Reviewing secure configuration and hardening and updates packages before launching projects and changes."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-6-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-6-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity requirements for software and application development projects within the entity shall include the following as a minimum:\n1.6.3.1 Using the secure coding standards.\n1.6.3.2 Using trusted and licensed sources for software development tools and libraries.\n1.6.3.3 Conducting compliance test for software against the cybersecurity requirements within the entity.\n1.6.3.4 Secure integration between applications.\n1.6.3.5 Reviewing secure configuration and hardening and updates packages before launching software products"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-6-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-6-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity requirements for project management within the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-6-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-7-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "If there are nationally approved international agreements or commitments that include cybersecurity requirements, the entity shall identify and comply with these requirements."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-7-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-8-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity department of the entity shall periodically review the implementation of cybersecurity controls by the entity."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-8-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-8-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity controls by the entity shall be reviewed and audited by parties other than the cybersecurity department at the entity, provided that the audit and review are to be conducted independently while considering the principle of conflict of interest, as per the Generally Accepted Auditing Standards (GAAS) and the relevant legislative and regulatory requirements."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-8-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-8-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The results of cybersecurity audits and reviews shall be documented and presented to the cybersecurity supervisory committee and the Authorized Official. Results shall include the audit and review scope, observations, recommendations, corrective actions, and remediation plans."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-8-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-9-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for personnel of the entity shall be identified, documented, and approved prior to, during, and upon the end or termination of their employment."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-9-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-9-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for personnel of the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-9-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-9-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements prior to the commencement of the employment relationship between personnel and the entity shall include the following as a minimum:\n1.9.3.1 Incorporating the personnel’s cybersecurity responsibilities clauses and non- disclosure clauses in their employment contracts with the entity (including during and after employment end/termination with the entity).\n1.9.3.2 Conducting screening or vetting for personnel in cybersecurity positions and technical positions with critical and privileged powers."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-9-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-9-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for personnel during their employment relationship with the entity shall include the following as a minimum:\n1.9.4.1 Cybersecurity awareness (during on-boarding and during employment).\n1.9.4.2 Implementation and compliance with cybersecurity requirements, as per the entity’s cybersecurity policies, procedures, and operations."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-9-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-9-5",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The personnel’s powers shall be reviewed and revoked immediately upon the end/termination of their employment with the entity."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-9-5",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-9-6",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for personnel of the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-9-6",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-10-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "A cybersecurity awareness program, delivered through multiple channels, shall be periodically developed and approved by the entity to strengthen the awareness about cybersecurity, cyber threats, and risks, and to build a positive cybersecurity awareness culture."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-10-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-10-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The approved cybersecurity awareness program shall be implemented within the entity."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-10-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-10-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The cybersecurity awareness program shall include how to protect the entity against the most important and latest cyber risks and threats, including:\n1.10.3.1 Secure handling of email services, especially phishing emails.\n1.10.3.2 Secure handling of mobile devices and storage media.\n1.10.3.3 Secure Internet browsing.\n1.10.3.4 Secure usage of social media."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-10-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-10-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Specialized skills and necessary training shall be provided to personnel in positions that are linked directly to cybersecurity within the entity. Such skills and training shall be classified in line with their cybersecurity responsibilities, including:\n1.10.4.1 Cybersecurity department personnel.\n1.10.4.2 Personnel working on software/application development and those working on information and technology assets of the entity.\n1.10.4.3 Executive and supervisory positions."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-10-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "1-10-5",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity awareness program within the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "1-10-5",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-1-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for managing information and technology assets of the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-1-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-1-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for managing information and technology assets of the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-1-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-1-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The policy of acceptable use of information and technology assets of the entity shall be identified, documented, approved, and communicated."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-1-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-1-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The policy of acceptable use of information and technology assets of the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-1-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-1-5",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Information and technology assets of the entity shall be classified, labeled, and handled as per the relevant legislative and regulatory requirements."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-1-5",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-1-6",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for managing information and technology assets of the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-1-6",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-2-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for identity and access management of the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-2-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-2-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for identity and access management of the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-2-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-2-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for identity and access management of the entity shall include the following as a minimum:\n2.2.3.1 Single-factor authentication based on username and password.\n2.2.3.2 Multi-factor authentication, and defining the suitable authentication factors and their numbers as well as the suitable authentication techniques based on the result of impact assessment of authentication failure and bypass for remote access and for privileged accounts.\n2.2.3.3 User authorization based on identity and access control principles (Need-to- Know and Need-to-Use principle, Least Privilege principle, and Segregation of Duties principle).\n2.2.3.4 Privileged access management.\n2.2.3.5 Periodic review of identities and access rights."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-2-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-2-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for identity and access management of the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-2-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-3-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of information system and processing facilities of the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-3-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-3-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of information systems and processing facilities of the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-3-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-3-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of information systems and processing facilities of the entity shall include the following as a minimum:\n2.3.3.1 Protection from viruses, suspicious programs and activities, and malware on workstations and servers, using modern and advanced protection technologies and mechanisms, and securely managing them.\n2.3.3.2 Strict restriction on the use of external storage media and their security.\n2.3.3.3 Patch management for systems, applications, and devices.\n2.3.3.4 Centralized clock synchronization with an accurate and trusted source, such as sources provided by the Saudi Standards, Metrology and Quality Organization (SASO)."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-3-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-3-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for protection of the information system and processing facilities of the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-3-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-4-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of the email service of the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-4-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-4-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of email service of the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-4-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-4-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of the email service of the entity shall include the following as a minimum:\n2.4.3.1 Analyzing and filtering email messages (specifically phishing emails and spam emails) using modern and advanced email protection techniques and mechanisms.\n2.4.3.2 Multi-factor authentication, and defining the suitable authentication factors and their numbers as well as the suitable authentication techniques based on the result of impact assessment of authentication failure and bypass for remote and webmail access.\n2.4.3.3 Email archiving and backup.\n2.4.3.4 Secure management and protection against Advanced Persistent Threats (APT), which normally utilize zero-day malware and viruses.\n2.4.3.5 Validation of the entity’s email service domains by using Sender Policy Framework (SPF), Domain Keys Identified Mail (DKIM), and Domain Message Authentication Reporting and Conformance (DMARC)."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-4-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-4-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for email service of the entity shall be periodically reviewed ."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-4-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-5-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for the entity’s network security management shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-5-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-5-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for the entity’s network security management shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-5-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-5-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for the entity’s network security management shall include the following as a minimum:\n2.5.3.1 Logical or physical isolation and segmentation of network segments in a secure manner which is required to control relevant cybersecurity risks, using firewall and defense-in-depth principle.\n2.5.3.2 Isolation of production network from testing and development environment networks.\n2.5.3.3 Secure browsing and internet connectivity, including strict restrictions on suspicious websites, file storage/sharing websites, and remote access websites.\n2.5.3.4 Wireless network security and protection using secure authentication and encryption techniques and avoiding the connection of wireless networks to the entity’s internal network, except after a comprehensive assessment of subsequent risks, with handling them in a way that protects the technology assets of the entity.\n2.5.3.5 Restricting and managing network services, protocols, and ports.\n2.5.3.6 Intrusion Prevention Systems (IPS).\n2.5.3.7 Security of Domain Name Service (DNS).\n2.5.3.8 Secure management and protection of Internet browsing channel against Advanced Persistent Threats (APT), which normally utilize zero-day malware and viruses.\n2.5.3.9 Protecting against Distributed Denial of Service (DDoS) attacks to limit risks arising from these attacks."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-5-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-5-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for the entity’s network security management shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-5-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-6-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for mobile devices and BYOD security when connected to the entity’s network shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-6-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-6-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for mobile devices and BYOD security of the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-6-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-6-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for mobile devices and BYOD security of the entity shall include the following as a minimum:\n2.6.3.1 Separation and encryption of the entity’s data and information stored on mobile devices and BYODs.\n2.6.3.2 Controlled and restricted use based on the requirements of the interest of the entity's business.\n2.6.3.3 Deletion of the entity’s data and information stored on mobile devices and BYOD in cases of device loss or after the ending/termination of employment with the entity.\n2.6.3.4 Security awareness for users."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-6-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-6-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for mobile devices and BYOD security of the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-6-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-7-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protecting and handling data and information of the entity shall be identified, documented, and approved, as per the relevant legislative and regulatory requirements."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-7-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-7-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protecting data and information of the entity shall be implemented, based on its classification level."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-7-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-7-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for protecting data and information of the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-7-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-8-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for cryptography within the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-8-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-8-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for cryptography within the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-8-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-8-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for cryptography shall include at least the requirements in the National Cryptographic Standards, published by NCA. The appropriate cryptographic standard level shall be implemented based on the nature and sensitivity of the data, systems, and networks to be protected as well as the entity’s risk assessment,\nand as per the relevant legislative and regulatory requirements, as follows:\n2.8.3.1 Approved cryptographic systems and solutions standards and their technical and regulatory restrictions.\n2.8.3.2 Secure management of cryptographic keys during their lifecycles.\n2.8.3.3 Encryption of data in-transit and at-rest, as per their classification and the relevant legislative and regulatory requirements."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-8-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-8-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for cryptography within the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-8-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-9-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for backup and recovery management within the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-9-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-9-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for backup and recovery management within the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-9-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-9-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for backup and recovery management shall include the following as a minimum:\n2.9.3.1 Scope of backups to cover critical technology and information assets.\n2.9.3.2 Ability to perform quick recovery of data and systems after cybersecurity incidents.\n2.9.3.3 Periodic testing for the effectiveness of backup recovery."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-9-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-9-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for backup and recovery management within the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-9-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-10-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for technical vulnerabilities management within the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-10-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-10-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for technical vulnerabilities management within the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-10-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-10-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for technical vulnerabilities management shall include the following as a minimum:\n2.10.3.1 Periodic vulnerabilities assessment and detection.\n2.10.3.2 Vulnerabilities classification based on their severities.\n2.10.3.3 Vulnerabilities remediation based on their classification and the associated cyber risks.\n2.10.3.4 Patch management to remediate vulnerabilities, and ensuring the integrity and effectiveness of these updates and fixes are verified using a non-production environment before being applied.\n2.10.3.5 Communication and subscription with trusted resources for new and up-to- date vulnerabilities."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-10-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-10-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for technical vulnerabilities management within the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-10-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-11-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for penetration testing within the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-11-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-11-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for penetration testing within the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-11-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-11-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for penetration testing shall include the following as a minimum:\n2.11.3.1 Scope of penetration testing to include all externally provided services (via the Internet) and their technical components, including infrastructure, websites, web applications, smartphone and tablet applications, email, and remote access.\n2.11.3.2 Conducting penetration tests periodically."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-11-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-11-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for penetration testing shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-11-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-12-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for cybersecurity event logs and monitoring management within the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-12-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-12-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for cybersecurity event logs and monitoring management within the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-12-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-12-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for cybersecurity event logs and monitoring management shall include the following as a minimum:\n2.12.3.1 Activation of cybersecurity event logs for critical information assets within the entity.\n2.12.3.2 Activation of cybersecurity event logs for critical and privileged accounts accessing information assets as well as for remote access events within the entity.\n2.12.3.3 Identification of Security Information and Event Management (SIEM) techniques required for cybersecurity event logs collection.\n2.12.3.4 Continuous monitoring of cybersecurity event logs.\n2.12.3.5 Retention period of cybersecurity event logs (shall be at least 12 months)."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-12-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-12-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for cybersecurity event logs and monitoring management within the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-12-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-13-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Requirements for cybersecurity incident and threat management within the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-13-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-13-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Requirements for cybersecurity incident and threat management within the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-13-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-13-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Requirements for cybersecurity incident and threat management shall include the following as a minimum:\n2.13.3.1 Cybersecurity incident response plans and escalation procedures.\n2.13.3.2 Cybersecurity incident classification.\n2.13.3.3 Reporting cybersecurity incidents to the NCA.\n2.13.3.4 Sharing cybersecurity incident notifications, threat intelligence, penetration indicators, and incident reports with the NCA.\n2.13.3.5 Collecting and handling threat intelligence feeds."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-13-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-13-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "The implementation of cybersecurity requirements for incident and threat management within the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-13-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-14-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-14-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-14-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-14-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-14-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall include the following as a minimum:\n2.14.3.1 Authorized access to critical areas within the entity (e.g. the entity’s data center, disaster recovery center, critical information processing facilities, security surveillance center, network connection rooms, technical device and equipment supply areas, etc.).\n2.14.3.2 Access and monitoring logs (CCTV).\n2.14.3.3 Protection of access and monitoring log information.\n2.14.3.4 Security of the destruction and re-use of physical assets that hold classified information (including paper documents and storage media).\n2.14.3.5 Security of devices and equipment inside and outside the entity’s facilities."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-14-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-14-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of information and technology assets of the entity against unauthorized physical access, loss, theft, and damage shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-14-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-15-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of external web applications of the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-15-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-15-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of external web applications of the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-15-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-15-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of external web applications of the entity shall include the following as a minimum:\n2.15.3.1 Use of web application firewall.\n2.15.3.2 Adoption of the multi-tier architecture principle.\n2.15.3.3 Use of secure protocols (e.g. HTTPS).\n2.15.3.4 Clarification of the secure usage policy for users.\n2.15.3.5 User authentication, and the suitable authentication factors and their numbers as well as the authentication techniques shall be defined based on the result of impact assessment of authentication failure and bypass for users’ access."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-15-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "2-15-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for protection of web applications of the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "2-15-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "3-1-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for business continuity management within the entity shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "3-1-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "3-1-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for business continuity management within the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "3-1-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "3-1-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for business continuity management within the entity shall include the following as a minimum:\n3.1.3.1 Ensuring the continuity of cybersecurity systems and procedures.\n3.1.3.2 Developing plans for response to cybersecurity incidents that may affect the entity’s business continuity.\n3.1.3.3 Developing disaster recovery plans."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "3-1-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "3-1-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for business continuity management within the entity shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "3-1-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "4-1-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for the entity’s contracts and agreements with third parties shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "4-1-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "4-1-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for contracts and agreements with third parties, e.g. Service Level Agreement (SLA), which, if impaired, may affect the entity's data or services shall include the following as a minimum:\n4.1.2.1 Clauses of non-disclosure and the secure removal of the entity’s data by the third party upon the end of service.\n4.1.2.2 Communication procedures in case of the occurrence of a cybersecurity incident.\n4.1.2.3 Obligating the third party to apply the entity’s cybersecurity requirements and policies and the relevant legislative and regulatory requirements."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "4-1-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "4-1-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for contracts and agreements with third parties providing IT or cybersecurity outsourcing or managed services shall include the following as a minimum:\n4.1.3.1 Conducting a cybersecurity risk assessment and ensuring the availability of risk mitigation controls before signing contracts and agreements or upon making changes to the relevant legislative and regulatory requirements.\n4.1.3.2 Cybersecurity managed service centers for monitoring and operations which use remote access shall be fully located in the Kingdom of Saudi Arabia."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "4-1-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "4-1-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for third parties shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "4-1-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "4-2-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for use of cloud computing and hosting services shall be identified, documented, and approved."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "4-2-1",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "4-2-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for the cloud computing and hosting services within the entity shall be implemented."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "4-2-2",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "4-2-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "In accordance with the relevant legislative and regulatory requirements, and in addition to the applicable controls in the Main Domains (1), (2), and (3) and Subdomain (4.1) that are necessary to protect the entity’s data or services provided thereto, cybersecurity requirements for use of cloud computing and hosting services shall include the following as a minimum:\n4.2.3.1 Protection of entity’s data by cloud and hosting service providers in accordance with its classification level and returning data (in a usable format) upon service completion.\n4.2.3.2 Separation of the entity’s environment (especially virtual servers) from environments of other entities within the cloud computing service provider."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "4-2-3",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "regulation_id",
+          "clause"
+        ],
+        "values": {
+          "clause": "4-2-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          },
+          "requirement_text": "Cybersecurity requirements for cloud computing and hosting services shall be periodically reviewed."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "entity": "grc_requirement",
+        "key": {
+          "clause": "4-2-4",
+          "regulation_id": {
+            "key": {
+              "name": "Essential Cybersecurity Controls",
+              "version": "ECC-2:2024"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view",
+      "grc"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "grc",
+  "seq": 2,
+  "title": "Pack: NCA Essential Cybersecurity Controls (ECC-2:2024)"
+}

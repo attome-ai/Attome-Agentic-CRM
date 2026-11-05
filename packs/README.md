@@ -154,6 +154,13 @@ Policy reviews, attestations and exceptions (R9): a review date and cadence on t
 `grc_policy`, attestation campaigns asking a role's holders to acknowledge a policy's current
 version by a date, and exceptions that are approved and expire. Needs the GRC module.
 
+`0002` (AG5-T1): NCA's Essential Cybersecurity Controls, ECC-2:2024, as one `grc_regulation` and its
+108 main controls as `grc_requirement`s (clause `1-1-1` and so on), each control's sub-controls in its text,
+in the English NCA publishes (TLP: White). It declares the keys the rows are matched by: a regulation by
+name and version, a requirement by regulation and clause; a deployment whose requirements already repeat a
+clause within one regulation must merge them before the pack installs. Not yet here: the Arabic text (the
+binding one), the SAMA framework, and links from platform controls to these requirements.
+
 ## bcm
 
 Business continuity (R15): business impact analysis per process (RTO, RPO, maximum tolerable

@@ -331,3 +331,35 @@ fn the_asset_management_pack_installs_once_with_its_software_dataset() {
         }
     });
 }
+
+// AG5-T1: the grc pack's NCA ECC-2:2024 set lands once: one regulation, its
+// 108 main controls as requirements keyed by regulation and clause, the
+// sub-controls inside their control's text.
+#[test]
+fn the_grc_pack_installs_the_nca_ecc_once() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        installs_once(&app, "grc", &["grc_regulation", "grc_requirement"]).await;
+        let (regulations, requirements, clauses): (i64, i64, i64) = sqlx::query_as(
+            "SELECT COUNT(DISTINCT g.id), COUNT(q.id), COUNT(DISTINCT q.clause) \
+               FROM grc_regulation g JOIN grc_requirement q ON q.regulation_id = g.id \
+              WHERE g.name = 'Essential Cybersecurity Controls' AND g.version = 'ECC-2:2024' \
+                AND g.is_active IS NOT FALSE AND q.is_active IS NOT FALSE",
+        )
+        .fetch_one(app.db())
+        .await
+        .expect("count the ECC rows");
+        assert_eq!((regulations, requirements, clauses), (1, 108, 108));
+        let mfa: String = sqlx::query_scalar(
+            "SELECT q.requirement_text FROM grc_requirement q \
+               JOIN grc_regulation g ON g.id = q.regulation_id \
+              WHERE g.version = 'ECC-2:2024' AND q.clause = '2-2-3'",
+        )
+        .fetch_one(app.db())
+        .await
+        .expect("read 2-2-3");
+        assert!(mfa.contains("\n2.2.3.2 Multi-factor authentication"), "{mfa}");
+    });
+}
