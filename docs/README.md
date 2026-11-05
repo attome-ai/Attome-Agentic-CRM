@@ -30,6 +30,7 @@
 - [Hijri calendar](hijri.md): Umm al-Qura dates, corrections, grouping, autonumbers and holidays.
 - [Duplicate rules](duplicates.md): comparators, what saving a duplicate does, scans, merges and undo.
 - [OData feed](odata.md): reading records live from Excel and Power BI.
+- [Reporting tools](content/bi/README.md): connecting Power BI and Excel, with a starter query.
 - [Data catalogue](data-catalog.md): the asset index, who sees what, search, descriptions, access requests, usage, the personal data map, agent tools and the export.
 - [Record timeline](record-timeline.md): what a record's timeline shows, who sees what, related records, filters, pins and the panel.
 - [Delta tokens](delta-tokens.md): keeping a copy of a list up to date with only what changed.
