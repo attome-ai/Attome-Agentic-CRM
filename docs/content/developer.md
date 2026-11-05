@@ -43,14 +43,20 @@ entities and fields.
   `If-Match: "<row_version>"` from the record you read; a stale version answers 409.
 - **Queries**: `POST /api/v1/query/execute` runs a stored query or a view with filters, keyset
   paging (`after_id`) and an optional exact total. Send `Accept: application/msgpack` for a
-  smaller MessagePack answer: each row is an array in the order `data.fields` names.
+  smaller MessagePack answer: each row is an array in the order `data.fields` names. A stored
+  query saved as a QuerySpec (no SQL) runs through the structured-query engine below, scoped to you
+  before it aggregates, one page with filters only. A stored SQL query over one entity is narrowed
+  to the records you may read through its `id`; one that returns no `id` (an aggregate) answers
+  403 unless you read the whole entity.
 - **Changes since**: `POST /api/v1/query/changes` with `{entity}` answers a cursor; send it back as
   `{entity, cursor}` to get the records added or changed since (`upserted`, as you may read them
   now), the ids deleted or no longer visible to you (`removed`, id only) and the next cursor. Use
   it to keep a local copy in step without re-reading the whole list.
 - **Structured queries**: `POST /api/v1/query/run` with `{spec}` (a QuerySpec: `entity`, `select`,
-  a `where` tree, `sort`, `page_size`, `cursor`, or `group_by` and `aggregates` with `having` and
-  `totals`, `rollup` or `cube`, whose total rows name the fields they add up in `rolled_up`) or
+  a `where` tree, `sort`, `page_size`, `cursor`, or `group_by` and `aggregates` (each with an
+  optional `filter` of its own) with `having` and `totals`, `rollup` or `cube`, whose total rows
+  name the fields they add up in `rolled_up`; dates compare with `today`, `this_week`,
+  `last_week`, `this_month` and the like) or
   `{q}` (`SELECT name FROM account WHERE EXISTS(incident.customer WHERE statecode = 0)`), with
   `params` for `:name` values. A related field is named by its path (`primary_contact.name`).
   Records and fields you may not read are left out; `explain: true` returns the plan instead.
