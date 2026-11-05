@@ -698,6 +698,18 @@ pub fn point_config_at(config: &mut attome_config::AppConfig, url: &str) {
     config.database.user = parts.user;
     config.database.password = (!parts.password.is_empty()).then(|| parts.password.into());
     config.database.dbname = parts.dbname;
+    // Session-pinned runtime connections (the metadata and cache-purge
+    // listeners, the workflow execution claim) need `database.runtime`
+    // outside APP_ENV=debug, and CI runs without it: a config that names no
+    // runtime identity gets the throwaway database's own login. Without one
+    // the listeners never connected, so metadata and cache invalidation fell
+    // back to slower paths and a test waiting on them could stall.
+    if config.database.runtime.is_none() {
+        config.database.runtime = Some(attome_config::RuntimeDbCredentials {
+            user: config.database.user.clone(),
+            password: config.database.password.clone().unwrap_or_default(),
+        });
+    }
     // In-process requests carry no peer address, so every test binary on the
     // shared Redis lands in the one `preauth-ip:unknown` bucket and the
     // suite as a whole trips the default 1000/min. A test that sets its own

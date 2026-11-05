@@ -149,16 +149,9 @@ async fn fixture() -> Option<Fx> {
         .try_init();
     let mut config = test_config();
     let throwaway_url = attome_testkit::migrated_db_url()?;
+    // Also names the runtime identity the listeners need (a missing one left
+    // the portal's G-9 cache reading the change feed inside requests).
     point_config_at(&mut config, &throwaway_url);
-    // The metadata and cache-purge listeners open a session-pinned runtime
-    // connection, which needs `database.runtime` outside APP_ENV=debug:
-    // here the throwaway database's own login. Without it they never
-    // connected, and the portal's G-9 cache fell back to reading the change
-    // feed inside requests (an extra statement C7 counted).
-    config.database.runtime = Some(attome_config::RuntimeDbCredentials {
-        user: config.database.user.clone(),
-        password: config.database.password.clone().unwrap_or_default(),
-    });
 
     let db = attome_db::create_pool(&config)
         .await
