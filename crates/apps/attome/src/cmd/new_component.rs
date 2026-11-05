@@ -9,8 +9,9 @@
 //! page sets `attome` and the bound properties (T3-T2's component host).
 //!
 //! `[--dir <folder>]` (default: the tag) must be new or empty;
-//! `[--package <name>]` (default: the tag) is the package the built module
-//! is published in, so the manifest's module is `<package>/<tag>.js`.
+//! `[--package <name>]` is the package the built module is published in, a
+//! reverse-DNS id (default `local.<tag without hyphens>`, which `attome dev`
+//! loads as is), so the manifest's module is `<package>/<tag>.js`.
 
 #![allow(
     clippy::print_stdout,
@@ -181,7 +182,10 @@ describe('<{tag}>', () => {{
          - `component.json`: its manifest (tag, module, properties and their bindings, events),\n  \
          checked when it is published.\n\
          - `npm test` runs the test; `npm run build` writes `dist/{tag}.js`, the module the manifest\n  \
-         names as `{module}` once it is published in the package `{package}`.\n"
+         names as `{module}` once it is published in the package `{package}`.\n\
+         - `attome dev .` rebuilds on every change and loads each build into your target (or the\n  \
+         workspace `attome workspace switch` chose), signed with a development key the target must\n  \
+         trust (`.attome/dev.key`; keep `.attome/` out of version control).\n"
     );
     Ok(vec![
         ("package.json".into(), pretty(&package_json)),
@@ -204,7 +208,8 @@ pub fn run(args: &[String]) -> Result<(), String> {
     if kind != "component" {
         return Err(USAGE.to_owned());
     }
-    let files = component_project(tag, package.as_deref().unwrap_or(tag))?;
+    let default_package = format!("local.{}", tag.replace('-', ""));
+    let files = component_project(tag, package.as_deref().unwrap_or(&default_package))?;
     let dir = PathBuf::from(dir.unwrap_or_else(|| tag.clone()));
     if std::fs::read_dir(&dir).is_ok_and(|mut entries| entries.next().is_some()) {
         return Err(format!("{} exists and is not empty", dir.display()));

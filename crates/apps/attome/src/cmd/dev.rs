@@ -16,6 +16,9 @@
 //! - `--once` builds and uploads one time and stops.
 //!
 //! JavaScript extensions (Javy) are not built here: Y10-T7 is parked.
+//!
+//! T3-T4: a folder holding `component.json` (an `attome new component`
+//! project) is a custom component instead: see [`super::dev_component`].
 
 #![allow(
     clippy::print_stdout,
@@ -33,8 +36,7 @@ use crate::cmd::login::credentials;
 use crate::cmd::output::{take_flag, take_value};
 
 const DEFAULT_URL: &str = "http://127.0.0.1:7865";
-const USAGE: &str =
-    "usage: attome dev <folder> [--name <name>] [--once]\n         [--target <name> | --url <url>]";
+const USAGE: &str = "usage: attome dev <folder> [--name <name>] [--app <app>] [--once]\n         [--target <name> | --url <url>]";
 /// How often the folder is looked at.
 const POLL: Duration = Duration::from_millis(500);
 /// The build target of a plain module.
@@ -137,10 +139,25 @@ pub fn run(args: &[String]) -> Result<(), String> {
         .or_else(|| std::env::var("ATTOME_URL").ok())
         .unwrap_or_else(|| DEFAULT_URL.to_owned());
     let target = take_value(&mut args, "--target")?;
+    let app = take_value(&mut args, "--app")?;
     let [folder] = args.as_slice() else {
         return Err(USAGE.to_owned());
     };
     let folder = PathBuf::from(folder);
+    if super::dev_component::is_component_project(&folder) {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|error| format!("start the runtime: {error}"))?;
+        let dev = super::dev_component::ComponentDev {
+            folder,
+            app: app.unwrap_or_else(|| super::dev_component::DEFAULT_APP.to_owned()),
+            url,
+            target,
+        };
+        super::dev_component::watch(&dev, &runtime, once);
+        return Ok(());
+    }
     let cargo_toml = std::fs::read_to_string(folder.join("Cargo.toml"))
         .map_err(|e| format!("{}: no Cargo.toml: {e}", folder.display()))?;
     let crate_name = package_name(&cargo_toml).ok_or("Cargo.toml names no [package]")?;

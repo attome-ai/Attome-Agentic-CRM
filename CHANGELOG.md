@@ -27,6 +27,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `GET /api/v1/packages/{id}/files`. `GET /api/v1/model/components/{id}` answers a custom component's
   tag, properties and its module's URL and integrity; pages host it in a shadow root, loaded only from
   its installed package with Subresource Integrity, with its own error box.
+- `attome dev <folder>` on a component project (T3-T4) rebuilds the component on every change and loads
+  each build into the target or the chosen workspace, as a package signed with the folder's development
+  key, and publishes its component object. `attome new component`'s default package is now
+  `local.<tag without hyphens>`. `attome package install` sends a package with files through the
+  package preview, which stages them; package commands follow `attome workspace switch`.
 - The grc pack's `0002` adds NCA's Essential Cybersecurity Controls (ECC-2:2024): the regulation and
   its 108 main controls as requirements, in English (AG5-T1).
 - `GET /api/v1/admin/model/{kind}/{id}/impact` answers one publish impact report for an object's

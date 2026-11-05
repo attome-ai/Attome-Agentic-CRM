@@ -95,6 +95,18 @@ not installed, the module does not load or never defines its element within 10 s
 element throws while being created or given its properties, the component shows its own error box
 and the rest of the page is unaffected.
 
+To develop one, `attome new component <tag>` writes the project (its module's package defaults to
+`local.<tag without hyphens>`; `--package com.example.credit` names your own), and `attome dev <folder>`
+on that folder rebuilds it on every change (`npm run build`) and loads each build into the target, or
+into the Develop workspace `attome workspace switch` chose: the module goes in as a one-file package at
+version `0.0.<seconds>`, signed with the folder's development key (`.attome/dev.key`, made on first use;
+keep `.attome/` out of version control) under the publisher `Local development`, installed through the
+package preview like any other, and `component.json` is published as the component object (app
+`components`, or `--app`). The target must trust that key: the first run that is refused prints the
+`packages.trusted_publishers` entry to add, which belongs on a workspace or a development deployment
+only. `--once` loads one build and stops. A page showing the component picks up the new build at its
+next load.
+
 ## Managed packages
 
 A package whose manifest says `"mode": "managed"` keeps its objects. Once its plan applies, its own

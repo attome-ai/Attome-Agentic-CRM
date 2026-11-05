@@ -8,10 +8,10 @@ pub mod bundle_offline;
 pub mod changeset_replay;
 /// AB9-T2: `attome drill chaos run`, a catalogue fault injected and undone.
 pub mod chaos;
-/// AB9-T4: `attome drill chaos suite`, every fault in turn, one signed report each.
-pub mod chaos_suite;
 /// AB9-T3: the steady state around a chaos fault.
 pub mod chaos_steady;
+/// AB9-T4: `attome drill chaos suite`, every fault in turn, one signed report each.
+pub mod chaos_suite;
 /// U2-T1: `attome cluster plan`, a deployment profile's files.
 pub mod cluster;
 /// U3-T1: `attome cluster create|expand`, a profile installed over SSH.
@@ -22,6 +22,8 @@ pub mod config_cmd;
 pub mod data;
 /// AE2-T2: `attome dev`, rebuilding and uploading an extension as it changes.
 pub mod dev;
+/// T3-T4: `attome dev` on a component project.
+pub mod dev_component;
 /// AB4-T3: drill keys, evidence verification and readiness.
 pub mod drill;
 pub mod flags;

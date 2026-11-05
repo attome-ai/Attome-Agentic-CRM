@@ -414,15 +414,31 @@ fn install(package: &Package, to: InstallTo) -> Result<(), String> {
         if !problems.is_empty() {
             return Err(problems.join("; "));
         }
-        let bundle = serde_json::to_value(&package.bundle).map_err(|e| e.to_string())?;
-        let plan = send(
-            &url,
-            &auth,
-            reqwest::Method::POST,
-            "/api/v1/admin/metadata/import?mode=plan",
-            Some(json!({ "bundle": bundle })),
-        )
-        .await?;
+        // T3-T2: a package with files goes through the package preview, which
+        // checks its signature on the target and stages the files with the
+        // plan; one without keeps the plain bundle plan.
+        let plan = if package.files.is_empty() {
+            let bundle = serde_json::to_value(&package.bundle).map_err(|e| e.to_string())?;
+            send(
+                &url,
+                &auth,
+                reqwest::Method::POST,
+                "/api/v1/admin/metadata/import?mode=plan",
+                Some(json!({ "bundle": bundle })),
+            )
+            .await?
+        } else {
+            let document = serde_json::to_value(package).map_err(|e| e.to_string())?;
+            send(
+                &url,
+                &auth,
+                reqwest::Method::POST,
+                "/api/v1/admin/packages/preview",
+                Some(json!({ "package": document })),
+            )
+            .await?["plan"]
+                .clone()
+        };
         let summary = &plan["summary"];
         let preview = format!(
             "{} {}: {} to create, {} to update, {} unchanged, {} blocked (plan {})",
@@ -490,7 +506,9 @@ pub(crate) async fn send(
     path: &str,
     body: Option<Value>,
 ) -> Result<Value, String> {
-    let mut request = client(url)?.request(method, format!("{url}{path}"));
+    // T3-T4: in the Develop workspace `attome workspace switch` chose, if any.
+    let mut request =
+        crate::cmd::login::in_workspace(client(url)?.request(method, format!("{url}{path}")));
     if let Some(value) = auth {
         request = request.header("authorization", value);
     }
