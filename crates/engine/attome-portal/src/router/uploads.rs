@@ -23,6 +23,7 @@ use attome_document::files::{
     UploadSessionResponse,
 };
 use attome_records::access_plan::{self, AccessPlan};
+use attome_server::capability::{Available, ObjectStorage};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -106,10 +107,14 @@ fn owner(plan: &AccessPlan) -> FileOwner {
         (status = 409, description = "An upload for this field is already being created", body = ErrorResponse),
         (status = 422, description = "Content type or size not allowed, or a storage quota would be exceeded", body = ErrorResponse),
         (status = 429, description = "Too many upload sessions for this account or portal", body = ErrorResponse),
+        (status = 503, description = "The file store is down; try again later", body = ErrorResponse),
     ),
 )]
 async fn start_upload(
     State(state): State<EngineState>,
+    // AB5-T4 (V2-D1814): a presigned URL to a store that is down only fails
+    // later; while it is confirmed down the upload is refused now.
+    _storage: Available<ObjectStorage>,
     Path((keyword, entity, id, field)): Path<(String, String, Uuid, String)>,
     headers: HeaderMap,
     Json(body): Json<UploadSessionRequest>,

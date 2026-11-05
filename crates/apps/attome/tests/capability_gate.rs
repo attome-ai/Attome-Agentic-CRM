@@ -68,6 +68,12 @@ const GATED_HANDLERS: &[(&str, &str, &str)] = &[
          store turns a diagnosable dependency outage into an opaque 500.",
     ),
     (
+        "start_upload",
+        "ObjectStorage",
+        "The web portal's upload session (AB5-T4): hands a portal user a presigned PUT the \
+         object store has to honour, as create_upload_session does for staff.",
+    ),
+    (
         "start_multipart",
         "ObjectStorage",
         "Creates the object-store multipart upload the caller's parts go into; against a dead store the session is recorded but no part can ever land.",
