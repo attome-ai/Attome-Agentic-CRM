@@ -22,6 +22,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Bulk operations take JSON lines and give a result file (S5-T1): `POST /api/v1/{entity}/bulk/lines`
+  queues the same durable bulk operation from an `application/x-ndjson` body (one
+  `{id?, expected_row_version?, data}` per line, the options as query parameters), and
+  `GET /api/v1/{entity}/bulk/{id}/results` returns one JSON line per record with its `ok` or
+  `problem` result.
 - A migration wave copies the source's files (A24-T4): every migrated entity gets a multi-file
   `attachments` field, and once a wave's imports have applied, a job downloads each written record's
   files from Salesforce, Dynamics, HubSpot or Zoho, runs them through the upload scan and adds them to
