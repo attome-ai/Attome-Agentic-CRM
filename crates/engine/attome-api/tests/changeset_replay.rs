@@ -747,46 +747,73 @@ async fn published_tokens(db: &DbPool, scope_ref: &str) -> Value {
     .unwrap_or_else(|e| panic!("no published portal theme `{scope_ref}`: {e}"))
 }
 
+/// Runs one step of a slow test with a bound, panicking with the step's
+/// name when it is exceeded, so a stalled run names where it stalled rather
+/// than ending as a bare nextest timeout.
+async fn phase<T>(name: &str, step: impl std::future::Future<Output = T>) -> T {
+    match tokio::time::timeout(std::time::Duration::from_secs(120), step).await {
+        Ok(value) => value,
+        Err(_) => panic!("{name}: still not done after 120 s"),
+    }
+}
+
 /// B13-T7: a theme saved and published in one changeset replays onto an
 /// empty database as the same published theme.
 // feature: B13
 #[test]
 fn theme_replays_through_changeset() {
     attome_testkit::run_shared(async {
-        let authoring = skip_if_no_db!(authoring_system().await);
-        let fresh = skip_if_no_db!(attome_testkit::empty_database("theme_replay").await);
+        let authoring =
+            skip_if_no_db!(phase("boot the authoring system", authoring_system()).await);
+        let fresh = skip_if_no_db!(
+            phase(
+                "create the empty database",
+                attome_testkit::empty_database("theme_replay")
+            )
+            .await
+        );
         let db = authoring.db();
         let (_, cookie) = seed_admin(&db).await;
-        let changeset = open(&authoring, &cookie, &format!("b13-theme-{}", suffix())).await;
+        let changeset = phase(
+            "open the changeset",
+            open(&authoring, &cookie, &format!("b13-theme-{}", suffix())),
+        )
+        .await;
         let scope_ref = format!("b13-{}", suffix());
 
-        let (status, draft) = send(
-            &authoring.app,
-            request(
-                "POST",
-                "/api/v1/admin/themes",
-                &cookie,
-                Some(json!({
-                    "scope_kind": "portal", "scope_ref": scope_ref,
-                    "tokens": { "app_name": "Replay CRM", "radius_px": 6 },
-                })),
-                Some(changeset),
-                None,
+        let (status, draft) = phase(
+            "save the theme draft",
+            send(
+                &authoring.app,
+                request(
+                    "POST",
+                    "/api/v1/admin/themes",
+                    &cookie,
+                    Some(json!({
+                        "scope_kind": "portal", "scope_ref": scope_ref,
+                        "tokens": { "app_name": "Replay CRM", "radius_px": 6 },
+                    })),
+                    Some(changeset),
+                    None,
+                ),
             ),
         )
         .await;
         assert_eq!(status, StatusCode::CREATED, "{draft}");
         let id = id_of(&draft);
         let version = draft["row_version"].as_i64().expect("row_version");
-        let (status, published) = send(
-            &authoring.app,
-            request(
-                "POST",
-                &format!("/api/v1/admin/themes/{id}/publish"),
-                &cookie,
-                None,
-                Some(changeset),
-                Some(version),
+        let (status, published) = phase(
+            "publish the theme",
+            send(
+                &authoring.app,
+                request(
+                    "POST",
+                    &format!("/api/v1/admin/themes/{id}/publish"),
+                    &cookie,
+                    None,
+                    Some(changeset),
+                    Some(version),
+                ),
             ),
         )
         .await;
@@ -798,9 +825,9 @@ fn theme_replays_through_changeset() {
             .collect();
         assert_eq!(ops, ["upsert_theme", "upsert_theme", "publish_theme"]);
 
-        let document = close(&authoring, &cookie, changeset).await;
-        let target = replay_system(&fresh).await;
-        replay(&target.state, &document).await;
+        let document = phase("close the changeset", close(&authoring, &cookie, changeset)).await;
+        let target = phase("boot the replay system", replay_system(&fresh)).await;
+        phase("replay the changeset", replay(&target.state, &document)).await;
         let replayed = target.db();
         assert_eq!(
             published_tokens(&replayed, &scope_ref).await,
