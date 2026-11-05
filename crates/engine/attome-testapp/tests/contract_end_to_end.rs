@@ -281,14 +281,43 @@ fn request_draft_negotiate_approve_sign_renew() {
             "the change is in the diff"
         );
 
-        // Approved: the playbook marked the liability clause for Legal, so a
-        // contract manager and Legal both approve.
-        sqlx::query("UPDATE contract SET playbook_deviations = $2 WHERE id = $1")
+        // Approved: a playbook rule flags the contract for Legal, so a
+        // contract manager and Legal both approve. Every save recomputes the
+        // deviations, so they come from a real rule, not a stored value.
+        sqlx::query(
+            "INSERT INTO contract_playbook_rule \
+               (clause_key, condition, severity, message, is_active, row_version) \
+             VALUES (NULL, 'contract_value > 40000', 'needs_legal', 'Non-standard value', true, 0)",
+        )
+        .execute(app.db())
+        .await
+        .unwrap();
+        // A save records the deviation before the transition asks for approval.
+        let row_version: i64 = sqlx::query_scalar("SELECT row_version FROM contract WHERE id = $1")
             .bind(contract)
-            .bind(r#"[{"rule_id":"00000000-0000-0000-0000-000000000001","clause_key":"liability","severity":"needs_legal"}]"#)
-            .execute(app.db())
+            .fetch_one(app.db())
             .await
             .unwrap();
+        let if_match = format!("\"{row_version}\"");
+        let (code, body) = app
+            .request_with(
+                Method::PATCH,
+                &format!("/api/v1/contract/{contract}"),
+                &[("if-match", if_match.as_str())],
+                Some(json!({ "contract_value": 55000 })),
+            )
+            .await;
+        assert!(code.is_success(), "{code} {body}");
+        let deviations: Option<String> =
+            sqlx::query_scalar("SELECT playbook_deviations FROM contract WHERE id = $1")
+                .bind(contract)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert!(
+            deviations.is_some_and(|d| d.contains("needs_legal")),
+            "the save records the needs_legal deviation"
+        );
         let (code, body) = app
             .request(
                 Method::POST,
