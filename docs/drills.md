@@ -21,6 +21,28 @@ A chaos run refuses a production deployment unless it is an approved game day
 (`ops.chaos.production_game_days`, a second person's approval of `POST /api/v1/ops/chaos/requests`);
 the suite never runs against production.
 
+## The chaos faults
+
+Each fault of the catalogue (`attome_release::chaos::CATALOGUE`), what a correct deployment does
+under it, and how the run undoes it. A run always undoes its fault: when its time is up, on Ctrl+C,
+and when injecting it failed part way.
+
+| Fault | A correct deployment | Undo | Default length |
+|---|---|---|---|
+| `process-kill` | The killed node's requests fail over to the others; durable jobs it held are retried by another node after their lease; no write is half done. | Start the process again. | 60 s |
+| `postgres-restart` | Requests during the restart answer 503 db_unavailable (GET and idempotent requests are retried inside the server's window); the pool reconnects without a server restart. | Nothing: Postgres comes back by itself. | 30 s |
+| `postgres-pause` | Requests time out at their route deadline with 504, the pool does not grow without bound, and readiness turns not ready until Postgres answers. | Unpause the Postgres container. | 30 s |
+| `disk-fill` | Uploads refuse with a clear storage error, logs keep rotating, and the disk alert fires; nothing already stored is lost. | Delete the fill file. | 120 s |
+| `redis-down` | Rate limits and replay checks refuse with 503 (they fail closed); records still save when AB5 is built, otherwise the server reports not ready. | Start Redis again. | 60 s |
+| `redis-pause` | Cache reads time out within the Redis timeout and fall back to Postgres; security checks fail closed; no request hangs. | Unpause the Redis container. | 30 s |
+| `file-store-down` | Uploads and downloads answer 503 with Retry-After; records without files still save; the file-store dependency shows down. | Start the object store again. | 60 s |
+| `ai-slow` | Assistant turns stop at their deadline with a clear message; nothing else slows down; the AI breaker opens after repeated timeouts. | Remove the added latency. | 120 s (needs `--allow-net-admin`) |
+| `ai-failing` | The fallback model answers when one is set, otherwise the assistant says it is unavailable; records and flows are unaffected. | Point the provider back at the real endpoint. | 120 s |
+| `email-down` | Emails stay in the outbox and are sent after the server returns; the business change that wrote them is not rolled back. | Start the mail server again. | 120 s |
+| `cert-expired` | Outbound calls to the expired endpoint fail the TLS check and are not sent in clear; the certificate alert fires. | Restore the valid certificate. | 60 s |
+| `queue-flood` | Interactive requests keep their latency while background jobs drain at the throttled pace; the backlog alert fires and clears. | Let the flood drain or cancel the flood jobs. | 300 s |
+| `network-delay` | Requests slow by the added delay but stay within their deadlines or fail at them; no retry storm (retries keep their budget). | Remove the netem delay. | 120 s (needs `--allow-net-admin`) |
+
 ## Evidence
 
 Each report is `attome-evidence/v1`, described by

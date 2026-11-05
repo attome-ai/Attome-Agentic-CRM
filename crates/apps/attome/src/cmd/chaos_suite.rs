@@ -5,8 +5,8 @@
 //! - The flags after `suite` are `chaos run`'s (the services, the steady
 //!   state, `--database-url`, ...), given once for every fault; `--duration`
 //!   applies to every fault, else each fault's default.
-//! - A fault that needs network administration (`network-delay`, tc/netem)
-//!   is left out without `--allow-net-admin`.
+//! - A fault that needs network administration (`ai-slow` and
+//!   `network-delay`, tc/netem) is left out without `--allow-net-admin`.
 //! - A fault the flags cannot plan (a service it names is missing) is still
 //!   written: its `fault_injected` check is skipped with the reason, so the
 //!   evidence is not ok and the gap shows in the drill history.
@@ -229,7 +229,10 @@ mod tests {
                 spec.name
             );
         }
-        assert!(without.len() < with.len(), "network-delay needs net admin");
+        assert!(
+            without.len() < with.len(),
+            "ai-slow and network-delay need net admin"
+        );
     }
 
     #[test]

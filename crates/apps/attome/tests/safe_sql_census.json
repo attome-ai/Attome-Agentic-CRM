@@ -125,7 +125,7 @@
   "crates/engine/attome-records/src/import_validate.rs": 1,
   "crates/engine/attome-records/src/money.rs": 1,
   "crates/engine/attome-records/src/query_admin.rs": 2,
-  "crates/engine/attome-records/src/query_exec.rs": 7,
+  "crates/engine/attome-records/src/query_exec.rs": 6,
   "crates/engine/attome-records/src/query_spec/aggregate.rs": 1,
   "crates/engine/attome-records/src/query_spec/compile.rs": 1,
   "crates/engine/attome-records/src/query_spec/routes.rs": 1,

@@ -1172,6 +1172,24 @@ fn table_definition_names(td: &Value) -> Option<Vec<String>> {
 }
 
 /// [`FilterSchema`] over this endpoint's own `ColumnDef`/
+/// The output columns of the stored query `base_sql` (validated metadata,
+/// never request data), as PostgreSQL describes a zero-row wrapper of it.
+/// Works on an entity with no records.
+async fn output_columns(
+    conn: &mut sqlx::PgConnection,
+    base_sql: &str,
+) -> Result<Vec<String>, AppError> {
+    let discovery_sql = format!("SELECT * FROM ({base_sql}) AS t LIMIT 0");
+    Ok(conn
+        .describe(&discovery_sql)
+        .await
+        .map_err(AppError::internal)?
+        .columns()
+        .iter()
+        .map(|column| column.name().to_owned())
+        .collect())
+}
+
 /// `table_definition`-derived whitelist — C-15 (M01 §7): the filter -> WHERE
 /// fragment itself is the shared `attome_core::filter::compile` writer
 /// now; only this whitelist stays entangled with this file's own
@@ -2956,17 +2974,7 @@ pub async fn execute_stored_query_with_definition(
     // zero-row wrapper. This works even when the entity has no records.
     let mut whitelist: Vec<String> = match &td_names {
         Some(names) => names.clone(),
-        None => {
-            let discovery_sql = format!("SELECT * FROM ({base_sql}) AS t LIMIT 0");
-            (&mut *tx)
-                .describe(&discovery_sql)
-                .await
-                .map_err(AppError::internal)?
-                .columns()
-                .iter()
-                .map(|column| column.name().to_owned())
-                .collect()
-        }
+        None => output_columns(&mut tx, &base_sql).await?,
     };
 
     // V2-D1808: the record scope names the rows' own columns (`t.id`, and
@@ -2983,15 +2991,7 @@ pub async fn execute_stored_query_with_definition(
             let output: Vec<String> = if td_names.is_none() {
                 whitelist.clone()
             } else {
-                let discovery_sql = format!("SELECT * FROM ({base_sql}) AS t LIMIT 0");
-                (&mut *tx)
-                    .describe(&discovery_sql)
-                    .await
-                    .map_err(AppError::internal)?
-                    .columns()
-                    .iter()
-                    .map(|column| column.name().to_owned())
-                    .collect()
+                output_columns(&mut tx, &base_sql).await?
             };
             let missing: Vec<&str> = needed
                 .iter()
@@ -3048,16 +3048,11 @@ pub async fn execute_stored_query_with_definition(
             attome_core::ALL_SYSTEM_COLS.contains(&field) && !whitelist.iter().any(|w| w == field)
         });
     if td_names.is_some() && wants_system_column {
-        let discovery_sql = format!("SELECT * FROM ({base_sql}) AS t LIMIT 0");
-        let described = (&mut *tx)
-            .describe(&discovery_sql)
-            .await
-            .map_err(AppError::internal)?;
-        for column in described.columns() {
-            let name = column.name();
-            if attome_core::ALL_SYSTEM_COLS.contains(&name) && !whitelist.iter().any(|w| w == name)
+        for name in output_columns(&mut tx, &base_sql).await? {
+            if attome_core::ALL_SYSTEM_COLS.contains(&name.as_str())
+                && !whitelist.iter().any(|w| *w == name)
             {
-                whitelist.push(name.to_owned());
+                whitelist.push(name);
             }
         }
     }

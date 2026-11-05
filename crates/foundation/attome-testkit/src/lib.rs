@@ -797,7 +797,7 @@ const DEFAULT_STALL_DUMP_SECS: u64 = 150;
 /// closes when it ends, and at each interval without that, prints
 /// [`busy_sessions`]. On its own thread and runtime, so a stalled shared
 /// runtime cannot hold the dump up.
-fn stall_watchdog() -> Option<(std::sync::mpsc::Sender<()>, std::thread::JoinHandle<()>)> {
+fn stall_watchdog() -> Option<(std::sync::mpsc::SyncSender<()>, std::thread::JoinHandle<()>)> {
     let secs = std::env::var(STALL_DUMP_ENV)
         .ok()
         .and_then(|v| v.trim().parse::<u64>().ok())
@@ -806,7 +806,8 @@ fn stall_watchdog() -> Option<(std::sync::mpsc::Sender<()>, std::thread::JoinHan
         return None;
     }
     let url = server_url()?;
-    let (done, ended) = std::sync::mpsc::channel::<()>();
+    // One slot: the body only ever closes it, so the bound never waits.
+    let (done, ended) = std::sync::mpsc::sync_channel::<()>(1);
     let thread = std::thread::Builder::new()
         .name("attome-test-stall-watchdog".into())
         .spawn(move || {
