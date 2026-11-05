@@ -269,6 +269,12 @@ async fn concurrent_boots_seed_the_platform_once_and_both_succeed() {
     attome_db::run_migrations(&migration_db, &MIGRATOR)
         .await
         .expect("run_migrations must apply every compiled migration");
+    // As `apply_schema_migrations` does: the tables the migrations created
+    // go to the migrator role, or its pool cannot read them (the platform
+    // changeset's export of `calendar_holiday_rule` is refused).
+    attome_db::assign_schema_ownership(&migration_db)
+        .await
+        .expect("hand the schema to the migrator role");
     attome::role_seed_lock::seed_roles_and_pepper_registry(&migration_db, &config)
         .await
         .expect("role seed and pepper registry must succeed after migrations");

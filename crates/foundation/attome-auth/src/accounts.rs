@@ -1309,8 +1309,16 @@ mod tests {
         use jsonwebtoken::EncodingKey;
         use rsa::pkcs1::EncodeRsaPrivateKey;
 
+        // Both keys first, off the runtime: a debug build takes seconds to
+        // generate one, and the published key is otherwise made lazily by
+        // the mock server while the client waits on `/jwks` and times out.
+        let other = tokio::task::spawn_blocking(|| {
+            test_rsa();
+            rsa::RsaPrivateKey::new(&mut rand::rngs::OsRng, 2048).unwrap()
+        })
+        .await
+        .unwrap();
         let issuer = mock_google().await;
-        let other = rsa::RsaPrivateKey::new(&mut rand::rngs::OsRng, 2048).unwrap();
         let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
         header.kid = Some(TEST_KID.to_string());
         let pem = other.to_pkcs1_pem(rsa::pkcs1::LineEnding::LF).unwrap();
