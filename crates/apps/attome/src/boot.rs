@@ -1383,6 +1383,13 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     platform_seed_lock.release().await;
     replay_erasures(system.state(), config).await?;
     enqueue_lookup_index_backfill(system.state()).await;
+    // V2-D1815: every system view mirrored into the model (expand step);
+    // best-effort, the view table stays what the lists read.
+    match attome_api::view_model::mirror_views(system.state()).await {
+        Ok(0) => {}
+        Ok(published) => tracing::info!(published, "views: system views mirrored into the model"),
+        Err(error) => tracing::warn!(%error, "views: the model mirror could not read the views"),
+    }
     // Y10-T2: the published extensions' hooks, loaded before anything
     // serves and kept fresh.
     attome_api::extension_hooks::start(system.state().clone()).await;

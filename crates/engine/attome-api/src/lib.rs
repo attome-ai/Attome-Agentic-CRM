@@ -322,6 +322,7 @@ mod tag_seed;
 pub mod validation_simulation;
 pub mod validation_stats;
 pub mod view_admin;
+pub mod view_model;
 /// Y4-T3: only with the `webcrawl` feature.
 #[cfg(feature = "webcrawl")]
 mod webcrawl_admin;

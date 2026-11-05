@@ -13,8 +13,8 @@
 //!   "settings": { } }
 //! ```
 //!
-//! `view_kind` is `list` (the default), `kanban`, `calendar`, `timeline` or
-//! `chart`, as the `view` table allows; `settings` carries what that kind
+//! `view_kind` is `list` (the default), `kanban`, `calendar`, `timeline`,
+//! `chart` or `map`, as the `view` table allows; `settings` carries what that kind
 //! shows (a kanban's lane field, a chart's measures), as `view_metadata`
 //! does today. A view reads its entity, its stored query (the `query`
 //! adapter kind, over `sql_query`) and each attribute it shows. Cooking
@@ -38,7 +38,7 @@ pub const VIEW: KindName = KindName("view");
 pub const QUERY: KindName = KindName("query");
 
 /// The kinds of view the `view` table allows.
-pub const VIEW_KINDS: [&str; 5] = ["list", "kanban", "calendar", "timeline", "chart"];
+pub const VIEW_KINDS: [&str; 6] = ["list", "kanban", "calendar", "timeline", "chart", "map"];
 
 /// Most columns one view shows.
 pub const MAX_COLUMNS: usize = 100;
