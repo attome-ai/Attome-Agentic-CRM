@@ -385,14 +385,11 @@ mod tests {
         assert!(extension_project("ErpSync", "hook").is_err());
         assert!(extension_project("erp-sync", "hook").is_err());
         assert!(extension_project("erp_sync", "trigger").is_err());
-        let ts = run(&[
-            "extension".into(),
-            "x".into(),
-            "--kind".into(),
-            "job".into(),
-            "--lang".into(),
-            "ts".into(),
-        ]);
+        let args: Vec<String> = ["extension", "x", "--kind", "job", "--lang", "ts"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let ts = run(&args);
         assert!(ts.unwrap_err().contains("Javy"));
     }
 }
