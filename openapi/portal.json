@@ -8454,6 +8454,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "The file store is down; try again later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "security": [

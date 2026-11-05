@@ -167165,6 +167165,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "The file store is down; try again later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -272265,7 +272275,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -272318,5 +272328,5 @@
       }
     }
   },
-  "x-api-version": "2026-10"
+  "x-version-adapters": []
 }
