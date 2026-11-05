@@ -1298,6 +1298,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-service-queue-claim-report",
         // V2-D1808: the call trend reports as QuerySpecs.
         "attome-callintel-trends-queryspec",
+        // V2-D1808: the service KPIs as QuerySpecs.
+        "attome-service-kpi-queryspec",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

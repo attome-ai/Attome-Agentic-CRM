@@ -21,8 +21,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   QuerySpec engine instead of answering 422, so a query widget, a metric, an agent or a document can
   use one; the record scope and field security apply before it aggregates. Filters narrow it; search,
   sort, keyset, `seek`, `related_to`, deltas and a page past the first are a 422. A bundle or changeset
-  `upsert_query` may declare `query_spec` and `parameters`, and the KPI and summary queries of thirteen
-  packs are now QuerySpecs (V2-D1808, `packs/README.md`).
+  `upsert_query` may declare `query_spec` and `parameters`, and the KPI and summary queries of fourteen
+  packs, the call trend reports and the service KPIs are now QuerySpecs (V2-D1808, `packs/README.md`).
+  A QuerySpec measure may carry its own `filter` and a `since: {field, unit}` time difference, and
+  dates compare with `this_week`, `last_week`, `after_today` and `before_today` too.
 - `attome supervise` takes `POST /stop` on its control address (the restart token): it drains the server and exits,
   so a script stops one node of a rolling restart gracefully on Windows. `loadtest/scripts/run-drain-exercise.ps1`
   proves a restart drains under load, on one node or rolling over two behind nginx (AB7-T10).

@@ -1,0 +1,260 @@
+{
+  "author": "attome-service",
+  "checksum": "sha256:2796eb7c3739f7fbfc18a7203e9919f6e239b2b7493173a27e433b2e7330f269",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "The service KPIs as QuerySpecs (V2-D1808): Queue Claim-To-Resolve, SLA Mean Time To Resolve, SLA Breaches By Queue And Priority and Queue Depth returned no id, so the record filter could not narrow them to a reader below full read access; the QuerySpec engine scopes the tickets before it aggregates. The queue column is now named work_queue_ref. Queue Average Wait (time up to now) stays SQL.",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa9d-016b-79ad-a3b4-0d7fddbb6314",
+  "layer": "platform",
+  "name": "attome-service-kpi-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "Queue Claim-To-Resolve, Minutes (Last 30 Days)",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "value",
+                "field": "resolved_at",
+                "func": "avg",
+                "since": {
+                  "field": "claimed_at",
+                  "unit": "minutes"
+                }
+              }
+            ],
+            "entity": "service_ticket",
+            "group_by": [
+              {
+                "field": "work_queue_ref"
+              }
+            ],
+            "where": {
+              "all": [
+                {
+                  "field": "work_queue_ref",
+                  "kind": "compare",
+                  "op": "is_not_null"
+                },
+                {
+                  "field": "status",
+                  "kind": "compare",
+                  "op": "in",
+                  "value": [
+                    "resolved",
+                    "closed"
+                  ]
+                },
+                {
+                  "field": "resolved_at",
+                  "kind": "compare",
+                  "op": "is_not_null"
+                },
+                {
+                  "field": "claimed_at",
+                  "kind": "compare",
+                  "op": "is_not_null"
+                },
+                {
+                  "field": "resolved_at",
+                  "kind": "compare",
+                  "op": "last_n_days",
+                  "value": 30
+                }
+              ],
+              "kind": "and"
+            }
+          },
+          "required_privilege": "service_ticket.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "service_ticket",
+        "query": "Queue Claim-To-Resolve, Minutes (Last 30 Days)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "SLA Breaches By Queue And Priority",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "breach_count",
+                "func": "count"
+              }
+            ],
+            "entity": "service_ticket",
+            "group_by": [
+              {
+                "field": "queue_id"
+              },
+              {
+                "field": "priority"
+              }
+            ],
+            "where": {
+              "field": "sla_breached",
+              "kind": "compare",
+              "op": "eq",
+              "value": true
+            }
+          },
+          "required_privilege": "service_ticket.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "service_ticket",
+        "query": "SLA Breaches By Queue And Priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "SLA Mean Time To Resolve, Minutes (Last 30 Days)",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "value",
+                "field": "resolved_at",
+                "func": "avg",
+                "since": {
+                  "field": "created_at",
+                  "unit": "minutes"
+                }
+              }
+            ],
+            "entity": "service_ticket",
+            "where": {
+              "all": [
+                {
+                  "field": "status",
+                  "kind": "compare",
+                  "op": "in",
+                  "value": [
+                    "resolved",
+                    "closed"
+                  ]
+                },
+                {
+                  "field": "resolved_at",
+                  "kind": "compare",
+                  "op": "is_not_null"
+                },
+                {
+                  "field": "resolved_at",
+                  "kind": "compare",
+                  "op": "last_n_days",
+                  "value": 30
+                }
+              ],
+              "kind": "and"
+            }
+          },
+          "required_privilege": "service_ticket.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "service_ticket",
+        "query": "SLA Mean Time To Resolve, Minutes (Last 30 Days)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "Queue Depth (Open, Unassigned Items Per Queue)",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "value",
+                "func": "count"
+              }
+            ],
+            "entity": "service_ticket",
+            "group_by": [
+              {
+                "field": "work_queue_ref"
+              }
+            ],
+            "where": {
+              "all": [
+                {
+                  "field": "work_queue_ref",
+                  "kind": "compare",
+                  "op": "is_not_null"
+                },
+                {
+                  "field": "assignee_id",
+                  "kind": "compare",
+                  "op": "is_null"
+                },
+                {
+                  "field": "status",
+                  "kind": "compare",
+                  "op": "not_in",
+                  "value": [
+                    "resolved",
+                    "closed"
+                  ]
+                }
+              ],
+              "kind": "and"
+            }
+          },
+          "required_privilege": "service_work_queue.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "service_work_queue",
+        "query": "Queue Depth (Open, Unassigned Items Per Queue)"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 96,
+  "title": "Platform definitions: attome-service-kpi-queryspec"
+}
