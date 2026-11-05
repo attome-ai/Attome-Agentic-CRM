@@ -204,4 +204,33 @@ async fn solo_boots_on_postgres_alone_and_the_stores_work() {
         .await
         .expect("check");
     assert!(!refused.allowed);
+
+    // AB5-T12: it serves records with no Redis: a record created through the
+    // generic write path (rules, validation, audit) reads back.
+    let state = boot.system.state();
+    let admin = attome_testapp::seed_admin(&base.db).await;
+    let ctx = base.security.resolve(admin.id).await.expect("resolve");
+    let meta = state
+        .entities
+        .load()
+        .iter()
+        .find(|m| m.logicalname == "team")
+        .cloned()
+        .expect("the platform's team entity");
+    let values = attome_testapp::fixtures::record_for(&meta, 12, &format!("solo-{jti}"));
+    let (id, _) = attome_records::entity_crud::create_record_for(
+        state,
+        &ctx,
+        admin.id,
+        "team",
+        serde_json::Value::Object(values),
+    )
+    .await
+    .expect("create a team with no Redis");
+    let found: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM team WHERE id = $1")
+        .bind(id)
+        .fetch_one(&base.db)
+        .await
+        .expect("read the team back");
+    assert_eq!(found, 1);
 }
