@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The extension developer guide (M17-T5, `docs/content/extensions/`): when to write code, one page per
+  kind (record hook, job, webhook handler) with Rust and TypeScript examples, the host API, limits,
+  testing, publishing and the compatibility promise.
 - `attome dev` refuses to upload an extension build whose `Cargo.lock` has a high-severity or unscored
   RustSec advisory (M17-T4), unless `--allow-advisory <ID>=<reason>` allows it; a check that cannot run
   needs `--skip-audit <reason>`.
@@ -845,6 +848,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- `attome new extension --kind job|webhook` now reads its input where the server puts it
+  (`input` for a job, `body` for a webhook); before, a generated job or webhook always answered
+  `"continue"`.
 - A single-entity stored query whose output lacks a column the record filter needs (the organisation
   or owner columns, a grant condition's field) no longer fails with a `500` for a reader below full
   read access (V2-D1808): when it returns `id`, the filter runs on the entity's own rows through it;

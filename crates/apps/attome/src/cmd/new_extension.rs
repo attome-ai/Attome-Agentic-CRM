@@ -13,9 +13,10 @@
 //!
 //! - `hook`: called at `before_save` on accounts; refuses a new account
 //!   with no name and trims the name it is given.
-//! - `job`: given `{"account_id", "website"}`, answers the account update.
-//! - `webhook`: given an event `{"company", "website"}`, answers a new
-//!   account.
+//! - `job`: given `{"kind": "job", "input": {"account_id", "website"}}`,
+//!   answers the account update.
+//! - `webhook`: given `{"kind": "webhook", "hook", "body": {"company",
+//!   "website"}}`, answers a new account.
 //!
 //! `--lang ts` is refused: JavaScript extensions need Javy (Y10-T7), which
 //! is not built. `[--dir <folder>]` (default: the name) must be new or empty.
@@ -103,10 +104,13 @@ pub fn decide(input: &Value) -> Value {
             manifest: json!({
                 "entities": { "account": { "read": true, "write": true, "attributes": ["website"] } },
             }),
-            decide: r#"/// What the job answers for its input `{"account_id", "website"}`: the
-/// account's website set, or nothing when either is missing. The server
-/// makes the write as the user who queued the run, within the grants. Pure.
-pub fn decide(input: &Value) -> Value {
+            decide: r#"/// What the job answers for its run: the server calls it with
+/// `{"kind": "job", "input": ...}`, the input it was queued with (or its
+/// schedule's). Given `{"account_id", "website"}` it sets the account's
+/// website; with either missing it writes nothing. The server makes the
+/// write as the user who queued the run, within the grants. Pure.
+pub fn decide(run: &Value) -> Value {
+    let input = &run["input"];
     match (input["account_id"].as_str(), input["website"].as_str()) {
         (Some(id), Some(website)) if !id.is_empty() && !website.is_empty() => json!({
             "records": [ { "entity": "account", "id": id, "values": { "website": website } } ]
@@ -117,15 +121,16 @@ pub fn decide(input: &Value) -> Value {
 "#,
             tests: r#"    #[test]
     fn the_job_updates_the_account_it_is_given() {
-        let input = json!({ "account_id": "0190a0b0-0000-7000-8000-000000000001", "website": "https://acme.example" });
-        let answer = decide(&input);
+        let run = json!({ "kind": "job", "input": { "account_id": "0190a0b0-0000-7000-8000-000000000001", "website": "https://acme.example" } });
+        let answer = decide(&run);
         assert_eq!(answer["records"][0]["entity"], "account");
         assert_eq!(answer["records"][0]["values"]["website"], "https://acme.example");
     }
 
     #[test]
     fn a_job_without_an_account_writes_nothing() {
-        assert_eq!(decide(&json!({ "website": "https://acme.example" })), json!("continue"));
+        let run = json!({ "kind": "job", "input": { "website": "https://acme.example" } });
+        assert_eq!(decide(&run), json!("continue"));
     }
 "#,
             on_bad_input: r#"{
@@ -140,10 +145,13 @@ pub fn decide(input: &Value) -> Value {
             manifest: json!({
                 "entities": { "account": { "write": true, "attributes": ["name", "website"] } },
             }),
-            decide: r#"/// What the webhook answers for an event `{"company", "website"}`: a new
-/// account, or nothing when the event names no company. The server checks
-/// the inbound hook's signature before calling it. Pure.
-pub fn decide(event: &Value) -> Value {
+            decide: r#"/// What the webhook answers for one event: the server calls it with
+/// `{"kind": "webhook", "hook": <inbound hook name>, "body": <the event>}`
+/// after the inbound hook's signature and replay checks. A body
+/// `{"company", "website"}` makes a new account; one with no company writes
+/// nothing. Pure.
+pub fn decide(delivery: &Value) -> Value {
+    let event = &delivery["body"];
     let Some(company) = event["company"].as_str().map(str::trim).filter(|c| !c.is_empty()) else {
         return json!("continue");
     };
@@ -157,14 +165,14 @@ pub fn decide(event: &Value) -> Value {
 "#,
             tests: r#"    #[test]
     fn an_event_with_a_company_creates_an_account() {
-        let answer = decide(&json!({ "company": " Acme ", "website": "https://acme.example" }));
+        let answer = decide(&json!({ "kind": "webhook", "hook": "crm_signup", "body": { "company": " Acme ", "website": "https://acme.example" } }));
         assert_eq!(answer["records"][0]["values"]["name"], "Acme");
         assert!(answer["records"][0].get("id").is_none(), "a create, not an update");
     }
 
     #[test]
     fn an_event_without_a_company_writes_nothing() {
-        assert_eq!(decide(&json!({ "website": "x" })), json!("continue"));
+        assert_eq!(decide(&json!({ "kind": "webhook", "hook": "crm_signup", "body": { "website": "x" } })), json!("continue"));
     }
 "#,
             on_bad_input: r#"{

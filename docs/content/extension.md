@@ -46,6 +46,10 @@ code.
 
 ## Code extensions (WebAssembly), in progress
 
+To build one, start with the [extension developer guide](extensions/README.md) (M17-T5): when
+to write code at all, one page per kind with examples, testing, publishing and the compatibility
+promise. This section is the reference summary.
+
 Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in the crate
 `attome-extension`. What exists today:
 
@@ -63,8 +67,9 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   with `POST /api/v1/admin/extensions/{name}/jobs`, as the caller) or `on_webhook` (an inbound hook's
   handler `{"type": "extension", "name": ...}`, run after the hook's signature checks, as the hook's
   user). It answers `"continue"` or `{"records": [{"entity", "id"?, "values"}]}`; each write must be
-  granted and is made through the ordinary write path, at most 100 per run. A failed run is not
-  retried, because writes made before the failure stay.
+  granted and is made through the ordinary write path, at most 100 per run. A failed job run is
+  not retried, because writes made before the failure stay; a failed webhook run is retried with
+  its inbound event, up to five attempts.
   A job extension can also run by itself: `"schedule": {"cron": "0 6 * * *", "timezone":
   "Asia/Riyadh", "input": {...}}` in its manifest (checked at upload) runs it once per slot across
   every worker, as the administrator who uploaded the published version.
