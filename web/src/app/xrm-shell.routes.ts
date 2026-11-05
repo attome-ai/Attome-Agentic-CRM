@@ -137,6 +137,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin').then(m => m.CachesComponent),
           },
           {
+            // AE2-T4: each extension's runs, with their logs.
+            path: 'extensions',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin').then(m => m.ExtensionsComponent),
+          },
+          {
             // Z1-T14. Their sidebar rows are seeded server-side (sidebar_seed.rs).
             path: 'secrets',
             canActivate: [authGuard],

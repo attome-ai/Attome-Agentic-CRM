@@ -27,6 +27,7 @@ export { SidebarManagerComponent }    from './sidebar-manager/sidebar-manager.co
 export { SystemSettingsComponent }    from './system-settings/system-settings.component';
 // Z1-T14: the secret inventory and the configuration history.
 export { CachesComponent }             from './caches/caches.component';
+export { ExtensionsComponent }         from './extensions/extensions.component';
 // AB6-T9: capabilities and outbound breakers.
 export { DependenciesComponent }       from './dependencies/dependencies.component';
 export { AdminConsoleComponent, ADMIN_AREAS, ADMIN_SCREENS } from './console/admin-console.component';
