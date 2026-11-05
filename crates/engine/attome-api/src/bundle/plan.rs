@@ -1404,6 +1404,8 @@ mod tests {
             is_report: false,
             entity_mappings: vec![],
             is_customized: false,
+            query_spec: None,
+            parameters: None,
         });
         let mut desired = live_b.clone();
         desired.entities[0].category = None;

@@ -340,6 +340,8 @@ fn query_def(entity: &str, name: &str, sql: &str) -> QueryDef {
         required_privilege: None,
         is_report: false,
         entity_mappings: vec![],
+        query_spec: None,
+        parameters: None,
     }
 }
 

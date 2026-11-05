@@ -1044,6 +1044,8 @@ async fn run_step(
                         id_column: m.id_column.clone(),
                     })
                     .collect(),
+                query_spec: q.query_spec.clone(),
+                parameters: q.parameters.clone(),
             };
             let desired_id = derived_id(COMPONENT_QUERY, &q.key().display());
             let (_, outcome) = with_lock_retry!({

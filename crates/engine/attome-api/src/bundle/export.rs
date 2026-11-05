@@ -196,6 +196,8 @@ pub(crate) fn query_def(
         is_report: q.is_report,
         entity_mappings,
         is_customized: q.is_customized,
+        query_spec: None,
+        parameters: None,
     })
 }
 

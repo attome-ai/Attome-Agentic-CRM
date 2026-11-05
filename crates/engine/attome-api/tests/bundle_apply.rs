@@ -427,6 +427,8 @@ impl Graph {
             is_report: false,
             entity_mappings: Vec::new(),
             is_customized: false,
+            query_spec: None,
+            parameters: None,
         });
         b.views.push(ViewDef {
             entity: self.entity.clone(),

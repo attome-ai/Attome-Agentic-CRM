@@ -364,6 +364,14 @@ pub struct QueryDef {
     pub entity_mappings: Vec<QueryEntityMapping>,
     #[serde(default)]
     pub is_customized: bool,
+    /// V2-D1808: a saved QuerySpec (S4-T9), with or instead of `sql` (which
+    /// is then empty), and the parameters it declares. A query declared this
+    /// way is scoped to each reader before it aggregates.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<Object>)]
+    pub query_spec: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<Vec<attome_records::query_spec::saved::ParamDecl>>,
 }
 
 /// One `sql_query_entity_mapping` row, entity carried by logicalname.

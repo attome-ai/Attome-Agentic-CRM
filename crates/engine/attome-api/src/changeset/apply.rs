@@ -1171,6 +1171,8 @@ impl Ctx<'_> {
                             id_column: m.id_column.clone(),
                         })
                         .collect(),
+                    query_spec: q.query_spec.clone(),
+                    parameters: q.parameters.clone(),
                 };
                 // A platform changeset is code-shipped content: the seed
                 // posture skips the EXPLAIN containment lint, as a platform

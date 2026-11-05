@@ -40,6 +40,10 @@ pub struct QueryDef {
     pub required_privilege: Option<String>,
     pub is_report: bool,
     pub entity_mappings: Vec<QueryEntityMapping>,
+    /// V2-D1808: a saved QuerySpec (S4-T9), with or instead of `sql`, and the
+    /// parameters it declares. `None` keeps a stored spec on a republish.
+    pub query_spec: Option<Value>,
+    pub parameters: Option<Vec<ParamDecl>>,
 }
 
 impl QueryDef {
@@ -646,13 +650,13 @@ async fn plan_or_trust(
     sql_query: &str,
     skip: bool,
 ) -> Result<(f64, Vec<String>), AppError> {
-    if skip {
-        reject_unsafe_default_query_sql(sql_query)?;
-        return Ok((0.0, Vec::new()));
-    }
     // S4-T9: a spec-only query has no SQL to lint or plan; its spec is
     // compiled and costed on every run.
     if sql_query.trim().is_empty() {
+        return Ok((0.0, Vec::new()));
+    }
+    if skip {
+        reject_unsafe_default_query_sql(sql_query)?;
         return Ok((0.0, Vec::new()));
     }
     lint_and_plan(db_readonly, sql_query).await
@@ -2512,9 +2516,14 @@ pub async fn reconcile_query(
         return Err(AppError::Validation("query name is required".into()));
     }
     let sql_query = desc.sql.trim();
-    if sql_query.is_empty() {
-        return Err(AppError::Validation("sql_query is required".into()));
+    if sql_query.is_empty() && desc.query_spec.is_none() {
+        return Err(AppError::Validation(
+            "sql_query or query_spec is required".into(),
+        ));
     }
+    // V2-D1808: a declared QuerySpec is validated as an admin's is.
+    let (query_spec, parameters) =
+        saved_spec_values(desc.query_spec.as_ref(), desc.parameters.as_deref())?;
     let table_definition = desc.table_definition.as_deref().unwrap_or("[]");
     let entity_id = match desc
         .entity
@@ -2554,6 +2563,9 @@ pub async fn reconcile_query(
                 || row.required_privilege.as_deref() != desc.required_privilege.as_deref()
                 || row.is_report.unwrap_or(false) != desc.is_report
                 || cur_mappings != wanted_mappings
+                || (query_spec.is_some()
+                    && current_spec(&state.base.db, row.id).await?
+                        != (query_spec.clone(), parameters.clone()))
         }
         None => false,
     };
@@ -2576,9 +2588,10 @@ pub async fn reconcile_query(
         // The bundle apply path records nothing (design §1.4).
         recording: None,
         unrecorded_layer: policy_layer(policy),
-        // Bundles carry no saved QuerySpec yet; a republish keeps the stored one.
-        query_spec: None,
-        parameters: None,
+        // V2-D1808: a declared spec is written; without one a republish
+        // keeps the stored one.
+        query_spec: query_spec.as_ref(),
+        parameters: parameters.as_ref(),
     };
     let key = desc.display_key();
     match step {
@@ -2603,6 +2616,23 @@ pub async fn reconcile_query(
             Ok((id, ReconcileOutcome::Updated))
         }
     }
+}
+
+/// V2-D1808: the query's current version's QuerySpec and parameters, as
+/// stored, for the reconcile's has-it-changed check.
+async fn current_spec(
+    db: &DbPool,
+    query_id: Uuid,
+) -> Result<(Option<Value>, Option<Value>), AppError> {
+    let row: Option<(Option<Value>, Option<Value>)> = sqlx::query_as(
+        "SELECT query_spec, parameters FROM sql_query_version \
+          WHERE query_id = $1 ORDER BY id DESC LIMIT 1",
+    )
+    .bind(query_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(row.unwrap_or((None, None)))
 }
 
 /// Flips `is_active` on the query keyed by `(entity, name)`. Idempotent:
