@@ -46,6 +46,12 @@ slow-timeout = { period = "60s", terminate-after = 15 }
 filter = 'package(attome-testapp) & binary(generated_permissions)'
 slow-timeout = { period = "60s", terminate-after = 12 }
 
+# The partner portal tests install the partner packs into a whole world:
+# 178 s on a quiet runner, past 180 s on a loaded one (41963612611).
+[[profile.default.overrides]]
+filter = 'package(attome) & binary(portal_isolation) & test(/^partner_/)'
+slow-timeout = { period = "60s", terminate-after = 8 }
+
 # attome-api's integration tests start a whole engine system on the shared
 # test database, 30-60 s each on a loaded CI runner before the test's own
 # work; at 3 x 60 s the heavier ones were killed at random.
