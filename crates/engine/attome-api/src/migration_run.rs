@@ -324,7 +324,11 @@ pub async fn run_wave(state: &EngineState, wave_id: Uuid) -> Result<(), AppError
     )
     .await
     {
-        Ok(()) => set_status(state, wave_id, "loaded", &counts, None).await,
+        Ok(()) => {
+            set_status(state, wave_id, "loaded", &counts, None).await?;
+            // Then its files, once the imports it queued have applied.
+            crate::migration_files::queue(state, wave_id, 0, 60).await
+        }
         Err(e) => {
             let reason = e.to_string();
             set_status(state, wave_id, "failed", &counts, Some(&reason)).await?;

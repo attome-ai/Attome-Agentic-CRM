@@ -22,6 +22,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A migration wave copies the source's files (A24-T4): every migrated entity gets a multi-file
+  `attachments` field, and once a wave's imports have applied, a job downloads each written record's
+  files from Salesforce, Dynamics, HubSpot or Zoho, runs them through the upload scan and adds them to
+  the field; a file is copied once per project (migration 0399).
 - A grant condition may name `@my_territories` (D13-T2): on `account`, `id eq @my_territories` lets a
   role read the accounts in the caller's territories; on another entity, a lookup to account
   (`account_ref`) reaches those accounts' deals, contacts and cases (`docs/access-model.md`).

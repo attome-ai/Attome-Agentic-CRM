@@ -200,6 +200,8 @@ pub mod metrics;
 /// calls; the route handlers stay module-private, same shape as
 /// `data_export`/`data_profile_admin`.
 pub mod migration;
+/// A24-T4: copying a wave's files onto the migrated records' attachments.
+pub mod migration_files;
 /// A24-T3: a migration project's model mapping (draft, read, save).
 mod migration_model;
 /// A24-T4: a migration project's waves, and the job that runs one.
