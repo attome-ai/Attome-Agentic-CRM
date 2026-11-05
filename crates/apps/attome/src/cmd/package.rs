@@ -315,10 +315,12 @@ pub fn run(args: &[String]) -> Result<(), String> {
             if let Some(file) = &trust_file {
                 trusted.extend(parse_trust_file(&read(Path::new(file))?)?);
             }
-            package::verify(&package, &trusted)?;
+            // V2-D1811: the platform publisher only with the release key.
+            let trust = package::verify_trust(&package, &trusted)?;
             install(
                 &package,
                 InstallTo {
+                    trust,
                     url,
                     target,
                     yes,
@@ -332,6 +334,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
 }
 
 struct InstallTo {
+    trust: package::Trust,
     url: Option<String>,
     target: Option<String>,
     yes: bool,
@@ -361,9 +364,14 @@ fn install(package: &Package, to: InstallTo) -> Result<(), String> {
             .flatten()
             .filter_map(|e| e["logicalname"].as_str().map(str::to_owned))
             .collect();
-        let problems = check_namespace(&package.manifest, &package.bundle, &|name| {
-            existing.contains(name)
-        });
+        // V2-D1811: a built-in module keeps the platform's own names.
+        let problems = if to.trust == package::Trust::Publisher {
+            check_namespace(&package.manifest, &package.bundle, &|name| {
+                existing.contains(name)
+            })
+        } else {
+            Vec::new()
+        };
         if !problems.is_empty() {
             return Err(problems.join("; "));
         }

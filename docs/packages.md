@@ -55,7 +55,11 @@ audit. `--json` prints the versioned result.
 A deployment can also check packages itself. List the publishers it trusts in the setting
 `packages.trusted_publishers` (`[{"publisher": "Example Co", "key": "<public key>"}]`; empty, the
 default, trusts none), then `POST /api/v1/admin/packages/preview` with `{"package": <the package
-document>}`. It checks the signature against those publishers, the manifest and the namespace, plans
+document>}`. The publisher `Attome` and package ids under `com.attome.` are reserved for the built-in
+modules, which keep the platform's own names (`account`, `service_ticket`) and so are exempt from the
+namespace rule: such a package is accepted only when signed by the platform release key the binary
+carries, whatever `packages.trusted_publishers` lists, and refused while a build carries none
+(V2-D1811). It checks the signature against those publishers, the manifest and the namespace, plans
 the bundle against live metadata and answers the install preview: new and changed objects, the
 permissions the package requests, its effects on records already there (records it writes, fields
 it adds to existing entities, field changes), what it removes and what is blocked, with the

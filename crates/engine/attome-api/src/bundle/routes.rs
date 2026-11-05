@@ -465,18 +465,22 @@ pub(super) async fn preview_document(
     mut package: super::package::Package,
     requested_by: Uuid,
 ) -> Result<PackagePreviewResponse, AppError> {
-    super::package::verify(&package, &trusted_publishers(state)).map_err(AppError::Validation)?;
+    let trust = super::package::verify_trust(&package, &trusted_publishers(state))
+        .map_err(AppError::Validation)?;
     // A package is a selection: it never retires what it does not carry.
     package.bundle.partial = true;
     let mut problems = super::package::check_manifest(&package.manifest);
     let locks = {
         let entities = state.entities.load();
         let existing = |name: &str| entities.get(name).is_some();
-        problems.extend(super::package::check_namespace(
-            &package.manifest,
-            &package.bundle,
-            &existing,
-        ));
+        // V2-D1811: a built-in module keeps the platform's own names.
+        if trust == super::package::Trust::Publisher {
+            problems.extend(super::package::check_namespace(
+                &package.manifest,
+                &package.bundle,
+                &existing,
+            ));
+        }
         problems.extend(super::package::check_extension_points(
             &package.manifest,
             &package.bundle,
@@ -632,7 +636,8 @@ async fn upgrade_package(
     };
     let package: super::package::Package = serde_json::from_value(raw)
         .map_err(|e| AppError::Validation(format!("the package does not read: {e}")))?;
-    super::package::verify(&package, &trusted_publishers(&state)).map_err(AppError::Validation)?;
+    let trust = super::package::verify_trust(&package, &trusted_publishers(&state))
+        .map_err(AppError::Validation)?;
     let current = installed(&state, &package.manifest.id)
         .await?
         .ok_or(AppError::NotFound)?;
@@ -658,11 +663,14 @@ async fn upgrade_package(
         // What the package itself installed is its own, not an entity it extends.
         let existing =
             |name: &str| entities.get(name).is_some() && !owned.iter().any(|o| o == name);
-        problems.extend(super::package::check_namespace(
-            &package.manifest,
-            &package.bundle,
-            &existing,
-        ));
+        // V2-D1811: a built-in module keeps the platform's own names.
+        if trust == super::package::Trust::Publisher {
+            problems.extend(super::package::check_namespace(
+                &package.manifest,
+                &package.bundle,
+                &existing,
+            ));
+        }
         problems.extend(super::package::check_extension_points(
             &package.manifest,
             &package.bundle,

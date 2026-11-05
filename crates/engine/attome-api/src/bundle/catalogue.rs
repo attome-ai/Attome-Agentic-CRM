@@ -39,7 +39,7 @@ use serde_json::{Value, json};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use super::package::{Package, check_manifest, verify};
+use super::package::{Package, check_manifest};
 
 /// The format of a catalogue index.
 pub const CATALOGUE_FORMAT: &str = "attome-catalogue/v1";
@@ -149,7 +149,7 @@ pub fn read_index(bytes: &[u8], partner: &Partner) -> Result<IndexItems, String>
             }
         };
         let mut problems = check_manifest(&package.manifest);
-        if let Err(e) = verify(&package, &trusted) {
+        if let Err(e) = super::package::verify_trust(&package, &trusted) {
             problems.push(e);
         }
         out.push((
@@ -321,7 +321,8 @@ async fn add_to_catalogue(
         (Some(raw), None) => {
             let package: Package = serde_json::from_value(raw)
                 .map_err(|e| AppError::Validation(format!("the package does not read: {e}")))?;
-            verify(&package, &super::routes::trusted_publishers(&state))
+            // V2-D1811: the platform publisher only with the release key.
+            super::package::verify_trust(&package, &super::routes::trusted_publishers(&state))
                 .map_err(AppError::Validation)?;
             (package, "pushed".to_owned())
         }

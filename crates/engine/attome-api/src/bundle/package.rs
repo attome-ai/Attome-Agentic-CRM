@@ -783,9 +783,111 @@ pub fn verify(package: &Package, trusted: &[(String, String)]) -> Result<(), Str
         .map_err(|_| "the signature does not match the package".to_owned())
 }
 
+/// T8-T5 (V2-D1811): the publisher the built-in modules (Sales, Service,
+/// GRC, the verticals) are packaged under. Its packages keep the platform's
+/// own unprefixed names (`account`, `opportunity`, `service_ticket`), so
+/// the namespace rule does not apply to them, and nobody else may claim it.
+pub const PLATFORM_PUBLISHER: &str = "Attome";
+
+/// The package ids reserved to [`PLATFORM_PUBLISHER`].
+pub const PLATFORM_ID_PREFIX: &str = "com.attome.";
+
+/// The base64 Ed25519 key the platform's packages are signed with, carried
+/// by the binary. `None` until the owner publishes it under the release-key
+/// custody (`docs/release-signing.md`): until then no package that claims
+/// the platform publisher or a reserved id is accepted, whoever a
+/// deployment trusts.
+pub const PLATFORM_RELEASE_KEY: Option<&str> = None;
+
+/// Whether `manifest` claims the platform publisher or a reserved id.
+pub fn claims_platform(manifest: &Manifest) -> bool {
+    manifest
+        .publisher
+        .trim()
+        .eq_ignore_ascii_case(PLATFORM_PUBLISHER)
+        || manifest.id.starts_with(PLATFORM_ID_PREFIX)
+}
+
+/// Who vouches for a verified package.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Trust {
+    /// A publisher the deployment trusts; the namespace rule applies.
+    Publisher,
+    /// The platform release key: a built-in module, exempt from the
+    /// namespace rule.
+    Platform,
+}
+
+/// [`verify`], but a package claiming the platform publisher or a reserved
+/// id verifies only against the platform release key, never against a key
+/// a deployment lists for that name.
+pub fn verify_trust(package: &Package, trusted: &[(String, String)]) -> Result<Trust, String> {
+    verify_trust_with(package, trusted, PLATFORM_RELEASE_KEY)
+}
+
+fn verify_trust_with(
+    package: &Package,
+    trusted: &[(String, String)],
+    platform_key: Option<&str>,
+) -> Result<Trust, String> {
+    if claims_platform(&package.manifest) {
+        let key = platform_key.ok_or(
+            "the Attome publisher and com.attome. package ids are reserved for packages signed \
+             by the platform release key, which this build does not carry",
+        )?;
+        verify(
+            package,
+            &[(package.manifest.publisher.clone(), key.to_owned())],
+        )?;
+        return Ok(Trust::Platform);
+    }
+    verify(package, trusted)?;
+    Ok(Trust::Publisher)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// V2-D1811: only the platform release key admits the reserved
+    /// publisher; a deployment trusting the name gains nothing.
+    #[test]
+    fn the_platform_publisher_needs_the_release_key() {
+        let release = SigningKey::from_bytes(&[7; 32]);
+        let release_pub =
+            base64::engine::general_purpose::STANDARD.encode(release.verifying_key().to_bytes());
+        let mut package = Package {
+            format: PACKAGE_FORMAT.into(),
+            manifest: Manifest {
+                id: "com.attome.sales".into(),
+                publisher: PLATFORM_PUBLISHER.into(),
+                namespace: "sales".into(),
+                ..manifest()
+            },
+            bundle: bundle(),
+            signature: None,
+        };
+        sign(&mut package, &release).unwrap();
+        // No release key in the build: refused, even when a deployment
+        // lists the publisher with the very same key.
+        let listed = vec![(PLATFORM_PUBLISHER.to_owned(), release_pub.clone())];
+        assert!(verify_trust_with(&package, &listed, None).is_err());
+        assert_eq!(
+            verify_trust_with(&package, &[], Some(&release_pub)),
+            Ok(Trust::Platform)
+        );
+        // Another key that claims the publisher is refused.
+        let other = SigningKey::from_bytes(&[9; 32]);
+        sign(&mut package, &other).unwrap();
+        assert!(verify_trust_with(&package, &[], Some(&release_pub)).is_err());
+        // A reserved id under another publisher's name is refused too.
+        package.manifest.publisher = "Example Co".into();
+        let example = vec![(
+            "Example Co".to_owned(),
+            base64::engine::general_purpose::STANDARD.encode(other.verifying_key().to_bytes()),
+        )];
+        assert!(verify_trust_with(&package, &example, None).is_err());
+    }
 
     fn manifest() -> Manifest {
         Manifest {
