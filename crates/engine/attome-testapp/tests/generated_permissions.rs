@@ -97,6 +97,11 @@ async fn user_with_role(app: &TestApp, role: Uuid) -> TestUser {
 // negative: POST /api/v1/query/execute, POST /api/v1/{entity}
 #[test]
 fn every_role_matches_its_privileges() {
+    // Errors to the output: a list that answers 500 logs why.
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter("error")
+        .with_test_writer()
+        .try_init();
     attome_testkit::run_shared(async {
         let Some(app) = TestApp::start().await else {
             return;

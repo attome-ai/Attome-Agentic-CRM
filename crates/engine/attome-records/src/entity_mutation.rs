@@ -2919,6 +2919,7 @@ async fn enforce_state_transition(
     attrs: &[AttrInfo],
     obj: &serde_json::Map<String, Value>,
     guard_ctx_source: &serde_json::Map<String, Value>,
+    caller_body: &serde_json::Map<String, Value>,
     mode: MutationMode,
 ) -> Result<Option<PendingRedirect>, AppError> {
     let registry = state.state_models.load();
@@ -2978,13 +2979,15 @@ async fn enforce_state_transition(
     };
 
     if let MutationMode::ApprovalFlow(request_id) = mode {
+        // What the settle itself sent: the engine may have filled other
+        // fields since (a record check's results, a hook's changes).
         verify_approval_flow_move(
             tx,
             entity_name,
             record_id,
             &model.state_field,
             current.as_deref(),
-            obj,
+            caller_body,
             request_id,
         )
         .await?;
@@ -3476,6 +3479,10 @@ pub async fn update_one_as(
         }
         None => obj,
     };
+    // What the writer sent, before the engine fills values (a currency, a
+    // record check's results, a hook's changes): an approval settle is
+    // judged on it.
+    let sent_body = obj;
     // D-535: before anything else, in every mode and whoever the caller is.
     validate_engine_owned_entity(state, entity_name)?;
     if let Principal::Staff(ctx) = principal {
@@ -3647,6 +3654,7 @@ pub async fn update_one_as(
         attrs,
         obj,
         rule_ctx_source,
+        sent_body,
         mode,
     )
     .await?;

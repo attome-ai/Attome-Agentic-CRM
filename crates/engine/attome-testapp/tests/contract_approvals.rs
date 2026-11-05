@@ -69,27 +69,30 @@ async fn user_with_role(app: &TestApp, label: &str, role: &str) -> TestUser {
     user
 }
 
-/// A draft contract; `needs_legal` marks a playbook deviation for legal.
+/// A draft contract; `needs_legal` gives it a value a `needs_legal`
+/// playbook rule flags (every save recomputes the deviations, so they come
+/// from a real rule, not a stored value).
 async fn contract(app: &TestApp, needs_legal: bool) -> Uuid {
+    let value = if needs_legal {
+        sqlx::query(
+            "INSERT INTO contract_playbook_rule                  (clause_key, condition, severity, message, is_active, row_version)              VALUES (NULL, 'contract_value > 60000', 'needs_legal', 'Non-standard value', true, 0)",
+        )
+        .execute(app.db())
+        .await
+        .unwrap();
+        64000
+    } else {
+        50000
+    };
     let (status, body) = app
         .request(
             Method::POST,
             "/api/v1/contract",
-            Some(json!({ "title": "Maintenance", "counterparty": "Gulf Services Co", "contract_value": 50000 })),
+            Some(json!({ "title": "Maintenance", "counterparty": "Gulf Services Co", "contract_value": value })),
         )
         .await;
     assert!(status.is_success(), "{status} {body}");
-    let id: Uuid = body["id"].as_str().unwrap().parse().unwrap();
-    if needs_legal {
-        // What the playbook check records for a non-standard liability clause.
-        sqlx::query("UPDATE contract SET playbook_deviations = $2 WHERE id = $1")
-            .bind(id)
-            .bind(r#"[{"rule_id":"00000000-0000-0000-0000-000000000001","clause_key":"liability","severity":"needs_legal"}]"#)
-            .execute(app.db())
-            .await
-            .unwrap();
-    }
-    id
+    body["id"].as_str().unwrap().parse().unwrap()
 }
 
 async fn skipped(app: &TestApp, contract: Uuid) -> Vec<i32> {

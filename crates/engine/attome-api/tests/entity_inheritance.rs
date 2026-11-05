@@ -248,12 +248,37 @@ fn json_request(method: &str, uri: String, cookie: &str, body: Value) -> Request
         .unwrap()
 }
 
+/// Sends `req`, again while another test's metadata write holds the
+/// database-wide metadata lock (a `409` the caller would retry), for up to
+/// 30 s: the suite's tests share one database.
 async fn send(app: &axum::Router, req: Request<Body>) -> (StatusCode, Value) {
-    let resp = app.clone().oneshot(req).await.unwrap();
-    let status = resp.status();
-    let bytes = to_bytes(resp.into_body(), 1024 * 1024).await.unwrap();
-    let body = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
-    (status, body)
+    let (parts, body) = req.into_parts();
+    let sent = to_bytes(body, 1024 * 1024).await.unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    loop {
+        let mut again = Request::builder()
+            .method(parts.method.clone())
+            .uri(parts.uri.clone());
+        for (name, value) in &parts.headers {
+            again = again.header(name, value);
+        }
+        let resp = app
+            .clone()
+            .oneshot(again.body(Body::from(sent.clone())).unwrap())
+            .await
+            .unwrap();
+        let status = resp.status();
+        let bytes = to_bytes(resp.into_body(), 1024 * 1024).await.unwrap();
+        let body = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+        let busy = status == StatusCode::CONFLICT
+            && body
+                .to_string()
+                .contains("a metadata write is already in progress");
+        if !busy || std::time::Instant::now() > deadline {
+            return (status, body);
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
 }
 
 /// Creates an entity, extending `base` when given.

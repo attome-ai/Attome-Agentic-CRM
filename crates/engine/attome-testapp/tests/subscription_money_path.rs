@@ -215,12 +215,19 @@ fn money_path_create_amend_run_cancel() {
             .await
             .unwrap();
         assert_eq!(ends, d(2028, 1, 1), "at the end of the term");
-        for _ in 0..20 {
-            let run = handoff::run(app.db()).await.unwrap();
-            if run.churned == 0 && run.revenue_events == 0 {
+        // Until the churn shows, for up to 60 s: one empty pass can come
+        // before the cancellation is visible to the hand-off on a shared
+        // database.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+        loop {
+            handoff::run(app.db()).await.unwrap();
+            if churned(&app, sub).await >= 1 || std::time::Instant::now() > deadline {
                 break;
             }
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         }
+        // Once only: another pass adds nothing.
+        handoff::run(app.db()).await.unwrap();
         assert_eq!(churned(&app, sub).await, 1, "one churn event");
     });
 }
