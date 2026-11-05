@@ -22,6 +22,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `docs/enrichment.md` states the no-bundled-dataset rule (V2-D367), what is on by default, and
+  what each enrichment source is sent and where it is processed (D24-T13).
 - Bulk operations take JSON lines and give a result file (S5-T1): `POST /api/v1/{entity}/bulk/lines`
   queues the same durable bulk operation from an `application/x-ndjson` body (one
   `{id?, expected_row_version?, data}` per line, the options as query parameters), and

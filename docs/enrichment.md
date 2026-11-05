@@ -6,6 +6,32 @@ person decides, and each proposal names its source and when it was fetched. Each
 daily call budget, and an account already matched to another by its work-email domain is skipped
 before any call is spent.
 
+## No bundled dataset
+
+Attome ships no company or contact dataset (V2-D367). Enrichment asks the sources below when a
+record needs it, with the customer's own credentials, and keeps what it learns as proposals on
+that deployment's records only.
+
+What is on by default is the free sources, and only through a connection the administrator adds:
+with no `wathq` or `national_address` integration connection the registry and the National Address
+are never called, and the website source reads only a company's own public home page. Contact data
+(people's names, emails and phones) is never fetched by anything that ships today. A paid company,
+contact or verification provider runs under the customer's own contract with that provider, through
+an integration connection holding the customer's key. The provider catalogue (D24-T6) is not built
+yet, so no paid provider ships.
+
+## What each source is sent
+
+| Source | Sent | To | Processed in |
+|---|---|---|---|
+| `registry` | the account's commercial registration number | Wathq, the Saudi commercial register API, at the connection's base URL | Saudi Arabia |
+| `national_address` | the account's short address, or its address text | SPL's National Address API, at the connection's base URL | Saudi Arabia |
+| `website` | an anonymous `GET` of `/robots.txt` and the home page, as `AttomeEnrichment/1.0` | the company's own web server | wherever the company hosts its site |
+| `model` (Arabic names) | the Latin legal names of up to 20 accounts a call | the deployment's approved AI model | the model provider's region, as configured under AI settings |
+
+Nothing else about the account, its contacts or the deployment is sent, and each provider's calls
+stay within its daily budget.
+
 ## Free sources
 
 Three sources cost nothing per call (`attome_sales::enrichment::free_sources`); each call is
