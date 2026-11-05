@@ -132044,6 +132044,22 @@
           "name": {
             "type": "string"
           },
+          "parameters": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ParamDecl"
+            }
+          },
+          "query_spec": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "V2-D1808: a saved QuerySpec (S4-T9), with or instead of `sql` (which\nis then empty), and the parameters it declares. A query declared this\nway is scoped to each reader before it aggregates."
+          },
           "required_privilege": {
             "type": [
               "string",

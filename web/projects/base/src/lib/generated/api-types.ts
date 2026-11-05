@@ -65939,6 +65939,13 @@ export interface components {
             is_customized?: boolean;
             is_report?: boolean;
             name: string;
+            parameters?: components["schemas"]["ParamDecl"][] | null;
+            /**
+             * @description V2-D1808: a saved QuerySpec (S4-T9), with or instead of `sql` (which
+             *     is then empty), and the parameters it declares. A query declared this
+             *     way is scoped to each reader before it aggregates.
+             */
+            query_spec?: Record<string, never> | null;
             required_privilege?: string | null;
             /** @description `sql_query.sql_query`. */
             sql: string;
