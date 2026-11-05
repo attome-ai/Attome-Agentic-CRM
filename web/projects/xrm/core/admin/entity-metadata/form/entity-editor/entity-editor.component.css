@@ -100,7 +100,7 @@
   gap: 16px; margin-bottom: 22px;
 }
 .ee-section-sub {
-  font-size: 13px; color: #b8cce0; margin: 5px 0 0;
+  font-size: 13px; color: var(--color-text-secondary); margin: 5px 0 0;
 }
 
 /* Add field button */

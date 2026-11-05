@@ -61,7 +61,7 @@ import { RobotsEditorComponent } from './robots-editor.component';
     .st-list { list-style: none; padding-inline-start: 0; display: grid; gap: 0.4rem; }
     .st-list li { display: flex; gap: 0.6rem; align-items: center; }
     .st-name { font-weight: 600; }
-    .st-muted { color: var(--text-muted, #6b7280); }
+    .st-muted { color: var(--color-text-secondary); }
     .st-error { color: var(--danger, #b91c1c); }
   `],
 })

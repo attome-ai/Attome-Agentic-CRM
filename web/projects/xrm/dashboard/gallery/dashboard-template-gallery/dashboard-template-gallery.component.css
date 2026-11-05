@@ -2,7 +2,7 @@
 .gallery-header h2 { font-size: 22px; font-weight: 700; color: var(--color-text-primary, #e5eefc); margin: 0; }
 .subtitle { color: var(--color-text-secondary, #94a3b8); margin-top: 4px; font-size: 13px; }
 .hint { color: var(--color-text-secondary, #94a3b8); font-size: 13px; }
-.error { color: #e34948; font-size: 13px; }
+.error { color: var(--color-danger, #b91c1c); font-size: 13px; }
 
 .grid {
   display: grid;

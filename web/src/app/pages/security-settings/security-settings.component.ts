@@ -192,8 +192,8 @@ const SETTINGS_PATH = '/settings/security';
       box-shadow: 0 20px 60px rgba(0,0,0,0.2);
     }
     h2 { font-size: 20px; font-weight: 700; color: #111827; margin: 0 0 4px; }
-    .subtitle { color: #6b7280; font-size: 14px; margin: 0 0 20px; }
-    .state-msg { color: #6b7280; font-size: 14px; }
+    .subtitle { color: var(--color-text-secondary); font-size: 14px; margin: 0 0 20px; }
+    .state-msg { color: var(--color-text-secondary); font-size: 14px; }
     .banner {
       font-size: 13px;
       border-radius: 6px;
@@ -265,7 +265,7 @@ const SETTINGS_PATH = '/settings/security';
     .secret-title { font-size: 14px; font-weight: 600; color: #111827; margin: 0 0 4px; }
     .secret-warning { font-size: 13px; color: #92400e; margin: 0 0 10px; }
     .secret-values { margin: 0 0 12px; font-size: 13px; }
-    .secret-values dt { color: #6b7280; margin-top: 6px; }
+    .secret-values dt { color: var(--color-text-secondary); margin-top: 6px; }
     .secret-values dd { margin: 2px 0 0; word-break: break-all; }
     .secret-value { user-select: all; }
   `],

@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { mockApi } from '../helpers/mock-api';
+import { xrmStaticRoutes } from '../helpers/xrm-routes';
 
 /** B22-T1: the pages a visitor reaches before signing in. */
 const ROUTES = [
@@ -30,12 +31,45 @@ for (const route of ROUTES) {
   });
 }
 
-/** B22-T1: the shell and a few screens behind sign-in, with empty data. */
-const SIGNED_IN = ['/xrm/dashboard', '/xrm/settings', '/xrm/search', '/xrm/security', '/xrm/security/mfa'];
+/**
+ * B22-T1: every built-in screen behind sign-in, read from the route tree
+ * (`helpers/xrm-routes.ts`), over the API mock with empty data. The shell's
+ * own reads get their real shapes (the sidebar and apps are arrays, the
+ * signed-in user is a record): a screen whose template throws halfway leaves
+ * the rest of it blank, which axe would report as unnamed buttons that are
+ * not the screen's fault.
+ */
+const ME = '00000000-0000-7000-8000-000000000001';
+const SHELL = {
+  '/api/v1/sidebar/get': [],
+  '/api/v1/apps': [],
+  [`/api/v1/user_account/${ME}`]: { id: ME, row_version: 1, data: { id: ME, timezone: null } },
+};
+const SIGNED_IN = [
+  ...new Set([...xrmStaticRoutes(), '/xrm/settings', '/xrm/search', '/xrm/security', '/xrm/security/mfa']),
+];
+
+/**
+ * Screens whose template throws on the mock's empty data during change
+ * detection (`Cannot read properties of undefined (reading 'length')`,
+ * logged to the console), which stops the update halfway: the rest of the
+ * screen stays blank, and axe then reports unnamed buttons and unlabelled
+ * controls the real screen does not have (their catalog keys exist). Each
+ * needs sample data in the mock, or a seeded backend (AC5-T5), before it can
+ * be checked; until then they are listed here, not hidden.
+ */
+const NEEDS_DATA = new Set([
+  '/xrm/admin/license/modules',
+  '/xrm/admin/project/booking',
+  '/xrm/marketing/deliverability',
+  '/xrm/documents',
+  '/xrm/admin/entity',
+]);
 
 for (const route of SIGNED_IN) {
   test(`${route} has no AA violations when signed in`, async ({ page }) => {
-    await mockApi(page);
+    test.fixme(NEEDS_DATA.has(route), 'blank under the API mock; needs sample data (see NEEDS_DATA)');
+    await mockApi(page, SHELL);
     await page.goto(route);
     await page.waitForLoadState('networkidle');
     const { violations } = await new AxeBuilder({ page }).withTags(AA).analyze();

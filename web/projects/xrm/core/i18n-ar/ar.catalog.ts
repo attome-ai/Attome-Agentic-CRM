@@ -2387,6 +2387,7 @@ export const xrmAr = {
   },
   recordShares: {
     title: 'مشاركات السجلات',
+    entityPicker: 'الكيان',
     subtitle: 'منح ومنع صريحان لكل سجل (مشاركة F137)، ومشاركات افتراضية على مستوى الكيان. يتجاوز صف "المنع" أي منحة صالحة لذلك الطرف، لكنه لا يحجب مسؤول المنصة أبداً.',
     recordIdPlaceholder: 'معرّف السجل (UUID)', userEmailPlaceholder: 'user@example.com', teamNamePlaceholder: 'المالية',
   },

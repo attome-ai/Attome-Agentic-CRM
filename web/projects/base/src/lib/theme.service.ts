@@ -45,7 +45,7 @@ export function isThemeMode(value: unknown): value is ThemeMode {
  */
 const SCHEME: ColorPalette = {
   name: 'Default Purple',
-  light: { bg:'#f5f6fb', bgAlt:'#ffffff', textPrimary:'#0d1117', textSecondary:'#666d7a', primary:'#374151', primaryHover:'#1f2937', border:'#dde1ef', accent:'#6d28d9', accentHover:'#5b21b6', shadow:'rgba(0,0,0,0.08)', rangeTrack:'#e5e7eb', rangeThumb:'#6d28d9', onAccent:'#ffffff', danger:'#b91c1c', success:'#166534' },
+  light: { bg:'#f5f6fb', bgAlt:'#ffffff', textPrimary:'#0d1117', textSecondary:'#5b6170', primary:'#374151', primaryHover:'#1f2937', border:'#dde1ef', accent:'#6d28d9', accentHover:'#5b21b6', shadow:'rgba(0,0,0,0.08)', rangeTrack:'#e5e7eb', rangeThumb:'#6d28d9', onAccent:'#ffffff', danger:'#b91c1c', success:'#166534' },
   dark:  { bg:'#0d0f1e', bgAlt:'#141728', textPrimary:'#e8eaf6', textSecondary:'#8b90bf', primary:'#5a5f8a', primaryHover:'#a78bfa', border:'#2e3150', accent:'#a78bfa', accentHover:'#c4b5fd', shadow:'rgba(0,0,0,0.5)', rangeTrack:'#2e3150', rangeThumb:'#a78bfa', onAccent:'#0d0f1e', danger:'#f87171', success:'#4ade80' },
 };
 

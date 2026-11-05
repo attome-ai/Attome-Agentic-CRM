@@ -2448,6 +2448,7 @@ export const xrmEn = {
   },
   recordShares: {
     title: 'Record Shares',
+    entityPicker: 'Entity',
     subtitle: 'Explicit per-record grants and denies (F137 sharing), and entity-wide default shares. A "deny" row overrides an otherwise-valid grant for that principal, but never blocks a platform admin.',
     recordIdPlaceholder: 'Record ID (UUID)', userEmailPlaceholder: 'user@example.com', teamNamePlaceholder: 'Finance',
   },

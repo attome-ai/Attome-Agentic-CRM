@@ -44,7 +44,7 @@ import {
 
       @if (!isLocked) {
         <div class="filter-bar">
-          <select [(ngModel)]="recordEntity">
+          <select [(ngModel)]="recordEntity" [attr.aria-label]="'recordShares.entityPicker' | translate">
             <option value="" disabled>Entity…</option>
             @for (e of entities(); track e.logicalname) {
               <option [value]="e.logicalname">{{ e.name }} ({{ e.logicalname }})</option>
@@ -157,7 +157,7 @@ import {
       <div class="section-header"><h3>Entity Default Shares <span class="hint">— every record of one entity</span></h3></div>
 
       <div class="filter-bar">
-        <select [(ngModel)]="defaultEntity">
+        <select [(ngModel)]="defaultEntity" [attr.aria-label]="'recordShares.entityPicker' | translate">
           <option value="" disabled>Entity…</option>
           @for (e of entities(); track e.logicalname) {
             <option [value]="e.logicalname">{{ e.name }} ({{ e.logicalname }})</option>

@@ -69,7 +69,6 @@
   font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
   color: var(--color-text-secondary, #94a3b8);
   margin-top: 5px;
-  opacity: 0.6;
   letter-spacing: .01em;
 }
 

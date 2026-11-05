@@ -103,8 +103,8 @@ export function recentWorkspaces(rows: readonly WorkspaceRow[], limit = RECENT):
             {{ 'dataModel.startBlank' | translate }}</button>
         </article>
         <article class="ds-card" data-testid="ds-describe">
-          <h3>{{ 'dataModel.describeApp' | translate }}</h3>
-          <textarea data-testid="ds-description" [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+          <h3 id="ds-describe-title">{{ 'dataModel.describeApp' | translate }}</h3>
+          <textarea data-testid="ds-description" aria-labelledby="ds-describe-title" [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
           <button type="button" data-testid="ds-plan" (click)="plan(false)" [disabled]="busy() || !description().trim()">
             {{ 'dataModel.planApp' | translate }}</button>
           @if (written(); as lines) {

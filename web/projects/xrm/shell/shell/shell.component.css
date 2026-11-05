@@ -59,6 +59,8 @@
   flex: 1; overflow-y: auto; background: var(--color-bg);
   padding: 24px; color: var(--color-text-primary);
 }
+.xrm-main:focus { outline: none; }
+.xrm-main:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 @media (max-width: 767px) {
   .xrm-main { padding: 12px; }
   .xrm-nav { padding: 0 8px; gap: 8px; }

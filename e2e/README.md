@@ -15,6 +15,12 @@ The specs under `tests/mobile` run only in the `phone` project (a Pixel 7): the 
 a swipe that completes a task, and the Arabic phone layout right to left, with axe on the cards
 (`npx playwright test --project=phone`).
 
+`tests/accessibility.spec.ts` runs axe (WCAG 2.2 A and AA) on the public pages and on every built-in
+screen behind sign-in, in every project: the screens are read from the route tree itself
+(`helpers/xrm-routes.ts` walks `web/src/app/xrm-shell.routes.ts`), so a new screen is checked without
+being listed. They run over the API mock with empty data; the few screens whose template throws on
+empty data are listed in the spec's `NEEDS_DATA` as `fixme` until they get sample data.
+
 `tests/rtl-screens.spec.ts` compares the built-in screens, in English and in Arabic, with their
 screenshot baselines (`tests/rtl-screens.spec.ts-snapshots/`, one per desktop project). The first
 run, or a change meant to move a screen, makes them: `npx playwright test rtl-screens.spec.ts
