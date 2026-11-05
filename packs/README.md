@@ -356,7 +356,8 @@ telecom-energy) re-declares those that QuerySpec can express as spec-only stored
 name, entity, privilege and output columns, run through the QuerySpec engine, which applies the
 reader's record scope and field security before it aggregates (V2-D1808). A sum over no rows is now
 empty rather than `0`. A measure may carry its own `filter` (`FILTER (WHERE ...)`), which CS SLA
-Compliance and the contract playbook deviation count use. Queries QuerySpec cannot yet express stay
-SQL and run for administrators and full-read readers only: averages of a time difference (partner
-lead accept hours), "this week" (healthcare appointments, retail visit compliance) and
+Compliance, the contract playbook deviation count and retail visit compliance use; `this_week`
+and `last_week` take a week from Monday, as healthcare appointments and retail visit compliance do
+(healthcare `0002`). Queries QuerySpec cannot yet express stay SQL and run for administrators and
+full-read readers only: averages of a time difference (partner lead accept hours) and
 `expires_on > CURRENT_DATE` (partner certifications).

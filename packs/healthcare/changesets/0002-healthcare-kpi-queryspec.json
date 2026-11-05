@@ -1,0 +1,70 @@
+{
+  "author": "packs",
+  "checksum": "sha256:8c22151e25612a918a032f9750297f7a1d331f14431f35e1425e738a1fe52a43",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "Pack KPIs as QuerySpecs (V2-D1808): Healthcare: Appointments by Status This Week is declared as a spec-only stored query, so query/execute runs it through the QuerySpec engine, which scopes it to each reader before it aggregates (its SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa92-6084-7aa9-93a0-d1a0799ff40b",
+  "layer": "product",
+  "name": "healthcare-kpi-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "hc_appointment",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Healthcare: Appointments by Status This Week",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "appointments",
+                "func": "count"
+              }
+            ],
+            "entity": "hc_appointment",
+            "group_by": [
+              {
+                "field": "status"
+              }
+            ],
+            "sort": [
+              {
+                "field": "status"
+              }
+            ],
+            "where": {
+              "field": "starts_at",
+              "kind": "compare",
+              "op": "this_week"
+            }
+          },
+          "required_privilege": "hc_appointment.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "hc_appointment",
+        "query": "Healthcare: Appointments by Status This Week"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "state",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "healthcare",
+  "seq": 2,
+  "title": "Pack: KPI queries as QuerySpecs"
+}

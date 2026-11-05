@@ -13,6 +13,8 @@ pub const DATE_OPS: &[&str] = &[
     "today",
     "last_n_days",
     "next_n_days",
+    "this_week",
+    "last_week",
     "this_month",
     "last_month",
     "this_quarter",
@@ -73,6 +75,16 @@ pub fn date_range(
         "today" => (today, today + Duration::days(1)),
         "last_n_days" => (today - Duration::days(days()?), today + Duration::days(1)),
         "next_n_days" => (today, today + Duration::days(days()? + 1)),
+        // Weeks start on Monday, as PostgreSQL's `date_trunc('week', ...)`.
+        "this_week" | "last_week" => {
+            let monday = today - Duration::days(i64::from(today.weekday().num_days_from_monday()));
+            let start = if op == "last_week" {
+                monday - Duration::days(7)
+            } else {
+                monday
+            };
+            (start, start + Duration::days(7))
+        }
         "this_month" => (month_start(month_index)?, month_start(month_index + 1)?),
         "last_month" => (month_start(month_index - 1)?, month_start(month_index)?),
         "this_quarter" => {
@@ -116,6 +128,21 @@ fn midnight(date: NaiveDate, tz: Tz) -> DateTime<Utc> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn weeks_start_on_monday() {
+        // 2026-11-05 is a Thursday.
+        let now = "2026-11-05T10:00:00Z".parse::<DateTime<Utc>>().unwrap();
+        let monday = "2026-11-02T00:00:00Z".parse::<DateTime<Utc>>().unwrap();
+        assert_eq!(
+            date_range("this_week", None, now, Tz::UTC, 1).unwrap(),
+            (monday, monday + Duration::days(7))
+        );
+        assert_eq!(
+            date_range("last_week", None, now, Tz::UTC, 1).unwrap(),
+            (monday - Duration::days(7), monday)
+        );
+    }
 
     fn at(s: &str) -> DateTime<Utc> {
         s.parse().unwrap()
