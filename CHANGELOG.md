@@ -17,6 +17,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `POST /api/v1/query/execute` runs a spec-only stored query (a saved QuerySpec, S4-T9) through the
+  QuerySpec engine instead of answering 422, so a query widget, a metric, an agent or a document can
+  use one; the record scope and field security apply before it aggregates. Filters narrow it; search,
+  sort, keyset, `seek`, `related_to`, deltas and a page past the first are a 422. A bundle or changeset
+  `upsert_query` may declare `query_spec` and `parameters`, and the KPI and summary queries of thirteen
+  packs are now QuerySpecs (V2-D1808, `packs/README.md`).
 - `attome supervise` takes `POST /stop` on its control address (the restart token): it drains the server and exits,
   so a script stops one node of a rolling restart gracefully on Windows. `loadtest/scripts/run-drain-exercise.ps1`
   proves a restart drains under load, on one node or rolling over two behind nginx (AB7-T10).
@@ -777,6 +783,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- A single-entity stored query whose output lacks a column the record filter needs (`id`, the
+  organisation or owner columns, a grant condition's field) answers `403` to a reader below full read
+  access instead of a `500`, with a warning naming the query and the columns (V2-D1808). Administrators
+  and full-read readers still run it.
 - An entity whose pack adds an `owner_ref` lookup (contracts, ITSM, manufacturing, marketing and others) no
   longer selects the column twice: a reader whose role lets owners reach their own records (the Contract
   Requester, say) got a 500 listing it through `POST /api/v1/query/execute`, and the GraphQL schema named the
