@@ -760,8 +760,126 @@ pub fn shared_runtime() -> &'static tokio::runtime::Runtime {
 
 /// Runs one test body on [`shared_runtime`]: `#[test] fn t() {
 /// attome_testkit::run_shared(async { ... }) }` in place of `#[tokio::test]`.
+///
+/// A body still running after [`STALL_DUMP_ENV`] seconds (150 by default,
+/// `0` turns it off) gets the server's busy sessions printed to stderr, and
+/// again at each further interval: a test that hangs on a lock or an idle
+/// transaction then shows what it waits on when the runner kills it, which
+/// a bare "test timed out" never does.
 pub fn run_shared<F: std::future::Future<Output = ()>>(body: F) {
-    shared_runtime().block_on(body)
+    let watchdog = stall_watchdog();
+    shared_runtime().block_on(body);
+    if let Some((done, thread)) = watchdog {
+        drop(done);
+        let _ = thread.join();
+    }
+}
+
+/// Seconds a [`run_shared`] body may run before its busy sessions are
+/// printed; `0` turns the dump off.
+pub const STALL_DUMP_ENV: &str = "ATTOME_TEST_STALL_DUMP_SECS";
+
+const DEFAULT_STALL_DUMP_SECS: u64 = 150;
+
+/// The watchdog thread behind [`run_shared`]: it waits on a channel the body
+/// closes when it ends, and at each interval without that, prints
+/// [`busy_sessions`]. On its own thread and runtime, so a stalled shared
+/// runtime cannot hold the dump up.
+fn stall_watchdog() -> Option<(std::sync::mpsc::Sender<()>, std::thread::JoinHandle<()>)> {
+    let secs = std::env::var(STALL_DUMP_ENV)
+        .ok()
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .unwrap_or(DEFAULT_STALL_DUMP_SECS);
+    if secs == 0 {
+        return None;
+    }
+    let url = server_url()?;
+    let (done, ended) = std::sync::mpsc::channel::<()>();
+    let thread = std::thread::Builder::new()
+        .name("attome-test-stall-watchdog".into())
+        .spawn(move || {
+            let interval = std::time::Duration::from_secs(secs);
+            let mut waited = 0;
+            while let Err(std::sync::mpsc::RecvTimeoutError::Timeout) = ended.recv_timeout(interval)
+            {
+                waited += secs;
+                let dump = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|error| error.to_string())
+                    .and_then(|runtime| runtime.block_on(busy_sessions(&url)));
+                match dump {
+                    Ok(lines) => {
+                        eprintln!(
+                            "attome-testkit: the test has run {waited}s; busy database sessions ({}):",
+                            lines.len()
+                        );
+                        for line in lines {
+                            eprintln!("  {line}");
+                        }
+                    }
+                    Err(error) => {
+                        eprintln!("attome-testkit: the test has run {waited}s; no session dump: {error}");
+                    }
+                }
+            }
+        })
+        .ok()?;
+    Some((done, thread))
+}
+
+/// One `pg_stat_activity` row as [`busy_sessions`] reads it: pid, database,
+/// state, wait event type and name, blocking pids, transaction age in
+/// seconds, statement.
+type SessionRow = (
+    i32,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Vec<i32>,
+    Option<f64>,
+    Option<String>,
+);
+
+/// Every session on the test server other than this one that is not idle:
+/// its database, state, wait, the sessions blocking it, its transaction's
+/// age and the start of its statement.
+async fn busy_sessions(url: &str) -> Result<Vec<String>, String> {
+    let connect = PgConnection::connect(url);
+    let mut conn = tokio::time::timeout(std::time::Duration::from_secs(10), connect)
+        .await
+        .map_err(|_| "connect timed out".to_owned())?
+        .map_err(|error| error.to_string())?;
+    let rows: Vec<SessionRow> = sqlx::query_as(
+        "SELECT pid, datname::text, state, wait_event_type, wait_event, \
+                    pg_blocking_pids(pid), \
+                    EXTRACT(EPOCH FROM now() - xact_start)::float8, \
+                    left(regexp_replace(query, '\\s+', ' ', 'g'), 300) \
+               FROM pg_stat_activity \
+              WHERE pid <> pg_backend_pid() \
+                AND backend_type = 'client backend' \
+                AND state IS DISTINCT FROM 'idle' \
+              ORDER BY xact_start NULLS LAST",
+    )
+    .fetch_all(&mut conn)
+    .await
+    .map_err(|error| error.to_string())?;
+    let _ = conn.close().await;
+    Ok(rows
+        .into_iter()
+        .map(|(pid, db, state, wait_type, wait, blockers, age, query)| {
+            format!(
+                "pid {pid} db {} state {} wait {}/{} blocked_by {blockers:?} xact {:.0}s: {}",
+                db.unwrap_or_default(),
+                state.unwrap_or_default(),
+                wait_type.unwrap_or_default(),
+                wait.unwrap_or_default(),
+                age.unwrap_or(0.0),
+                query.unwrap_or_default(),
+            )
+        })
+        .collect())
 }
 
 /// Environment switch that turns a missing object store into a failure, as
