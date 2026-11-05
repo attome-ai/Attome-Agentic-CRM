@@ -31,6 +31,10 @@ async fn create_entity(app: &TestApp, name: &str) -> Uuid {
                 "is_sortable": true, "is_filterable": true }),
         json!({ "logicalname": "amount", "name": "amount", "field_type": "number",
                 "is_sortable": true, "is_filterable": true }),
+        json!({ "logicalname": "opened_at", "name": "opened_at", "field_type": "date_time",
+                "is_filterable": true }),
+        json!({ "logicalname": "closed_at", "name": "closed_at", "field_type": "date_time",
+                "is_filterable": true }),
     ] {
         let (status, body) = app
             .request(
@@ -129,11 +133,14 @@ fn a_kpi_counts_only_what_its_reader_may_see() {
         // Six records of 10 to 60; the reader owns the first three.
         for n in 1..=6_i32 {
             sqlx::query(&format!(
-                "INSERT INTO \"{entity}\" (title, amount, owner_ref) VALUES ($1, $2, $3)"
+                "INSERT INTO \"{entity}\" (title, amount, owner_ref, opened_at, closed_at) \
+                 VALUES ($1, $2, $3, now() - interval '1 day', \
+                         now() - interval '1 day' + make_interval(hours => $4))"
             ))
             .bind(format!("r{n}"))
             .bind(n * 10)
             .bind((n <= 3).then_some(reader.id))
+            .bind(n)
             .execute(app.db())
             .await
             .unwrap();
@@ -152,7 +159,9 @@ fn a_kpi_counts_only_what_its_reader_may_see() {
                         { "func": "count", "alias": "n" },
                         { "func": "sum", "field": "amount", "alias": "total" },
                         { "func": "count", "alias": "big",
-                          "filter": { "kind": "compare", "field": "amount", "op": "gt", "value": 15 } }
+                          "filter": { "kind": "compare", "field": "amount", "op": "gt", "value": 15 } },
+                        { "func": "avg", "field": "closed_at", "alias": "hours",
+                          "since": { "field": "opened_at", "unit": "hours" } }
                     ]
                 },
                 "parameters": []
@@ -188,13 +197,15 @@ fn a_kpi_counts_only_what_its_reader_may_see() {
         assert_eq!(number(row, "total"), 60.0, "{body}");
         // A measure with its own filter counts only the rows that meet it.
         assert_eq!(number(row, "big"), 2.0, "{body}");
+        // Record n closes n hours after it opens: the reader's 1, 2, 3.
+        assert!((number(row, "hours") - 2.0).abs() < 1e-6, "{body}");
         let columns: Vec<&str> = body["data"]["columns"]
             .as_array()
             .unwrap()
             .iter()
             .filter_map(|c| c["name"].as_str())
             .collect();
-        assert_eq!(columns, ["n", "total", "big"], "{body}");
+        assert_eq!(columns, ["n", "total", "big", "hours"], "{body}");
 
         // The administrator, whom no filter narrows, counts all six.
         let (status, body) = app
