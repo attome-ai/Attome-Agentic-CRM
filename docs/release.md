@@ -12,7 +12,8 @@ machine does not count as either), at the same commit:
 cargo run -p attome-release --target-dir target/gate -- --check --web
 ```
 
-The steps are format, clippy, tests, the plan guards (`perf_plans`: the EXPLAIN tests of
+The steps are format, clippy, tests, the test targets (`test_targets`: the coverage map against
+`docs/test-targets.json`, see [testing](testing.md)), the plan guards (`perf_plans`: the EXPLAIN tests of
 `attome-audit` and `attome-records`, which fail when a query stops using its index; they need the
 test database `DATABASE_URL` names), the pack golden workflows (`packs`: every pack with
 `packs/<pack>/golden/golden.json` installed on a fresh test deployment and its golden workflows run;
