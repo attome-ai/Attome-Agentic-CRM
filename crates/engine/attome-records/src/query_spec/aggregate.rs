@@ -208,27 +208,36 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<CompiledAggregate, App
             )));
         }
         let expr = match (agg.func, agg.field.as_deref()) {
-            (AggFunc::Count, None) => "count(*)".to_owned(),
-            (_, None) => {
-                return Err(AppError::Validation(format!("{} needs a field", agg.alias)));
-            }
-            // V2-D1808: the time from one date field to another, in a unit.
-            (func, Some(field)) if agg.since.is_some() => {
+            // V2-D1808: the time from one date field to another (or, with no
+            // `field`, to the clock's now, bound like a relative date), in a
+            // unit.
+            (func, field) if agg.since.is_some() => {
                 let since = agg
                     .since
                     .as_ref()
                     .ok_or_else(|| AppError::internal("since"))?;
-                let end = b.resolve(&scope, field)?;
                 let start = b.resolve(&scope, &since.field)?;
-                if end.cast != "timestamptz" || start.cast != "timestamptz" {
+                let end_expr = match field {
+                    Some(field) => {
+                        let end = b.resolve(&scope, field)?;
+                        if end.cast != "timestamptz" {
+                            return Err(AppError::Validation(format!(
+                                "{} measures time between two date fields",
+                                agg.alias
+                            )));
+                        }
+                        end.expr
+                    }
+                    None => format!("${}", b.bind(b.env().clock.now.to_rfc3339())),
+                };
+                if start.cast != "timestamptz" {
                     return Err(AppError::Validation(format!(
                         "{} measures time between two date fields",
                         agg.alias
                     )));
                 }
                 let span = format!(
-                    "(EXTRACT(EPOCH FROM ({}::timestamptz - {}::timestamptz)) / {})",
-                    end.expr,
+                    "(EXTRACT(EPOCH FROM ({end_expr}::timestamptz - {}::timestamptz)) / {})",
                     start.expr,
                     since.unit.seconds()
                 );
@@ -244,6 +253,10 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<CompiledAggregate, App
                         )));
                     }
                 }
+            }
+            (AggFunc::Count, None) => "count(*)".to_owned(),
+            (_, None) => {
+                return Err(AppError::Validation(format!("{} needs a field", agg.alias)));
             }
             (func, Some(field)) => {
                 let col = b.resolve(&scope, field)?;
@@ -525,7 +538,9 @@ mod tests {
                 {"func": "avg", "field": "created_on", "alias": "hours",
                  "since": {"field": "created_on", "unit": "hours"}},
                 {"func": "count", "alias": "big",
-                 "filter": {"kind": "compare", "field": "revenue", "op": "gt", "value": 5}}
+                 "filter": {"kind": "compare", "field": "revenue", "op": "gt", "value": 5}},
+                {"func": "avg", "alias": "age",
+                 "since": {"field": "created_on", "unit": "days"}}
             ]}),
             &reader(),
             &global(),
@@ -539,6 +554,14 @@ mod tests {
             c.sql
         );
         assert!(c.sql.contains("count(*) FILTER (WHERE "), "{}", c.sql);
+        // With no field, the time runs to the clock's now, bound.
+        assert!(
+            c.sql
+                .contains("::timestamptz - t.\"created_on\"::timestamptz)) / 86400) AS a3"),
+            "{}",
+            c.sql
+        );
+        assert!(c.binds.contains(&clock().now.to_rfc3339()), "{:?}", c.binds);
 
         let not_dates = refused(json!({"entity": "account",
             "aggregates": [{"func": "avg", "field": "revenue", "alias": "x",

@@ -1,8 +1,8 @@
 {
   "author": "attome-service",
-  "checksum": "sha256:2796eb7c3739f7fbfc18a7203e9919f6e239b2b7493173a27e433b2e7330f269",
+  "checksum": "sha256:09242622f61e9d6450ca0c8e7fbb6f80af410fc2a85ca348ce53ce18576fc3fc",
   "closed_at": "2026-11-05T00:00:00Z",
-  "description": "The service KPIs as QuerySpecs (V2-D1808): Queue Claim-To-Resolve, SLA Mean Time To Resolve, SLA Breaches By Queue And Priority and Queue Depth returned no id, so the record filter could not narrow them to a reader below full read access; the QuerySpec engine scopes the tickets before it aggregates. The queue column is now named work_queue_ref. Queue Average Wait (time up to now) stays SQL.",
+  "description": "The service KPIs as QuerySpecs (V2-D1808): Queue Claim-To-Resolve, SLA Mean Time To Resolve, SLA Breaches By Queue And Priority, Queue Depth and Queue Average Wait (to now) returned no id, so the record filter could not narrow them to a reader below full read access; the QuerySpec engine scopes the tickets before it aggregates. The queue column is now named work_queue_ref.",
   "format": "attome-changeset/v1",
   "id": "01a1aa9d-016b-79ad-a3b4-0d7fddbb6314",
   "layer": "platform",
@@ -245,6 +245,69 @@
       "target": {
         "entity": "service_work_queue",
         "query": "Queue Depth (Open, Unassigned Items Per Queue)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "Queue Average Wait, Minutes (Currently Unassigned Items)",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "value",
+                "func": "avg",
+                "since": {
+                  "field": "created_at",
+                  "unit": "minutes"
+                }
+              }
+            ],
+            "entity": "service_ticket",
+            "group_by": [
+              {
+                "field": "work_queue_ref"
+              }
+            ],
+            "where": {
+              "all": [
+                {
+                  "field": "work_queue_ref",
+                  "kind": "compare",
+                  "op": "is_not_null"
+                },
+                {
+                  "field": "assignee_id",
+                  "kind": "compare",
+                  "op": "is_null"
+                },
+                {
+                  "field": "status",
+                  "kind": "compare",
+                  "op": "not_in",
+                  "value": [
+                    "resolved",
+                    "closed"
+                  ]
+                }
+              ],
+              "kind": "and"
+            }
+          },
+          "required_privilege": "service_work_queue.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "service_work_queue",
+        "query": "Queue Average Wait, Minutes (Currently Unassigned Items)"
       }
     }
   ],

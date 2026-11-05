@@ -360,5 +360,5 @@ Compliance, the contract playbook deviation count and retail visit compliance us
 and `last_week` take a week from Monday, as healthcare appointments and retail visit compliance do
 (healthcare `0002`), and `after_today`/`before_today` every day after or before today, as partner
 certifications do for `expires_on`. A measure may also take the time from one date field to
-another (`since: {field, unit}`), as partner lead accept hours does in hours. Every pack KPI is
+another, or to now when the measure names no `field` (`since: {field, unit}`), as partner lead accept hours does in hours. Every pack KPI is
 now a QuerySpec.
