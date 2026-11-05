@@ -2,7 +2,7 @@ import {
   ENVIRONMENT_INITIALIZER, EnvironmentInjector, EnvironmentProviders, inject,
   makeEnvironmentProviders, runInInjectionContext,
 } from '@angular/core';
-import { EntityRouteRegistry } from '@attome/xrm/core/entity';
+import { EntityRouteRegistry } from '@attome/xrm/core/entity/data';
 
 /**
  * Declares (but does not run) every built-in entity's bespoke-form loader,

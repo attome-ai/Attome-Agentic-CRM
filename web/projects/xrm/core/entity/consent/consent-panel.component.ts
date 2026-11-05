@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { RelatedGridComponent, RelatedGridFilter } from '../related-grid/related-grid.component';
 import { ConsentAdminService } from './consent-admin.service';
 

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untr
 import { RouterLink } from '@angular/router';
 import { SdkService, TranslatePipe } from '@attome/base';
 
-import { entityFormRoute } from '../services/entity-url.utils';
+import { entityFormRoute } from '@attome/xrm/core/entity/data';
 
 /** One step of a record's path up its tree. */
 export interface AncestorStep {

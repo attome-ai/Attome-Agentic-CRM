@@ -3,7 +3,7 @@ import { LangService } from '@attome/base';
 import type { ApiError } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { RecordAccessDialogComponent } from './record-access-dialog.component';
 import { RecordSharingService } from './record-sharing.service';
 

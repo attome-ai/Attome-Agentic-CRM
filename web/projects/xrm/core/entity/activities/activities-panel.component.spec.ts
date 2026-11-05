@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { VideoMeetingService } from './video-meeting';
 import {
   ActivitiesPanelComponent, ActivityRow, CallLog, callBody, isOverdue, nextStepBody, sortActivities,

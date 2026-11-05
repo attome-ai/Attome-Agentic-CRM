@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ATTOME_CONFIG, CurrencyService, LangService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { AvailableView, QueryService, ViewAdminService } from '@attome/xrm/core/query/data';
-import { EntityRouteRegistry } from '../entity-route-registry.service';
-import { EntityService } from '../services/entity.service';
+import { EntityRouteRegistry } from '@attome/xrm/core/entity/data';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { BulkJobRunner } from './bulk-job-runner.service';
 import { EntityListComponent, richTextToPlainText } from './entity-list.component';
 

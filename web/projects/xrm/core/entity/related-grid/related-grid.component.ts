@@ -7,9 +7,9 @@ import { catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import { TranslatePipe } from '@attome/base';
 import { EntityRecord } from '@attome/xrm';
 import { QueryColumnDef, QueryService, ViewAdminService } from '@attome/xrm/core/query/data';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { EntityListComponent } from '../list/entity-list.component';
-import { entityFormRoute } from '../services/entity-url.utils';
+import { entityFormRoute } from '@attome/xrm/core/entity/data';
 import { FeatureFlagsService } from '@attome/xrm/core/admin/data';
 import { ContinuousScanDialogComponent } from './continuous-scan-dialog.component';
 

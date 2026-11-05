@@ -5,7 +5,7 @@ import type { EntityRecord } from '@attome/xrm';
 import { firstValueFrom, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { MultiLookupComponent, chipsChanged } from './multi-lookup.component';
 
 const rec = (id: string, data: Record<string, unknown>) => ({ id, row_version: 1, data } as unknown as EntityRecord);

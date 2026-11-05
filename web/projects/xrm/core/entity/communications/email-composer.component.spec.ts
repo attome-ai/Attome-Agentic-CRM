@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SdkService, LangService } from '@attome/base';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { EmailComposerComponent, composeBody, splitAddresses } from './email-composer.component';
 import { sdkFromApi } from '../../../testing/sdk-from-api';
 

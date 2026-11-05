@@ -3,7 +3,7 @@ import { LangService } from '@attome/base';
 import type { FieldSchema } from '@attome/xrm';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { AdvancedFindPanelComponent } from './advanced-find-panel.component';
 import type { QueryFilter } from './column-filters';
 

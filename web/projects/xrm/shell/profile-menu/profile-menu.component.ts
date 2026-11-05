@@ -7,7 +7,7 @@ import {
   UserPreferencesService,
 } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
-import { EntityService } from '@attome/xrm/core/entity';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { PersonalSettingsService } from '../settings/personal-settings.service';
 
 /**

@@ -5,7 +5,7 @@ import { firstValueFrom, from, of } from 'rxjs';
 import type { Subscription } from 'rxjs';
 import { catchError, map, mergeMap, toArray } from 'rxjs/operators';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import {
   RecordSharingService, SHARE_CAPABILITIES,
 } from './record-sharing.service';

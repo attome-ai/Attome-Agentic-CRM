@@ -12,11 +12,11 @@ import { Announcer, ApiError, CurrencyService, LangService, LiveChannel, Transla
 import type { LiveRecords } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityRecord, FieldType, ListFilter, LookupMeta } from '@attome/xrm';
-import { EntityService, type DeleteImpact } from '../services/entity.service';
-import { logicalToUrlPath } from '../services/entity-url.utils';
+import { EntityService, type DeleteImpact } from '@attome/xrm/core/entity/data';
+import { logicalToUrlPath } from '@attome/xrm/core/entity/data';
 import { actionAllowed } from '../services/allowed-actions';
-import { EntityRouteRegistry } from '../entity-route-registry.service';
-import type { SelectionAction } from '../entity-route-registry.service';
+import { EntityRouteRegistry } from '@attome/xrm/core/entity/data';
+import type { SelectionAction } from '@attome/xrm/core/entity/data';
 import {
   AvailableView, CreatePersonalViewBody, QueryColumnDef, QueryService, ViewAdminService, ViewKind,
 } from '@attome/xrm/core/query/data';

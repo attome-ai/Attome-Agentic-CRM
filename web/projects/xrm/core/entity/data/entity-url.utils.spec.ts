@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EntityRouteRegistry } from '../entity-route-registry.service';
+import { EntityRouteRegistry } from './entity-route-registry.service';
 import {
   entityFormRoute, entityListRoute, logicalToUrlPath, resolveEntityUrlPath,
   urlPathCandidates, urlPathToLogical,

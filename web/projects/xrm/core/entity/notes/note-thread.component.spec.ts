@@ -4,7 +4,7 @@ import { AuthService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { NoteThreadComponent, ThreadItem, parseReactions, toggleReaction } from './note-thread.component';
 
 describe('note thread helpers (C1-T2)', () => {

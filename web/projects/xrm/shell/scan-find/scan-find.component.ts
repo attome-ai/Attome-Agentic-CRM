@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiError, SdkService, LangService, Page, TranslatePipe } from '@attome/base';
 import { ScanService } from '@attome/base/scan';
-import { entityFormRoute } from '@attome/xrm/core/entity';
+import { entityFormRoute } from '@attome/xrm/core/entity/data';
 import { Subscription, catchError, of } from 'rxjs';
 
 /** A record a scanned code points at (`GET /api/v1/scan/find`, `ScanHit`). */

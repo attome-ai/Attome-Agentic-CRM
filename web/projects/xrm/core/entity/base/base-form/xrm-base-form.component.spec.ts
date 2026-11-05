@@ -6,7 +6,7 @@ import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ATTOME_CONFIG, LangService } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { EngineFormBase, type XrmFormTabDef } from '../xrm-form.base';
 import { XrmFieldVisibleDirective } from '../../business-rules/field-visible.directive';
 import { XrmTabDirective } from './xrm-tab.directive';

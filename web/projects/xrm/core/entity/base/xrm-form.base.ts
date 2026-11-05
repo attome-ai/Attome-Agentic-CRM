@@ -16,8 +16,8 @@ import {
   type FieldLockState, type FieldRuleMessage, type RuleWriteWarning,
 } from '../business-rules/field-policy';
 import { withGoldenTab } from '../record-tabs/record-tabs';
-import { EntityRecordResponse, EntityService } from '../services/entity.service';
-import { entityFormRoute, entityListRoute } from '../services/entity-url.utils';
+import { EntityRecordResponse, EntityService } from '@attome/xrm/core/entity/data';
+import { entityFormRoute, entityListRoute } from '@attome/xrm/core/entity/data';
 import { RecordChange, RecordChangeNotifier } from '../services/record-change-notifier.service';
 import { DuplicatesService } from '@attome/xrm/core/admin/data';
 import { DuplicateNotice, duplicateWarningsOf } from '../duplicate-banner/duplicate-notice';

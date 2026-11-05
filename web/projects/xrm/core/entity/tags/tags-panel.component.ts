@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChoicePillComponent } from '@attome/xrm/core/generic/components';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 interface TagCategoryRow {
   id: string;

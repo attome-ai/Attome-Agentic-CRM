@@ -3,7 +3,7 @@ import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, SdkService, AuthService, LangService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { FileUploadService } from '../field/file-upload.service';
 import { NotesPanelComponent } from './notes-panel.component';
 import { sdkFromApi } from '../../../testing/sdk-from-api';

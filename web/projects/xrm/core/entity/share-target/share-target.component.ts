@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService, TranslatePipe } from '@attome/base';
 import { FileUploadService } from '../field/file-upload.service';
 import { UploadPipeline } from '../field/upload-pipeline';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { firstValueFrom } from 'rxjs';
 
 /** What the service worker (`src/sw.js`) kept from a share. */

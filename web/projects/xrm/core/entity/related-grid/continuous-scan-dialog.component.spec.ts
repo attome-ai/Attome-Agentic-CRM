@@ -5,7 +5,7 @@ import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ContinuousScanDialogComponent, SCAN_BATCH } from './continuous-scan-dialog.component';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 describe('ContinuousScanDialogComponent (B16-T10)', () => {
   let bulkCreate: ReturnType<typeof vi.fn>;

@@ -1,5 +1,5 @@
 import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
-import { EntityService } from './entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 /**
  * Optional — EntityService is providedIn: 'root' so this is only

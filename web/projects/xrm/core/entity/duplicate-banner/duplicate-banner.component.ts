@@ -4,7 +4,7 @@ import { TranslatePipe } from '@attome/base';
 import { DuplicateCandidate, DuplicatesService, MergeResponse } from '@attome/xrm/core/admin/data';
 import { MergeDialogComponent } from '../merge-dialog/merge-dialog.component';
 import { MergeUndoBarComponent } from '../merge-dialog/merge-undo-bar.component';
-import { entityFormRoute } from '../services/entity-url.utils';
+import { entityFormRoute } from '@attome/xrm/core/entity/data';
 import { DuplicateNotice } from './duplicate-notice';
 
 /**

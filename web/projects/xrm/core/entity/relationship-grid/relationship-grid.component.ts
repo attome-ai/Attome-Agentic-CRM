@@ -5,8 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@attome/base';
 import { QueryColumnDef, QueryService } from '@attome/xrm/core/query/data';
-import { EntityService, EntityRecordResponse } from '../services/entity.service';
-import { entityFormRoute } from '../services/entity-url.utils';
+import { EntityService, EntityRecordResponse } from '@attome/xrm/core/entity/data';
+import { entityFormRoute } from '@attome/xrm/core/entity/data';
 
 /**
  * M01 Core P3 gap (D-455) — the generic M:M relationship sub-grid: one

@@ -4,7 +4,7 @@ import { EntityRecord, EntitySchema } from '@attome/xrm';
 import { concatMap, from, map, of, catchError, toArray } from 'rxjs';
 import { fieldErrorsFromApiError } from '../business-rules/field-policy';
 import { ConflictChoices, ConflictDialogComponent } from '../conflict-dialog/conflict-dialog.component';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import type { Col } from './entity-list.component';
 import { CellPos, EditableType, changed, editable, editorText, keyMove, parseCell } from './editable-grid.model';
 import { PastePlan, PastedCell, fillValues, parseTsv, planPaste } from './grid-paste';

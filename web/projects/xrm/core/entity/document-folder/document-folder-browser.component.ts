@@ -7,7 +7,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ApiComponents, SdkService, TranslatePipe } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
-import { EntityService, EntityRecordResponse } from '../services/entity.service';
+import { EntityService, EntityRecordResponse } from '@attome/xrm/core/entity/data';
 import { FileUploadService } from '../field/file-upload.service';
 import { UploadPipeline } from '../field/upload-pipeline';
 

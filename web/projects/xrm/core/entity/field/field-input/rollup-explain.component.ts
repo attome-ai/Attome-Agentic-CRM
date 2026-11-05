@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untr
 import { RouterLink } from '@angular/router';
 import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 
-import { entityFormRoute } from '../../services/entity-url.utils';
+import { entityFormRoute } from '@attome/xrm/core/entity/data';
 
 /** `GET /api/v1/{entity}/{id}/rollups/{attribute}/explain`'s answer. */
 export interface RollupExplanation {

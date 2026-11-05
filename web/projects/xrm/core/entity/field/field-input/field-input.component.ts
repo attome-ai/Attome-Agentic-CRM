@@ -18,7 +18,7 @@ import {
   ChoiceOptions, DateOptions, FieldSchema, FileOptions, FormulaOptions, LookupOptions, TextOptions,
 } from '@attome/xrm';
 import { XRM_FIELD_POLICY, isEmptyFieldValue } from '../../business-rules/field-policy';
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { FileUploadService, RestoreVersionResponse } from '../file-upload.service';
 import { FileVersionsComponent } from '../file-versions/file-versions.component';
 import { UploadPipeline } from '../upload-pipeline';

@@ -7,7 +7,7 @@ import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import { ScanService } from '@attome/base/scan';
 import { Subscription } from 'rxjs';
 
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 /** A repeat of the same code within this time is the camera seeing it again, not a new scan. */
 export const SAME_SCAN_MS = 1500;

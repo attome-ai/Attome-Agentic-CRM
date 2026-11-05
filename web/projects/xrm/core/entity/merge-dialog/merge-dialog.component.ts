@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import { DuplicatesService, MergePicks, MergePreview, MergeResponse } from '@attome/xrm/core/admin/data';
 import { forkJoin } from 'rxjs';
-import { EntityRecordResponse, EntityService } from '../services/entity.service';
+import { EntityRecordResponse, EntityService } from '@attome/xrm/core/entity/data';
 
 /** One field row of the side-by-side view. */
 export interface MergeFieldRow {

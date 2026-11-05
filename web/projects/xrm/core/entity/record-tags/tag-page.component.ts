@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { RouterLink } from '@angular/router';
 import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
-import { entityFormRoute, entityListRoute } from '../services/entity-url.utils';
+import { entityFormRoute, entityListRoute } from '@attome/xrm/core/entity/data';
 
 /** `tags::TaggedRecord`. */
 export interface TaggedRecord {

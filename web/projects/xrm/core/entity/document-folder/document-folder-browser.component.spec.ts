@@ -3,7 +3,7 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SdkService, LangService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { FileUploadService } from '../field/file-upload.service';
 import { DocumentFolderBrowserComponent, DOCUMENT_ROW_HEIGHT_PX } from './document-folder-browser.component';
 import { sdkFromApi } from '../../../testing/sdk-from-api';

@@ -5,7 +5,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntityRecord, EntitySchema } from '@attome/xrm';
 import { Announcer, LangService } from '@attome/base';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { RecordChangeNotifier } from '../services/record-change-notifier.service';
 import { SAVED_CONFIRMATION_MS, EngineFormBase } from './xrm-form.base';
 

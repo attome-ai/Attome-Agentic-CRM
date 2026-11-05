@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { recordLabel } from '../polymorphic-lookup/polymorphic-lookup.component';
 
 /** One linked record, as a chip. */

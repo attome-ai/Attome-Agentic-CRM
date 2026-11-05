@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { LangService, LiveChannel, LiveRecords, TranslatePipe } from '@attome/base';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 /** What the banner says happened to the open record. */
 export interface ServerChange {

@@ -11,7 +11,7 @@ import {
 } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { NativeService } from '@attome/base/native';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { FileUploadService } from '../field/file-upload.service';
 import { UploadPipeline } from '../field/upload-pipeline';
 import { TranslateTextComponent } from '../translate/translate-text.component';

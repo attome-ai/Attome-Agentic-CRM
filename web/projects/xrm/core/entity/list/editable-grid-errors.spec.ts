@@ -6,7 +6,7 @@ import type { BusinessRuleClient } from '@attome/xrm/core/admin/data';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { EditableGridComponent } from './editable-grid.component';
 import type { Col } from './entity-list.component';
 import { fieldIssue, rowIssues } from './grid-checks';

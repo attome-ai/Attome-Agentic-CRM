@@ -5,7 +5,7 @@ import type { EntityRecord } from '@attome/xrm';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { EditableGridComponent } from './editable-grid.component';
 import { changed, editable, editorText, keyMove, parseCell } from './editable-grid.model';
 import type { Col } from './entity-list.component';

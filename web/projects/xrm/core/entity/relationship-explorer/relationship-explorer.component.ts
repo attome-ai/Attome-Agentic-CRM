@@ -6,7 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
-import { entityFormRoute } from '../services/entity-url.utils';
+import { entityFormRoute } from '@attome/xrm/core/entity/data';
 
 /** `POST /api/v1/graph/traverse`'s wire shapes, straight from the generated
  * contract — M38 Phase 1's bounded, permission-per-hop traversal. */

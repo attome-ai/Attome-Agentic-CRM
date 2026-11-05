@@ -4,7 +4,7 @@ import { LangService, UserPreferencesService } from '@attome/base';
 import { FieldSchema } from '@attome/xrm';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { FieldHistoryComponent, controlValue, entriesFor } from './field-history.component';
 
 const FIELD: FieldSchema = {

@@ -4,7 +4,7 @@ import { LangService, LiveChannel, LiveRecords } from '@attome/base';
 import { Subject, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { RecordChangedBannerComponent } from './record-changed-banner.component';
 
 describe('RecordChangedBannerComponent (A16-T4)', () => {

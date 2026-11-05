@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LangService } from '@attome/base';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { CommunicationsPanelComponent, toRow } from './communications-panel.component';
 
 describe('CommunicationsPanelComponent', () => {

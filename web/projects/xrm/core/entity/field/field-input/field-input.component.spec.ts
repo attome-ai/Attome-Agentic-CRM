@@ -7,7 +7,7 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CurrencyService, LangService } from '@attome/base';
 import { FieldInputComponent, fromLocalDateTimeInput, toLocalDateTimeInput } from './field-input.component';
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { FileUploadService } from '../file-upload.service';
 import {
   XRM_FIELD_POLICY, type FieldLockState, type FieldRuleMessage, type XrmFieldPolicy,

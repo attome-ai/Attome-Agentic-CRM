@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import type { QueryExecResponse } from '@attome/xrm/core/query/data';
 
-import { logicalToUrlPath } from '../services/entity-url.utils';
+import { logicalToUrlPath } from '@attome/xrm/core/entity/data';
 
 /** A query filter: `in` takes a list, the rest one value. */
 export interface Customer360Filter {

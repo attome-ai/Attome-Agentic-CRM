@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { ApiError, AuthService, LangService, TranslatePipe } from '@attome/base';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 /** The platform entity a reminder is stored in (`platform-bundles/xrm-reminder.json`). */
 export const REMINDER_ENTITY = 'reminder';

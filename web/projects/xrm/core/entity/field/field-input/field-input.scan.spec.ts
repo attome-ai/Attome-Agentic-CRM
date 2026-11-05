@@ -8,7 +8,7 @@ import { FieldSchema } from '@attome/xrm';
 
 import { FieldInputComponent } from './field-input.component';
 import { scanToValues } from './scan-to-values';
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { FileUploadService } from '../file-upload.service';
 
 const MOCK_CURRENCY_SERVICE = {

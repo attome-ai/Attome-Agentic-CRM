@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { concatMap, of } from 'rxjs';
 import { LangService, TranslatePipe } from '@attome/base';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import {
   DEFAULT_MEETING_MINUTES, MEETING_PROVIDERS, MeetingProvider, VideoMeetingService, canJoin, meetingFields,
   meetingRequest, safeJoinUrl,

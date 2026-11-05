@@ -5,9 +5,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { LocalDatePipe, TranslatePipe } from '@attome/base';
 
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { EmailComposerComponent } from './email-composer.component';
-import { entityFormRoute } from '../services/entity-url.utils';
+import { entityFormRoute } from '@attome/xrm/core/entity/data';
 
 /** One message as the panel shows it: only what a reader scans for. */
 export interface CommunicationRow {

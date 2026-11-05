@@ -1,12 +1,12 @@
 // ── Entity model ──────────────────────────────────────────────────────────────
-export { EntityService }              from './services/entity.service';
+export { EntityService }              from '@attome/xrm/core/entity/data';
 // P-api-contract Phase 2 — the backend's real single-record wire shape,
 // derived from the generated OpenAPI types rather than hand-written.
-export type { EntityRecordResponse }  from './services/entity.service';
+export type { EntityRecordResponse }  from '@attome/xrm/core/entity/data';
 // M07/M64 — state transition wire types (kanban's drag-and-drop contract).
 export type {
   AvailableTransition, TransitionRequestBody, TransitionResult, PaginatedAvailableTransitions,
-} from './services/entity.service';
+} from '@attome/xrm/core/entity/data';
 export { EntityListComponent, resolveRouteTemplate } from './list/entity-list.component';
 export { RelatedGridComponent }       from './related-grid/related-grid.component';
 export { TagPageComponent }           from './record-tags/tag-page.component';
@@ -104,10 +104,10 @@ export type {
 // in this same entry would force its full weight into every module that
 // registers a bespoke form — see that entry's public-api.ts doc comment for
 // the concrete regression this split fixed (D-314 packaging).
-export { EntityRouteRegistry }        from './entity-route-registry.service';
+export { EntityRouteRegistry }        from '@attome/xrm/core/entity/data';
 export type {
   EntityRouteOverride, ListCellRenderers, SelectionAction,
-} from './entity-route-registry.service';
+} from '@attome/xrm/core/entity/data';
 export {
   logicalToUrlPath,
   urlPathToLogical,
@@ -116,8 +116,8 @@ export {
   entityMatchesUrlPath,
   entityListRoute,
   entityFormRoute,
-} from './services/entity-url.utils';
-export type { EntityUrlResolution } from './services/entity-url.utils';
+} from '@attome/xrm/core/entity/data';
+export type { EntityUrlResolution } from '@attome/xrm/core/entity/data';
 
 // ── Shared form base (every xrm form extends this) ──────────────────────────
 // Lives here, not a separate `core/base` entry, because it genuinely depends

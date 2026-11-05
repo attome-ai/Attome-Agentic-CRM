@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveRouteTemplate } from './entity-list.component';
-import { logicalToUrlPath } from '../services/entity-url.utils';
+import { logicalToUrlPath } from '@attome/xrm/core/entity/data';
 
 describe('resolveRouteTemplate', () => {
   it('derives generic entity paths from linked logical names', () => {

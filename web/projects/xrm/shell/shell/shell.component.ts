@@ -8,7 +8,7 @@ import {
   ShortcutRegistry, TranslatePipe, UiTextOverrides, isTypingTarget,
 } from '@attome/base';
 import { AdminService, SidebarItem } from '@attome/xrm/core/admin/data';
-import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/core/entity';
+import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/core/entity/data';
 import { WebVitals } from '../services/web-vitals.service';
 import { DEBOUNCE_MS, MIN_QUERY_LENGTH, OmniSearchComponent, SearchService } from '@attome/xrm/search/omni';
 import type { OmniSelection } from '@attome/xrm/search/omni';

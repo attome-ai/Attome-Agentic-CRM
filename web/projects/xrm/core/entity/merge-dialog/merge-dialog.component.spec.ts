@@ -5,7 +5,7 @@ import { DuplicatesService, MergePreview } from '@attome/xrm/core/admin/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { MergeDialogComponent } from './merge-dialog.component';
 
 describe('MergeDialogComponent (A15-T10)', () => {

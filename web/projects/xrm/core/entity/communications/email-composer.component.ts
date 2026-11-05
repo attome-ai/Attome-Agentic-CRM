@@ -4,7 +4,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 /** A reply template suggested for the record (`/api/v1/model/reply-suggestions`). */
 export interface ComposerTemplate {

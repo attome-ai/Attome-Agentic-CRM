@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, output, signal,
 } from '@angular/core';
 import { ApiError, AuthService, LangService, TranslatePipe } from '@attome/base';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 /** The reactions a note or reply offers. */
 export const REACTIONS = ['👍', '❤️', '🎉', '✅', '👀'] as const;

@@ -4,7 +4,7 @@ import { TranslatePipe } from '@attome/base';
 import { EntityRecord } from '@attome/xrm';
 import { Subject, catchError, debounceTime, distinctUntilChanged, forkJoin, map, of, switchMap } from 'rxjs';
 
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 /** One picked target of a polymorphic lookup (A8-T1's pair). */
 export interface PolymorphicValue {

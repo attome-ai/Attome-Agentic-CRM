@@ -5,7 +5,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import type { Subscription } from 'rxjs';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import type { FieldSchema } from '@attome/xrm';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import { FieldInputComponent } from '../field/field-input/field-input.component';
 import type { ColumnFilterDraft, FilterKind, QueryFilter } from './column-filters';
 import {

@@ -7,11 +7,11 @@ import { firstValueFrom } from 'rxjs';
 import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { ChoiceOptions, FieldSchema } from '@attome/xrm';
-import { EntityService } from '../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 import type {
   BulkEditFilter, BulkEditOp, BulkEditOperation, BulkEditPreview, BulkEditRequest, BulkEditSubmitted,
   BulkOperationStatus, BulkRecordEnvelope,
-} from '../services/entity.service';
+} from '@attome/xrm/core/entity/data';
 import { FieldInputComponent } from '../field/field-input/field-input.component';
 import { BulkJobRunner, isBulkTerminal } from './bulk-job-runner.service';
 

@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { ApiComponents, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import { FieldSchema } from '@attome/xrm';
-import { EntityService } from '../../services/entity.service';
+import { EntityService } from '@attome/xrm/core/entity/data';
 
 type HistoryChange = ApiComponents['schemas']['RecordHistoryChange'];
 type HistoryField = ApiComponents['schemas']['RecordHistoryField'];

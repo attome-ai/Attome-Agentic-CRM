@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { Page } from '@attome/base';
 
-import { entityFormRoute } from '../services/entity-url.utils';
+import { entityFormRoute } from '@attome/xrm/core/entity/data';
 
 /** `attome_api::record_template_routes::TemplatePrompt`. */
 export interface TemplatePrompt {
