@@ -84,7 +84,17 @@ export const routes: Routes = [
     // a route-scoped provider instead of living in the root ApplicationConfig
     // — see that file's header comment for why.
     path: 'xrm',
-    loadChildren: () => import('./xrm-shell.routes').then(m => m.xrmShellRoutes),
+    // AA14-T6: the first xrm render waits on three downloads that used to
+    // start one after another: this route chunk, then xrm's English catalog
+    // (its `layerCatalogsReady` guard), then the shell. All three start
+    // together here; the guard and the shell's `loadComponent` then find
+    // their module already fetched (one module record per URL). A failed
+    // early fetch is ignored: the guard or the route retries it and reports.
+    loadChildren: () => {
+      import('@attome/xrm/core/i18n-en').catch(() => undefined);
+      import('@attome/xrm/shell').catch(() => undefined);
+      return import('./xrm-shell.routes').then(m => m.xrmShellRoutes);
+    },
     // AA12-T1: the signed-in app is where the sign-in page leads.
     data: { preload: true },
   },
