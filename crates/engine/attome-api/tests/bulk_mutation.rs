@@ -1668,6 +1668,117 @@ async fn process_partial_failure_marks_one_item_failed_and_completes_the_rest() 
     );
 }
 
+/// S5-T1: a JSON-lines body queues the same bulk operation, and the result
+/// file carries one line per record: `ok` with the written record for the
+/// row that applied, `problem` for the stale one. Another user cannot read
+/// the results, and a bad line is refused naming it.
+#[tokio::test]
+async fn json_lines_bulk_runs_and_its_result_file_has_a_line_per_record() {
+    let system = skip_if_no_db!(test_system().await);
+    let (user_id, _, admin_cookie) = seed_user(&system, true).await;
+    let (_, _, other_cookie) = seed_user(&system, false).await;
+    let state = system.state().clone();
+    let app = full_app(system);
+    let (logicalname, _) = provision_entity(&app, &admin_cookie, "lines", false).await;
+
+    let created = app
+        .clone()
+        .oneshot(req(
+            "POST",
+            &format!("/api/v1/{logicalname}"),
+            &admin_cookie,
+            Some(&json!({ "title": "existing" })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(created.status(), StatusCode::CREATED);
+    let existing = body_json(created).await["id"].as_str().unwrap().to_owned();
+
+    let lines_req = |body: String| {
+        Request::builder()
+            .method("POST")
+            .uri(format!("/api/v1/{logicalname}/bulk/lines?operation=update"))
+            .header("cookie", &admin_cookie)
+            .header("origin", "http://localhost:4200")
+            .header("sec-fetch-site", "same-origin")
+            .header("content-type", "application/x-ndjson")
+            .body(Body::from(body))
+            .unwrap()
+    };
+
+    let bad = app
+        .clone()
+        .oneshot(lines_req(format!(
+            "{{\"id\": \"{existing}\", \"data\": {{}}}}\nnot a record\n"
+        )))
+        .await
+        .unwrap();
+    let (status, body) = status_or_body(bad).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert!(body.to_string().contains("line 2"), "{body}");
+
+    let first = format!(
+        "{{\"id\": \"{existing}\", \"expected_row_version\": 0, \"data\": {{\"title\": \"one\"}}}}"
+    );
+    let second = format!(
+        "{{\"id\": \"{existing}\", \"expected_row_version\": 99, \"data\": {{\"title\": \"two\"}}}}"
+    );
+    let res = app
+        .clone()
+        .oneshot(lines_req(format!("{first}\n\n{second}\n")))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::ACCEPTED);
+    let queued = body_json(res).await;
+    assert_eq!(queued["total"], 2);
+    let bulk_op_id: Uuid = queued["id"].as_str().unwrap().parse().unwrap();
+
+    attome_records::bulk::process(
+        &state,
+        bulk_op_id,
+        &logicalname,
+        "update",
+        Vec::new(),
+        user_id,
+    )
+    .await
+    .expect("the bulk operation runs");
+
+    let results_uri = format!("/api/v1/{logicalname}/bulk/{bulk_op_id}/results");
+    let res = app
+        .clone()
+        .oneshot(req("GET", &results_uri, &admin_cookie, None))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(
+        res.headers()["content-type"].to_str().unwrap(),
+        "application/x-ndjson"
+    );
+    let bytes = to_bytes(res.into_body(), 1024 * 1024).await.unwrap();
+    let text = String::from_utf8(bytes.to_vec()).unwrap();
+    let lines: Vec<Value> = text
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert_eq!(lines.len(), 2, "{text}");
+    assert_eq!(lines[0]["index"], 0);
+    assert_eq!(lines[0]["ok"]["record_id"], existing.as_str());
+    assert_eq!(lines[1]["index"], 1);
+    assert!(lines[1]["problem"]["code"].is_string(), "{text}");
+
+    let res = app
+        .clone()
+        .oneshot(req("GET", &results_uri, &other_cookie, None))
+        .await
+        .unwrap();
+    assert!(
+        matches!(res.status(), StatusCode::NOT_FOUND | StatusCode::FORBIDDEN),
+        "{}",
+        res.status()
+    );
+}
+
 /// A16-T6: a bulk update of three rows with one stale applies the other
 /// two and reports the stale row as a conflict carrying the record's current
 /// version, both in the item ledger and in the operation's errors.
