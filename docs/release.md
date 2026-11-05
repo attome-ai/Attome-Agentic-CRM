@@ -78,7 +78,12 @@ names every changed path under `### Breaking`; the gate's contract step refuses 
 otherwise. Move `[Unreleased]` under the new version's heading in the same commit as the version
 bump.
 
-## 4. Tag
+## 4. Check the restore drill
+
+The newest restore drill must be ok and at most 7 days old ([recovery drills](drills.md#before-a-release-is-tagged)).
+When it is not, run it again before tagging.
+
+## 5. Tag
 
 ```sh
 COSIGN_KEY=~/attome-release-key/cosign.key cargo run -p attome-release -- tag 2.0.0
@@ -98,7 +103,7 @@ binary for Linux and Windows, packs each with the web app as `attome-<os>-x86_64
 a `.sha256` file, and attaches them to the GitHub release of the tag. `scripts/install.sh` and
 `scripts/install.ps1` download the latest of these, or the one `--version`/`-Version` names.
 
-## 5. After the release
+## 6. After the release
 
 The stability ledger records what happened to each release:
 
