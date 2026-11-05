@@ -26,6 +26,8 @@ pub mod dev;
 pub mod dev_component;
 /// AB4-T3: drill keys, evidence verification and readiness.
 pub mod drill;
+/// M17-T4: an extension's dependencies against the RustSec advisories.
+pub mod extension_scan;
 pub mod flags;
 pub mod healthcheck;
 pub mod init;

@@ -14,6 +14,11 @@
 //! - A build that fails prints cargo's errors, each with its source lines,
 //!   and uploads nothing.
 //! - `--once` builds and uploads one time and stops.
+//! - M17-T4: before each upload the extension's `Cargo.lock` is checked
+//!   against the RustSec advisories (`super::extension_scan`); a high or
+//!   unscored advisory refuses the upload unless `--allow-advisory
+//!   <ID>=<reason>` names it, and a check that cannot run refuses it unless
+//!   `--skip-audit <reason>` says why.
 //!
 //! JavaScript extensions (Javy) are not built here: Y10-T7 is parked.
 //!
@@ -36,7 +41,7 @@ use crate::cmd::login::credentials;
 use crate::cmd::output::{take_flag, take_value};
 
 const DEFAULT_URL: &str = "http://127.0.0.1:7865";
-const USAGE: &str = "usage: attome dev <folder> [--name <name>] [--app <app>] [--once]\n         [--target <name> | --url <url>]";
+const USAGE: &str = "usage: attome dev <folder> [--name <name>] [--app <app>] [--once]\n         [--allow-advisory <ID>=<reason> ...] [--skip-audit <reason>]\n         [--target <name> | --url <url>]";
 /// How often the folder is looked at.
 const POLL: Duration = Duration::from_millis(500);
 /// The build target of a plain module.
@@ -129,6 +134,10 @@ struct Dev {
     crate_name: String,
     url: String,
     target: Option<String>,
+    /// M17-T4: advisories allowed, by id, with the reason.
+    allowed: std::collections::BTreeMap<String, String>,
+    /// M17-T4: why the dependency check may be skipped.
+    skip_audit: Option<String>,
 }
 
 pub fn run(args: &[String]) -> Result<(), String> {
@@ -140,6 +149,12 @@ pub fn run(args: &[String]) -> Result<(), String> {
         .unwrap_or_else(|| DEFAULT_URL.to_owned());
     let target = take_value(&mut args, "--target")?;
     let app = take_value(&mut args, "--app")?;
+    let mut allow_pairs = Vec::new();
+    while let Some(pair) = take_value(&mut args, "--allow-advisory")? {
+        allow_pairs.push(pair);
+    }
+    let allowed = super::extension_scan::parse_allowed(&allow_pairs)?;
+    let skip_audit = take_value(&mut args, "--skip-audit")?;
     let [folder] = args.as_slice() else {
         return Err(USAGE.to_owned());
     };
@@ -167,6 +182,8 @@ pub fn run(args: &[String]) -> Result<(), String> {
         folder,
         url,
         target,
+        allowed,
+        skip_audit,
     };
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -234,6 +251,36 @@ impl Dev {
             }
             println!("build failed; nothing uploaded");
             return;
+        }
+        // M17-T4: no upload with a known high-severity vulnerability.
+        match super::extension_scan::check(&self.folder, &self.allowed, self.skip_audit.as_deref())
+        {
+            Ok(super::extension_scan::Verdict::Pass(findings)) => {
+                for finding in &findings {
+                    let note = self
+                        .allowed
+                        .get(&finding.id)
+                        .map_or_else(String::new, |reason| format!(" (allowed: {reason})"));
+                    println!("advisory: {}{note}", finding.line());
+                }
+                if let Some(reason) = &self.skip_audit {
+                    println!("dependency check skipped: {reason}");
+                }
+            }
+            Ok(super::extension_scan::Verdict::Refused(refused)) => {
+                for finding in &refused {
+                    println!("refused: {}", finding.line());
+                }
+                println!(
+                    "a dependency has a known high-severity vulnerability; update it, or pass \
+                     --allow-advisory <ID>=<reason> if it cannot reach this extension; nothing uploaded"
+                );
+                return;
+            }
+            Err(error) => {
+                println!("{error}; nothing uploaded");
+                return;
+            }
         }
         match runtime.block_on(self.upload()) {
             Ok(version) => println!("uploaded {} version {version} as a draft", self.name),

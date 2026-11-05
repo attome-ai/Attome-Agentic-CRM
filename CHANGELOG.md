@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `attome dev` refuses to upload an extension build whose `Cargo.lock` has a high-severity or unscored
+  RustSec advisory (M17-T4), unless `--allow-advisory <ID>=<reason>` allows it; a check that cannot run
+  needs `--skip-audit <reason>`.
 - Reading the text of an image (B16-T14, N21): `POST /api/v1/ai/read-text` sends one image to the
   deployment's own vision model and answers its text (stored nowhere, ten a minute per person);
   `GET` on the same path says whether it is available. A text field's scan panel offers **Read text**

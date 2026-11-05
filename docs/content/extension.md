@@ -77,6 +77,12 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   builds it for `wasm32-unknown-unknown` on every change, prints cargo's errors with their source
   lines, and uploads each good build as a new draft version (`--once` builds one time; `--target`
   or `--url` names the deployment). JavaScript extensions are not supported yet.
+- **Vulnerable dependencies (M17-T4).** Before each upload `attome dev` checks the extension's
+  `Cargo.lock` against the RustSec advisories (`cargo audit --json`; install it with
+  `cargo install cargo-audit`). An advisory with a CVSS v3 score of 7.0 or more, or with no score,
+  refuses the upload until the dependency is updated, or until `--allow-advisory <ID>=<reason>` names
+  it with a reason of at least 20 characters (for a flaw the extension cannot reach); lower scores
+  are printed. If the check cannot run, the upload is refused unless `--skip-audit <reason>` says why.
 - **Record and replay.** `attome_extension::Recorder` wraps a host and keeps every host call of a
   run with its result, every secret value masked; `Replayer` answers the same calls from that
   recording, reaching no record, secret or network, and lists where a changed extension's run
