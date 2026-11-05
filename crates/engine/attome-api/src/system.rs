@@ -189,6 +189,8 @@ impl EngineSystem {
             // AA9-T6: every limit and its use; a caller's own limits.
             .merge(crate::limits_admin::routes())
             .merge(crate::model_admin::cooked::routes())
+            // T3-T2: components to host and the package files they load.
+            .merge(crate::package_files::routes())
             // C4-T1: mentions in text about a record.
             .merge(crate::mentions::routes())
             // Q20-T5: rate-limit bans (admin-gated in the handlers).

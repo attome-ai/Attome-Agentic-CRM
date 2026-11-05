@@ -15,6 +15,24 @@ export interface PageRows {
   total: number | null;
 }
 
+/**
+ * T3-T2: a published custom component and where its module is
+ * (`GET /api/v1/model/components/{id}`); `module_url` and `integrity` are
+ * null when no installed package carries the module.
+ */
+export interface ComponentView {
+  id: string;
+  name: string;
+  tag: string;
+  module: string;
+  module_url: string | null;
+  integrity: string | null;
+  properties: Record<string, unknown>[];
+  events: Record<string, unknown>[];
+  label_en: string | null;
+  label_ar: string | null;
+}
+
 /** The most rows a page component reads at once. */
 export const PAGE_ROWS = 50;
 
@@ -40,6 +58,11 @@ export class PageDataService {
   private readonly sdk = inject(SdkService);
   private readonly query = inject(QueryService);
   private readonly entities = inject(EntityService);
+
+  /** T3-T2: the custom component `id` a page node hosts. */
+  component(id: string): Observable<ComponentView> {
+    return this.sdk.get<ComponentView>(`/api/v1/model/components/${encodeURIComponent(id)}`);
+  }
 
   /** The published page `id`; a page not in the current version is a 404. */
   page(id: string): Observable<PageDoc> {

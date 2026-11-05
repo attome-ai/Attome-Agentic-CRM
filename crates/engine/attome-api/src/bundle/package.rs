@@ -40,6 +40,14 @@
 //!   which an uninstall that removes its data plans with retiring allowed.
 //!   A package's bundle is always a selection (`partial`): installing or
 //!   upgrading it never retires what it does not carry.
+//! - T3-T2: [`Package::files`] carries static files (a custom component's
+//!   JavaScript module), base64 by path; [`check_files`] bounds them and
+//!   [`signing_payload`] covers them, so a file cannot change after signing.
+//!   A preview stages them against its plan ([`stage_files`]); the newest
+//!   applied plan's files are what `GET /api/v1/packages/{id}/files/{path}`
+//!   serves ([`installed_file`]).
+
+use std::collections::BTreeMap;
 
 use base64::Engine as _;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
@@ -102,8 +110,201 @@ pub struct Package {
     pub format: String,
     pub manifest: Manifest,
     pub bundle: Bundle,
+    /// T3-T2: static files by path (`gauge.js`, `icons/gauge.svg`), each
+    /// base64. Covered by the signature when there are any.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub files: BTreeMap<String, String>,
     #[serde(default)]
     pub signature: Option<String>,
+}
+
+/// The most bytes one package file may hold.
+pub const MAX_FILE_BYTES: usize = 2 * 1024 * 1024;
+/// The most bytes a package's files may hold together.
+pub const MAX_FILES_BYTES: usize = 10 * 1024 * 1024;
+/// The most files a package may carry.
+pub const MAX_FILES: usize = 200;
+
+/// The extensions a package file may have, with the type it is served as.
+pub const FILE_TYPES: [(&str, &str); 6] = [
+    ("js", "text/javascript; charset=utf-8"),
+    ("mjs", "text/javascript; charset=utf-8"),
+    ("css", "text/css; charset=utf-8"),
+    ("json", "application/json"),
+    ("svg", "image/svg+xml"),
+    ("png", "image/png"),
+];
+
+/// The type `path` is served as, when its extension is allowed. Pure.
+pub fn content_type_of(path: &str) -> Option<&'static str> {
+    let ext = path.rsplit_once('.')?.1.to_ascii_lowercase();
+    FILE_TYPES
+        .iter()
+        .find(|(e, _)| *e == ext)
+        .map(|(_, content_type)| *content_type)
+}
+
+/// Whether `path` is a plain relative path: segments of letters, digits,
+/// `.`, `_` and `-`, none empty, `.` or `..`, at most 200 characters. Pure.
+pub fn is_file_path(path: &str) -> bool {
+    !path.is_empty()
+        && path.len() <= 200
+        && path.split('/').all(|segment| {
+            !segment.is_empty()
+                && segment != "."
+                && segment != ".."
+                && segment
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+        })
+}
+
+/// One file's digests: lowercase hex SHA-256, and the Subresource
+/// Integrity value (`sha256-<base64>`) a browser checks it against. Pure.
+pub fn file_digest(bytes: &[u8]) -> (String, String) {
+    use sha2::Digest as _;
+    let digest = sha2::Sha256::digest(bytes);
+    (
+        hex::encode(digest),
+        format!(
+            "sha256-{}",
+            base64::engine::general_purpose::STANDARD.encode(digest)
+        ),
+    )
+}
+
+/// T3-T2: `files` decoded, or every problem with them at once: a bad path,
+/// an extension not served, content that is not base64, and the size caps.
+/// Pure.
+pub fn check_files(
+    files: &BTreeMap<String, String>,
+) -> Result<Vec<(String, Vec<u8>)>, Vec<String>> {
+    let mut problems = Vec::new();
+    let mut decoded = Vec::with_capacity(files.len());
+    if files.len() > MAX_FILES {
+        problems.push(format!("files: at most {MAX_FILES}"));
+    }
+    let mut total = 0usize;
+    for (path, content) in files {
+        if !is_file_path(path) {
+            problems.push(format!("files.{path}: not a plain relative path"));
+            continue;
+        }
+        if content_type_of(path).is_none() {
+            problems.push(format!(
+                "files.{path}: only .js, .mjs, .css, .json, .svg and .png files are served"
+            ));
+            continue;
+        }
+        match base64::engine::general_purpose::STANDARD.decode(content.trim()) {
+            Ok(bytes) if bytes.len() > MAX_FILE_BYTES => {
+                problems.push(format!("files.{path}: larger than {MAX_FILE_BYTES} bytes"));
+            }
+            Ok(bytes) => {
+                total += bytes.len();
+                decoded.push((path.clone(), bytes));
+            }
+            Err(_) => problems.push(format!("files.{path}: not base64")),
+        }
+    }
+    if total > MAX_FILES_BYTES {
+        problems.push(format!(
+            "files: larger than {MAX_FILES_BYTES} bytes together"
+        ));
+    }
+    if problems.is_empty() {
+        Ok(decoded)
+    } else {
+        Err(problems)
+    }
+}
+
+/// The digest of every file, by path (what the signature covers). Pure.
+fn files_digest(files: &BTreeMap<String, String>) -> Value {
+    let digests: serde_json::Map<String, Value> = files
+        .iter()
+        .map(|(path, content)| {
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(content.trim())
+                .unwrap_or_else(|_| content.as_bytes().to_vec());
+            (path.clone(), Value::String(file_digest(&bytes).0))
+        })
+        .collect();
+    Value::Object(digests)
+}
+
+/// T3-T2: stores a previewed package's files against its plan, so the plan's
+/// apply makes them the package's served files. Replaces what the plan had.
+pub async fn stage_files(
+    db: &attome_db::DbPool,
+    plan_ref: uuid::Uuid,
+    manifest: &Manifest,
+    files: &[(String, Vec<u8>)],
+) -> Result<(), attome_types::AppError> {
+    use attome_types::AppError;
+    let mut tx = attome_db::tx::begin(db).await?;
+    sqlx::query("DELETE FROM package_file WHERE plan_ref = $1")
+        .bind(plan_ref)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    for (path, bytes) in files {
+        let (sha256, integrity) = file_digest(bytes);
+        let content_type = content_type_of(path)
+            .ok_or_else(|| AppError::Validation(format!("files.{path}: not served")))?;
+        sqlx::query(
+            "INSERT INTO package_file (plan_ref, package_id, version, path, content_type, sha256, \
+                 integrity, size_bytes, body) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        )
+        .bind(plan_ref)
+        .bind(&manifest.id)
+        .bind(&manifest.version)
+        .bind(path)
+        .bind(content_type)
+        .bind(&sha256)
+        .bind(&integrity)
+        .bind(i32::try_from(bytes.len()).unwrap_or(i32::MAX))
+        .bind(bytes)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    attome_db::tx::commit(tx).await
+}
+
+/// A package file as served.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ServedFile {
+    pub content_type: String,
+    pub sha256: String,
+    pub integrity: String,
+    pub body: Vec<u8>,
+}
+
+/// T3-T2: `path` of package `package_id` as its newest applied plan carries
+/// it, unless that install was since uninstalled; `None` when there is none.
+/// With `with_body` false the body is left empty (a lookup of the digest).
+pub async fn installed_file(
+    db: &attome_db::DbPool,
+    package_id: &str,
+    path: &str,
+    with_body: bool,
+) -> Result<Option<ServedFile>, attome_types::AppError> {
+    sqlx::query_as(
+        "SELECT f.content_type, f.sha256, f.integrity, \
+                CASE WHEN $3 THEN f.body ELSE ''::bytea END AS body \
+           FROM package_file f JOIN metadata_bundle_plan p ON p.id = f.plan_ref \
+          WHERE f.package_id = $1 AND f.path = $2 AND p.status = 'succeeded' \
+            AND NOT EXISTS (SELECT 1 FROM package_install i \
+                             WHERE i.plan_ref = f.plan_ref AND i.uninstalled_at IS NOT NULL) \
+          ORDER BY p.finished_at DESC NULLS LAST, p.created_at DESC LIMIT 1",
+    )
+    .bind(package_id)
+    .bind(path)
+    .bind(with_body)
+    .fetch_optional(db)
+    .await
+    .map_err(attome_types::AppError::internal)
 }
 
 /// The components a manifest's `contents` may name.
@@ -702,24 +903,34 @@ pub fn without_package(live: &Bundle, installed: &Bundle, namespace: &str) -> Bu
 }
 
 /// The bytes a package's signature covers: the canonical JSON of its
-/// format, manifest and bundle hash.
+/// format, manifest and bundle hash, and (T3-T2) each file's SHA-256 when it
+/// carries files, so a package without files signs exactly as before.
 pub fn signing_payload(
     format: &str,
     manifest: &Manifest,
     bundle: &Bundle,
+    files: &BTreeMap<String, String>,
 ) -> Result<Vec<u8>, String> {
     let manifest = serde_json::to_value(manifest).map_err(|e| e.to_string())?;
-    let doc = json!({
+    let mut doc = json!({
         "format": format,
         "manifest": manifest,
         "bundle_sha256": bundle_hash(bundle),
     });
+    if !files.is_empty() {
+        doc["files_sha256"] = files_digest(files);
+    }
     attome_model::canonical::canonicalize(&doc).map(String::into_bytes)
 }
 
 /// Signs `package` with the publisher's key.
 pub fn sign(package: &mut Package, key: &SigningKey) -> Result<(), String> {
-    let payload = signing_payload(&package.format, &package.manifest, &package.bundle)?;
+    let payload = signing_payload(
+        &package.format,
+        &package.manifest,
+        &package.bundle,
+        &package.files,
+    )?;
     let signature = key.sign(&payload);
     package.signature =
         Some(base64::engine::general_purpose::STANDARD.encode(signature.to_bytes()));
@@ -778,7 +989,12 @@ pub fn verify(package: &Package, trusted: &[(String, String)]) -> Result<(), Str
         .and_then(|s| engine.decode(s).ok())
         .and_then(|b| b.try_into().ok())
         .ok_or("the package is not signed")?;
-    let payload = signing_payload(&package.format, &package.manifest, &package.bundle)?;
+    let payload = signing_payload(
+        &package.format,
+        &package.manifest,
+        &package.bundle,
+        &package.files,
+    )?;
     key.verify(&payload, &Signature::from_bytes(&signature))
         .map_err(|_| "the signature does not match the package".to_owned())
 }
@@ -865,6 +1081,7 @@ mod tests {
                 ..manifest()
             },
             bundle: bundle(),
+            files: BTreeMap::new(),
             signature: None,
         };
         sign(&mut package, &release).unwrap();
@@ -942,6 +1159,47 @@ mod tests {
         assert_eq!(check_namespace(&manifest(), &b, &existing).len(), 2);
     }
 
+    /// T3-T2: files are signed with the package; changing one breaks the
+    /// signature, and a package without files signs as before.
+    #[test]
+    fn package_files_are_signed_and_checked() {
+        let key = SigningKey::from_bytes(&[9u8; 32]);
+        let trusted = vec![(
+            "Example Co".to_owned(),
+            base64::engine::general_purpose::STANDARD.encode(key.verifying_key().as_bytes()),
+        )];
+        let b64 = |s: &str| base64::engine::general_purpose::STANDARD.encode(s);
+        let mut package = Package {
+            format: PACKAGE_FORMAT.into(),
+            manifest: manifest(),
+            bundle: bundle(),
+            files: BTreeMap::from([("gauge.js".to_owned(), b64("export {};"))]),
+            signature: None,
+        };
+        sign(&mut package, &key).unwrap();
+        assert_eq!(verify(&package, &trusted), Ok(()));
+        package
+            .files
+            .insert("gauge.js".into(), b64("alert('changed')"));
+        assert!(verify(&package, &trusted).is_err(), "a changed file");
+
+        assert!(check_files(&package.files).is_ok());
+        let bad = BTreeMap::from([
+            ("../escape.js".to_owned(), b64("x")),
+            ("run.exe".to_owned(), b64("x")),
+            ("ok.js".to_owned(), "%%%".to_owned()),
+        ]);
+        let problems = check_files(&bad).unwrap_err();
+        assert_eq!(problems.len(), 3, "{problems:?}");
+        assert_eq!(
+            content_type_of("a/b.MJS"),
+            Some("text/javascript; charset=utf-8")
+        );
+        let (hex, sri) = file_digest(b"export {};");
+        assert_eq!(hex.len(), 64);
+        assert!(sri.starts_with("sha256-"));
+    }
+
     #[test]
     fn a_package_signs_and_verifies_and_tampering_fails() {
         let key = SigningKey::from_bytes(&[7u8; 32]);
@@ -953,6 +1211,7 @@ mod tests {
             format: PACKAGE_FORMAT.into(),
             manifest: manifest(),
             bundle: bundle(),
+            files: BTreeMap::new(),
             signature: None,
         };
         assert!(verify(&package, &trusted).is_err(), "unsigned");

@@ -51,6 +51,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::slo_admin::openapi_fragment(), "core"),
         (crate::limits_admin::openapi_fragment(), "core"),
         (crate::model_admin::cooked::openapi_fragment(), "core"),
+        (crate::package_files::openapi_fragment(), "core"),
         (crate::mentions::openapi_fragment(), "core"),
         (crate::ratelimit_admin::openapi_fragment(), "core"),
         (crate::sbom_admin::openapi_fragment(), "core"),

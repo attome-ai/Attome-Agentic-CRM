@@ -3515,6 +3515,7 @@ export const xrmEn = {
     asList: 'Shown as a list on this page.',
     noRecord: 'No record to show.',
     custom: 'Custom component {id}',
+    componentFailed: 'This component could not load. The rest of the page is unaffected.',
     run: 'Run',
   },
   canvas: {

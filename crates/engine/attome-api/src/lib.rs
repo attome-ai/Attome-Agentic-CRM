@@ -241,6 +241,8 @@ pub mod omnichannel_metrics;
 mod openapi;
 /// A31-T3: previewing and preparing an ownership model change.
 pub mod ownership_change;
+/// T3-T2: a custom component to host, and installed packages' files.
+pub mod package_files;
 mod profiler_admin;
 /// L2-T2: the data-quality dimensions.
 pub mod quality;

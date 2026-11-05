@@ -9,10 +9,14 @@ import { DashboardChartComponent, SLICE_COLORS } from '@attome/xrm/dashboard/cha
 import type { ChartCategory, ChartSeries } from '@attome/xrm/dashboard/chart';
 import { Observable } from 'rxjs';
 
+import { CustomComponentHostComponent } from './custom-component-host.component';
 import { PAGE_BLOCKS, findBlock } from './page-blocks';
 import { PageContext } from './page-context';
 import { PageDataService, PageRows } from './page-data.service';
 import { PageEvent, PageNode, fillTarget, isVisible, seriesOf, textProp } from './page-model';
+
+/** A component object's id: a page's `@component:` reference becomes one at install (T3-T2). */
+const COMPONENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Components that read rows from a view or stored query. */
 const ROW_TYPES = new Set(['list', 'chart', 'metric', 'kanban', 'map', 'timeline']);
@@ -30,7 +34,7 @@ const ROW_TYPES = new Set(['list', 'chart', 'metric', 'kanban', 'map', 'timeline
   selector: 'xrm-page-node',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, DashboardChartComponent, NgComponentOutlet],
+  imports: [TranslatePipe, DashboardChartComponent, NgComponentOutlet, CustomComponentHostComponent],
   template: `
     @if (visible()) {
       @switch (node().type) {
@@ -82,6 +86,11 @@ const ROW_TYPES = new Set(['list', 'chart', 'metric', 'kanban', 'map', 'timeline
           } @else if (blockFailed()) {
             <section class="pn-box" [attr.data-node]="node().id">
               <p class="pn-error" role="alert" data-node-error>{{ 'pageRuntime.failed' | translate }}</p>
+            </section>
+          } @else if (componentId(); as id) {
+            <!-- T3-T2: a published custom component, in its own shadow root. -->
+            <section class="pn-box" [attr.data-node]="node().id">
+              <xrm-custom-component-host [componentId]="id" [props]="node().props ?? {}" />
             </section>
           } @else {
             <section class="pn-box pn-custom" [attr.data-node]="node().id">
@@ -174,6 +183,11 @@ export class PageNodeComponent {
     }
   });
   protected readonly children = computed(() => this.node().children ?? []);
+  /** T3-T2: a custom node naming a component object (its id) rather than a registered block. */
+  protected readonly componentId = computed(() => {
+    const name = this.node().component ?? '';
+    return COMPONENT_ID.test(name) && !findBlock(this.blocks, name) ? name : null;
+  });
   protected readonly title = computed(() => this.titleOf(this.node()));
   protected readonly columns = computed(() => {
     const first = this.rows()?.records[0];

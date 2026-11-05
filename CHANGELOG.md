@@ -22,6 +22,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Packages carry static files (T3-T2): a package folder's `files/` is signed into the package, staged
+  at the install preview (migration `0401`, `package_file`) and served once installed at
+  `GET /api/v1/packages/{id}/files`. `GET /api/v1/model/components/{id}` answers a custom component's
+  tag, properties and its module's URL and integrity; pages host it in a shadow root, loaded only from
+  its installed package with Subresource Integrity, with its own error box.
 - The grc pack's `0002` adds NCA's Essential Cybersecurity Controls (ECC-2:2024): the regulation and
   its 108 main controls as requirements, in English (AG5-T1).
 - `GET /api/v1/admin/model/{kind}/{id}/impact` answers one publish impact report for an object's

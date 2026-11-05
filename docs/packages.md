@@ -23,6 +23,12 @@ attome package build ./fleet --key publisher.key # writes com.example.fleet-1.2.
 The key file is the publisher's secret: keep it out of the repository and off shared machines.
 Targets trust the publisher by the printed public key. `keygen` never overwrites a key file.
 
+A folder may also hold `files/`: static files the package carries, such as a custom component's built
+module (T3-T2). Each goes into the package by its path under `files/`, base64, and the signature covers
+it, so no file can change after signing. Only `.js`, `.mjs`, `.css`, `.json`, `.svg` and `.png` files with
+plain relative paths are taken, at most 2 MiB each, 10 MiB and 200 files together; `build` refuses
+anything else, and so does the install preview.
+
 ## Publish
 
 ```sh
@@ -65,6 +71,29 @@ permissions the package requests, its effects on records already there (records 
 it adds to existing entities, field changes), what it removes and what is blocked, with the
 persisted plan. Installing is applying that plan (`POST /api/v1/admin/metadata/import?mode=apply`
 with its `plan_id`). Administrators only.
+
+The preview stages the package's files with its plan; once that plan applies they are the package's
+served files, at `GET /api/v1/packages/{id}/files?path=<path>` for any signed-in user, with an ETag of
+their SHA-256 and `nosniff`. A newer install's files replace them and an uninstalled package serves
+none.
+
+### Custom components
+
+A custom component (the `component` model kind; `attome new component` writes one) names its module as
+`<package id>/<path>`: `"module": "com.example.credit/gauge.js"` is the file `files/gauge.js` of the
+package `com.example.credit`. A page shows it as a `custom` node whose `component` is the component's
+id. `GET /api/v1/model/components/{id}` gives the page the tag, the properties and events, the module's
+URL and its Subresource Integrity value; the page loads the module with a `<script type="module">`
+carrying that integrity, so the browser refuses bytes the package was not signed with, and the page's
+CSP (`script-src 'self'`) admits it because the deployment itself serves it. A component is never
+loaded from anywhere else.
+
+The element lives in its own shadow root, so its styles and markup stay apart from the page's. Bound
+properties follow the page (the record's id, a field's value, the entity, the signed-in user, the
+theme); the rest take the builder's value from the node or the manifest's default. If the package is
+not installed, the module does not load or never defines its element within 10 seconds, or the
+element throws while being created or given its properties, the component shows its own error box
+and the rest of the page is unaffected.
 
 ## Managed packages
 

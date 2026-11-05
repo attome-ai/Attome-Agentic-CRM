@@ -467,6 +467,9 @@ pub(super) async fn preview_document(
 ) -> Result<PackagePreviewResponse, AppError> {
     let trust = super::package::verify_trust(&package, &trusted_publishers(state))
         .map_err(AppError::Validation)?;
+    // T3-T2: its static files, checked now and staged with the plan.
+    let files = super::package::check_files(&package.files)
+        .map_err(|problems| AppError::Validation(problems.join("; ")))?;
     // A package is a selection: it never retires what it does not carry.
     package.bundle.partial = true;
     let mut problems = super::package::check_manifest(&package.manifest);
@@ -494,6 +497,10 @@ pub(super) async fn preview_document(
     let manifest = serde_json::to_value(&package.manifest).map_err(AppError::internal)?;
     let manifest_doc = package.manifest.clone();
     let (plan, preview) = plan_and_persist(state, package.bundle, false, requested_by).await?;
+    // T3-T2: served once this plan applies.
+    if !files.is_empty() {
+        super::package::stage_files(&state.base.db, plan.plan_id, &manifest_doc, &files).await?;
+    }
     // T8-T2: what it locks once this plan applies (T8-T3: and the manifest
     // an upgrade, drift or uninstall reads back).
     if manifest_doc.mode == super::package::PackageMode::Managed {

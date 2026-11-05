@@ -3436,6 +3436,7 @@ export const xrmAr = {
     asList: 'معروض كقائمة في هذه الصفحة.',
     noRecord: 'لا يوجد سجل لعرضه.',
     custom: 'مكوّن مخصص {id}',
+    componentFailed: 'تعذّر تحميل هذا المكوّن. بقية الصفحة لم تتأثر.',
     run: 'تشغيل',
   },
   canvas: {

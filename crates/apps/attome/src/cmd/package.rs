@@ -6,7 +6,9 @@
 //!   trust the publisher by.
 //! - `build <folder> --key <file> [--out <file>]` reads `package.json` (the
 //!   manifest) and `bundle.json` (an `attome-bundle/v1`) from the folder,
-//!   checks the manifest and signs the package.
+//!   checks the manifest and signs the package. T3-T2: every file under the
+//!   folder's `files/` (a custom component's built module, say) goes into
+//!   the package by its path there, base64, and is signed with it.
 //! - `publish <package file> --to <folder>` adds a signed package to a
 //!   catalogue folder: `<id>/<version>.attome-package.json` plus
 //!   `index.json`. A published version never changes.
@@ -96,8 +98,44 @@ pub fn assemble(manifest: &str, bundle: &str) -> Result<Package, String> {
         format: package::PACKAGE_FORMAT.to_owned(),
         manifest,
         bundle,
+        files: BTreeMap::new(),
         signature: None,
     })
+}
+
+/// T3-T2: every file under `dir` by its path there (`/`-separated), base64;
+/// none when `dir` does not exist. The paths and sizes are checked as an
+/// install checks them.
+pub fn read_files(dir: &Path) -> Result<BTreeMap<String, String>, String> {
+    fn walk(root: &Path, dir: &Path, out: &mut BTreeMap<String, String>) -> Result<(), String> {
+        let entries = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        for entry in entries {
+            let path = entry.map_err(|e| e.to_string())?.path();
+            if path.is_dir() {
+                walk(root, &path, out)?;
+            } else {
+                let relative = path
+                    .strip_prefix(root)
+                    .map_err(|e| e.to_string())?
+                    .components()
+                    .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                    .collect::<Vec<_>>()
+                    .join("/");
+                let bytes = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+                out.insert(
+                    relative,
+                    base64::Engine::encode(&base64::engine::general_purpose::STANDARD, bytes),
+                );
+            }
+        }
+        Ok(())
+    }
+    let mut files = BTreeMap::new();
+    if dir.is_dir() {
+        walk(dir, dir, &mut files)?;
+    }
+    package::check_files(&files).map_err(|problems| problems.join("; "))?;
+    Ok(files)
 }
 
 /// The file name a package is written and published under. Pure.
@@ -241,6 +279,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 &read(&folder.join("package.json"))?,
                 &read(&folder.join("bundle.json"))?,
             )?;
+            package.files = read_files(&folder.join("files"))?;
             sign_with_seed(&mut package, &seed)?;
             // The package must verify under the key it was signed with.
             package::verify(
