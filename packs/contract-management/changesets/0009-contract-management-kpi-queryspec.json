@@ -1,8 +1,8 @@
 {
   "author": "packs",
-  "checksum": "sha256:7aeaec6bc19c4bd1048bef9e3477d57717de98db46836427fc123663d2a51380",
+  "checksum": "sha256:d7ba3cfcf3d7da8a87433ceb6abd6cdb509a58e4f70fe0a8b3d51e0786302f8e",
   "closed_at": "2026-11-05T00:00:00Z",
-  "description": "Pack KPIs as QuerySpecs (V2-D1808): Contract: Value Under Management are declared as spec-only stored queries, so query/execute runs them through the QuerySpec engine, which scopes them to each reader before it aggregates (their SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
+  "description": "Pack KPIs as QuerySpecs (V2-D1808): Contract: Value Under Management and Contract: Playbook Deviation Count are declared as spec-only stored queries, so query/execute runs them through the QuerySpec engine, which scopes them to each reader before it aggregates (their SQL named no id, organisation or owner column, so a reader below full read access could not be narrowed).",
   "format": "attome-changeset/v1",
   "id": "01a1aa86-c97c-704c-9c77-8fe16bcae635",
   "layer": "product",
@@ -48,6 +48,80 @@
       "target": {
         "entity": "contract",
         "query": "Contract: Value Under Management"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Contract: Playbook Deviation Count",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "with_deviations",
+                "filter": {
+                  "all": [
+                    {
+                      "field": "playbook_deviations",
+                      "kind": "compare",
+                      "op": "is_not_null"
+                    },
+                    {
+                      "field": "playbook_deviations",
+                      "kind": "compare",
+                      "op": "not_in",
+                      "value": [
+                        "",
+                        "[]"
+                      ]
+                    }
+                  ],
+                  "kind": "and"
+                },
+                "func": "count"
+              },
+              {
+                "alias": "needing_legal",
+                "filter": {
+                  "field": "playbook_deviations",
+                  "kind": "compare",
+                  "op": "contains",
+                  "value": "needs_legal"
+                },
+                "func": "count"
+              },
+              {
+                "alias": "open_contracts",
+                "func": "count"
+              }
+            ],
+            "entity": "contract",
+            "where": {
+              "field": "status",
+              "kind": "compare",
+              "op": "in",
+              "value": [
+                "draft",
+                "review",
+                "approved"
+              ]
+            }
+          },
+          "required_privilege": null,
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "contract",
+        "query": "Contract: Playbook Deviation Count"
       }
     }
   ],

@@ -355,8 +355,8 @@ enterprise-architecture, financial-services, government, manufacturing, nonprofi
 telecom-energy) re-declares those that QuerySpec can express as spec-only stored queries: same
 name, entity, privilege and output columns, run through the QuerySpec engine, which applies the
 reader's record scope and field security before it aggregates (V2-D1808). A sum over no rows is now
-empty rather than `0`. Queries QuerySpec cannot yet express stay SQL and run for administrators and
-full-read readers only: per-aggregate `FILTER` counts (CS SLA Compliance, contract playbook
-deviation count, retail visit compliance), averages of a time difference (partner lead accept
-hours), "this week" (healthcare appointments) and `expires_on > CURRENT_DATE` (partner
-certifications).
+empty rather than `0`. A measure may carry its own `filter` (`FILTER (WHERE ...)`), which CS SLA
+Compliance and the contract playbook deviation count use. Queries QuerySpec cannot yet express stay
+SQL and run for administrators and full-read readers only: averages of a time difference (partner
+lead accept hours), "this week" (healthcare appointments, retail visit compliance) and
+`expires_on > CURRENT_DATE` (partner certifications).

@@ -279,7 +279,12 @@ impl Parser {
                     self.expect_sym(")")?;
                     self.expect_kw("AS")?;
                     let alias = self.ident()?;
-                    aggregates.push(Aggregate { func, field, alias });
+                    aggregates.push(Aggregate {
+                        func,
+                        field,
+                        alias,
+                        filter: None,
+                    });
                 }
                 None => select.push(self.ident()?),
             }

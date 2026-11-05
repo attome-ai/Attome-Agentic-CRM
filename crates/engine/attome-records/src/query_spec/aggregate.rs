@@ -236,6 +236,14 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<CompiledAggregate, App
                 }
             }
         };
+        // V2-D1808: a measure over the rows that meet its own condition.
+        let expr = match &agg.filter {
+            Some(condition) => format!(
+                "{expr} FILTER (WHERE {})",
+                b.condition(&scope, condition, spec)?
+            ),
+            None => expr,
+        };
         select.push(format!("{expr} AS a{}", i + 1));
         measures.push(expr);
         aliases.push(agg.alias.clone());

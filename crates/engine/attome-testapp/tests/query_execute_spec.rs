@@ -150,7 +150,9 @@ fn a_kpi_counts_only_what_its_reader_may_see() {
                     "entity": entity,
                     "aggregates": [
                         { "func": "count", "alias": "n" },
-                        { "func": "sum", "field": "amount", "alias": "total" }
+                        { "func": "sum", "field": "amount", "alias": "total" },
+                        { "func": "count", "alias": "big",
+                          "filter": { "kind": "compare", "field": "amount", "op": "gt", "value": 15 } }
                     ]
                 },
                 "parameters": []
@@ -184,13 +186,15 @@ fn a_kpi_counts_only_what_its_reader_may_see() {
         let row = &body["data"]["records"][0];
         assert_eq!(number(row, "n"), 3.0, "{body}");
         assert_eq!(number(row, "total"), 60.0, "{body}");
+        // A measure with its own filter counts only the rows that meet it.
+        assert_eq!(number(row, "big"), 2.0, "{body}");
         let columns: Vec<&str> = body["data"]["columns"]
             .as_array()
             .unwrap()
             .iter()
             .filter_map(|c| c["name"].as_str())
             .collect();
-        assert_eq!(columns, ["n", "total"], "{body}");
+        assert_eq!(columns, ["n", "total", "big"], "{body}");
 
         // The administrator, whom no filter narrows, counts all six.
         let (status, body) = app

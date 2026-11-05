@@ -161,13 +161,18 @@ pub enum AggFunc {
     CountDistinct,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Aggregate {
     pub func: AggFunc,
     /// None only for `count` (every row).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub field: Option<String>,
     pub alias: String,
+    /// V2-D1808: only the rows that meet this condition are measured
+    /// (`FILTER (WHERE ...)`), so one query counts, say, breached and
+    /// on-track tickets side by side.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<Condition>,
 }
 
 #[cfg(test)]
