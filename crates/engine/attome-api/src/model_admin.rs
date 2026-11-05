@@ -1000,6 +1000,152 @@ async fn provision_dependency(state: &EngineState, id: Uuid, doc: &Value) -> Res
     crate::changeset::boot::apply_pack_document(state, &document).await
 }
 
+/// AD8-T1: what publishing an object's open draft would change, in one
+/// report: the changes against what is published, the publish checks it
+/// fails now, the objects that read it, the entities and flows its customer
+/// tests watch, the publish gates' refusals and warnings, and whether it
+/// changes access.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PublishImpactReport {
+    pub kind: String,
+    pub id: Uuid,
+    /// The draft's version, or the newest version when nothing is open.
+    pub version_no: i64,
+    /// Whether a draft is open; without one a publish answers 404.
+    pub has_draft: bool,
+    /// RFC 6902 operations from the published document to the draft's (on a
+    /// first publish, one `replace` of the whole document).
+    #[schema(value_type = Vec<Object>)]
+    pub changes: Value,
+    /// The publish checks the draft fails now, `{path, code, message}`;
+    /// empty when they pass.
+    #[schema(value_type = Vec<Object>)]
+    pub issues: Value,
+    /// Objects that read this one (the reference graph), at most
+    /// [`IMPACT_DEPENDENTS`].
+    #[schema(value_type = Vec<Object>)]
+    pub dependents: Value,
+    /// How many objects read it.
+    pub dependents_total: i64,
+    /// The entities and flows a customer test touching them would see change.
+    pub affected_entities: Vec<String>,
+    pub affected_flows: Vec<String>,
+    /// Why a publish would be refused now (an eval suite, the quality gate).
+    pub blocked: Vec<String>,
+    /// What a publish would warn about.
+    pub warnings: Vec<String>,
+    /// The object decides access: a sharing rule or an agent.
+    pub security_change: bool,
+}
+
+/// Most dependents one impact report lists.
+pub const IMPACT_DEPENDENTS: i64 = 200;
+
+/// Kinds whose publish changes who may read or do what.
+const SECURITY_KINDS: [&str; 2] = ["sharing_rule", "agent"];
+
+/// The publish checks' issues as `{path, code, message}`. Pure.
+fn issues_json(issues: &[Issue]) -> Value {
+    Value::Array(
+        issues
+            .iter()
+            .map(|i| serde_json::json!({ "path": i.path, "code": i.code, "message": i.message }))
+            .collect(),
+    )
+}
+
+/// An object's publish impact
+///
+/// AD8-T1: what publishing the object's open draft would change, in one
+/// report, without publishing anything: the diff against the published
+/// version, the publish checks it fails, the objects that read it, what its
+/// customer tests watch, the gates' refusals and warnings, and whether it
+/// changes access.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/model/{kind}/{id}/impact",
+    operation_id = "model_publish_impact",
+    tag = "admin",
+    params(("kind" = String, Path, description = "Kind name"), ("id" = Uuid, Path, description = "Object id")),
+    responses(
+        (status = 200, description = "The impact report", body = PublishImpactReport),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such kind or object", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn publish_impact_report(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Path((kind_name, id)): Path<(String, Uuid)>,
+) -> Result<Json<PublishImpactReport>, AppError> {
+    let kind = kind(&kind_name)?;
+    let newest = read_checked(&state, &kind_name, id, None).await?;
+    let published = match store::read_published(&state.base.db, id).await {
+        Ok(published) => Some(published),
+        Err(AppError::NotFound) => None,
+        Err(e) => return Err(e),
+    };
+    let has_draft = newest.state == "draft";
+    let changes = store::json_diff(
+        &published.as_ref().map_or(Value::Null, |p| p.doc.clone()),
+        &newest.doc,
+    );
+    // The publish checks, in a transaction that writes nothing.
+    let issues = {
+        let mut tx = attome_db::tx::begin(&state.base.db).await?;
+        let issues =
+            attome_model::validate::validate_save(&mut tx, kinds(), kind.as_ref(), &newest.doc)
+                .await?;
+        drop(tx);
+        issues
+    };
+    let dependents = attome_model::references::references_in(
+        &state.base.db,
+        &object_ref(kind.as_ref(), id),
+        &OnePageQuery {
+            page: Some(1),
+            page_size: Some(IMPACT_DEPENDENTS),
+        },
+    )
+    .await?;
+    let impact = attome_records::customer_tests::publish_impact(
+        &state.base.db,
+        kind.name().as_str(),
+        id,
+        Some(newest.name.as_str()),
+    )
+    .await?;
+    let gate = attome_ai::publish_gate::check(&state.base.db, kind.name().as_str(), id).await?;
+    let mut blocked = gate.blocked;
+    let mut warnings = gate.warnings;
+    if matches!(kind.name().as_str(), "form" | "page") {
+        let mut quality = a11y_warnings(kind.name().as_str(), &newest.doc);
+        quality.extend(perf_warnings(kind.name().as_str(), &newest.doc));
+        if !quality.is_empty() && quality_gate_blocks(&state) {
+            blocked.extend(quality);
+        } else {
+            warnings.extend(quality);
+        }
+    }
+    Ok(Json(PublishImpactReport {
+        kind: kind.name().as_str().to_owned(),
+        id,
+        version_no: newest.version_no,
+        has_draft,
+        changes: serde_json::to_value(&changes).map_err(AppError::internal)?,
+        issues: issues_json(&issues),
+        dependents: serde_json::to_value(&dependents.items).map_err(AppError::internal)?,
+        dependents_total: dependents.total,
+        affected_entities: impact.entities.into_iter().collect(),
+        affected_flows: impact.flows.into_iter().collect(),
+        blocked,
+        warnings,
+        security_change: SECURITY_KINDS.contains(&kind.name().as_str()),
+    }))
+}
+
 /// Publish an object
 ///
 /// Publishes an object's open draft once it passes the publish checks, and
@@ -3366,6 +3512,10 @@ pub fn routes() -> Router<EngineState> {
             post(apply_commands),
         )
         .route("/api/v1/admin/model/{kind}/{id}/publish", post(publish))
+        .route(
+            "/api/v1/admin/model/{kind}/{id}/impact",
+            get(publish_impact_report),
+        )
         .route("/api/v1/admin/model/apps/{app}/retire", post(retire_app))
         .route("/api/v1/model/forms/{id}/plan", get(form_plan))
         .route(
@@ -3404,6 +3554,7 @@ pub fn routes() -> Router<EngineState> {
         validate,
         apply_commands,
         publish,
+        publish_impact_report,
         retire_app,
         switch_version,
         version_preview,
@@ -3486,6 +3637,30 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod impact_tests {
+    use super::*;
+
+    /// AD8-T1: the publish checks' issues reach the report as plain
+    /// `{path, code, message}` objects, and access kinds are named.
+    #[test]
+    fn the_impact_report_lists_issues_and_names_access_kinds() {
+        let issues = vec![Issue::new(
+            "/columns/0",
+            "required",
+            "a column names its attribute",
+        )];
+        let json = issues_json(&issues);
+        assert_eq!(json[0]["path"], "/columns/0");
+        assert_eq!(json[0]["code"], "required");
+        assert_eq!(json[0]["message"], "a column names its attribute");
+        assert!(SECURITY_KINDS.contains(&attome_model::kinds::SHARING_RULE.as_str()));
+        assert!(SECURITY_KINDS.contains(&attome_model::kinds::agent::AGENT.as_str()));
+        let first = store::json_diff(&Value::Null, &serde_json::json!({ "a": 1 }));
+        assert_eq!(first.len(), 1, "a first publish is one change");
+    }
 }
 
 #[cfg(test)]

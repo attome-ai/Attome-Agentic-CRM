@@ -22,6 +22,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `GET /api/v1/admin/model/{kind}/{id}/impact` answers one publish impact report for an object's
+  draft: its changes against the published version, the publish checks it fails, the objects that
+  read it, the entities and flows its customer tests watch, the gates' refusals and warnings, and
+  whether it changes access (AD8-T1).
+- `attome drill chaos suite` writes one signed chaos report per catalogue fault, and
+  `attome release --check --chaos` runs it against a rig as the gate step `chaos_suite`
+  (AB9-T4, AB9-T10); an agent reads the results with `ops.chaos_results` (AB9-T9).
 - The recovery drills page filters runs by kind, names the fault of a chaos run (`fault` on
   `GET /api/v1/ops/drills` rows, from the evidence's `extra.fault`) and shows each run passed or
   failed, oldest first (AB9-T8).
