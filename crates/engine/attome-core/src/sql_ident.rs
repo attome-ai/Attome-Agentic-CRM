@@ -55,6 +55,15 @@ pub const ALL_SYSTEM_COLS: &[&str] = &[
     "owner_type",
 ];
 
+/// An attribute named like a system column (a pack's `owner_ref` lookup
+/// over the system `owner_ref`, say) is that same column, already selected
+/// from [`ALL_SYSTEM_COLS`]. Selecting it twice made `owner_ref` ambiguous in
+/// every `FROM (...) AS t` wrapper over the list, so the record filter's
+/// owner arm (`t.owner_ref = ...`) failed for every owner-visible reader.
+fn shadows_system_col(attr: &crate::AttrInfo) -> bool {
+    ALL_SYSTEM_COLS.contains(&attr.logicalname.as_str())
+}
+
 /// The one live-row predicate every read that counts, lists or exports
 /// records must agree on (dashboard 10/10 Phase 0 spikes S2 and S8): a
 /// provisioned table's `is_active` is nullable and NULL counts as live, the
@@ -100,7 +109,7 @@ pub fn select_columns_filtered(
     can_read: impl Fn(&crate::AttrInfo) -> bool,
 ) -> String {
     let mut cols: Vec<String> = ALL_SYSTEM_COLS.iter().map(|c| (*c).to_owned()).collect();
-    for attr in attrs {
+    for attr in attrs.iter().filter(|attr| !shadows_system_col(attr)) {
         if attr.is_read_gated() && !can_read(attr) {
             continue;
         }
@@ -118,7 +127,7 @@ pub fn select_columns_where(
     keep: impl Fn(&crate::AttrInfo) -> bool,
 ) -> String {
     let mut cols: Vec<String> = ALL_SYSTEM_COLS.iter().map(|c| (*c).to_owned()).collect();
-    for attr in attrs {
+    for attr in attrs.iter().filter(|attr| !shadows_system_col(attr)) {
         if keep(attr) {
             cols.push(quote_ident(&attr.logicalname));
         }
@@ -137,7 +146,7 @@ pub fn select_columns_access(
 ) -> String {
     use crate::field_mask::ColumnAccess;
     let mut cols: Vec<String> = ALL_SYSTEM_COLS.iter().map(|c| (*c).to_owned()).collect();
-    for attr in attrs {
+    for attr in attrs.iter().filter(|attr| !shadows_system_col(attr)) {
         let col = quote_ident(&attr.logicalname);
         match access(attr) {
             ColumnAccess::Full => cols.push(col),
@@ -240,5 +249,27 @@ mod tests {
         let cols = select_columns(&[], true);
         assert!(cols.contains("owner_ref"));
         assert!(cols.contains("owner_type"));
+    }
+
+    /// A pack's `owner_ref` lookup attribute is the system column itself: it
+    /// is selected once, or `t.owner_ref` is ambiguous over the list.
+    #[test]
+    fn an_attribute_named_like_a_system_column_is_selected_once() {
+        let attrs = vec![attr("owner_ref", false), attr("title", false)];
+        for cols in [
+            select_columns(&attrs, true),
+            super::select_columns_where(&attrs, |_| true),
+        ] {
+            let names: Vec<&str> = cols.split(", ").collect();
+            assert_eq!(
+                names
+                    .iter()
+                    .filter(|c| c.trim_matches('"') == "owner_ref")
+                    .count(),
+                1,
+                "{cols}"
+            );
+            assert!(names.contains(&"\"title\""), "{cols}");
+        }
     }
 }
