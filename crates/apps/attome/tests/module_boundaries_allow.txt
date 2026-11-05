@@ -1,0 +1,41 @@
+# Y4-T4: engine-to-engine dependencies between modules that are allowed today.
+# One edge per line, `from -> to  # reason`. Seeded on 2026-11-05 with every edge
+# that existed; each is to be removed over time by going through attome-sdk or a
+# relationship. Never add a line without a reason; delete a line when its edge goes.
+
+attome-ai -> attome-billing  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-commission  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-compliance  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-content  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-contract  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-dashboard  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-field  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-fulfilment  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-marketing  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-metric  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-ops  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-partner  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-sales  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-service  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-webcrawl  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-ai -> attome-workforce  # its agent tools for this module are registered in the action gate (V2-D1807; Y4-T3 decided no crate split)
+attome-billing -> attome-einvoice  # an issued invoice is cleared through e-invoicing (F4)
+attome-dashboard -> attome-metric  # dashboard tiles read metric definitions and values
+attome-fleet -> attome-api  # the developer-only fleet console drives the composed server
+attome-fulfilment -> attome-billing  # fulfilment raises or reads invoices
+attome-marketing -> attome-compliance  # consent and suppression checks before a send
+attome-portal -> attome-billing  # the portal serves billing records to external users
+attome-portal -> attome-commission  # the portal serves commission records to external users
+attome-portal -> attome-compliance  # the portal serves compliance records to external users
+attome-portal -> attome-fulfilment  # the portal serves fulfilment records to external users
+attome-portal -> attome-partner  # the portal serves partner records to external users
+attome-portal -> attome-sales  # the portal serves sales records to external users
+attome-project -> attome-billing  # project raises or reads invoices
+attome-project -> attome-procurement  # project purchases raise purchase requests
+attome-records -> attome-field  # field-service records hook into the shared record writes
+attome-sales -> attome-billing  # sales raises or reads invoices
+attome-sales -> attome-service  # a won deal opens its service entitlements
+attome-sales -> attome-webcrawl  # account enrichment reads crawled company pages
+attome-service -> attome-billing  # service raises or reads invoices
+attome-workflow -> attome-marketing  # journey steps run inside the workflow engine
+attome-workflow -> attome-sales  # sales steps (cadences) run inside the workflow engine
