@@ -777,6 +777,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- An entity whose pack adds an `owner_ref` lookup (contracts, ITSM, manufacturing, marketing and others) no
+  longer selects the column twice: a reader whose role lets owners reach their own records (the Contract
+  Requester, say) got a 500 listing it through `POST /api/v1/query/execute`, and the GraphQL schema named the
+  field twice. `owner_ref` is now the one system field, with the attribute's lookup target.
 - Security: `POST /api/v1/query/execute`'s five-second repeat cache (AA4-T9) no longer answers
   from before a change to the caller's access. Its key now also carries the caller's permission
   fingerprint and their record shares, so a share, a revoke or a role change is seen at once; until
