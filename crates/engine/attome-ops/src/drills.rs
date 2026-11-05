@@ -48,7 +48,7 @@ impl PrivilegeKey for OpsDrillRun {
 
 const COLUMNS: &str = "id, kind, started_at, finished_at, overall_ok, restore_ok, provenance_ok, \
      rpo_seconds, rto_seconds, data_size_bytes, platform_version, key_id, sha256, uploaded_by, \
-     created_at";
+     created_at, evidence #>> '{evidence,extra,fault}' AS fault";
 
 /// One recorded drill, without its evidence.
 #[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
@@ -73,6 +73,9 @@ pub struct DrillRun {
     pub sha256: String,
     pub uploaded_by: Option<Uuid>,
     pub created_at: DateTime<Utc>,
+    /// AB9-T8: the fault a chaos drill injected (its evidence's
+    /// `extra.fault`); absent for other kinds.
+    pub fault: Option<String>,
 }
 
 /// An upload's outcome.

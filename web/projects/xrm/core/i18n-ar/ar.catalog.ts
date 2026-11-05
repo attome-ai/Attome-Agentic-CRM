@@ -5545,6 +5545,9 @@ export const xrmAr = {
       version: 'الإصدار',
       keyId: 'مفتاح التوقيع',
       signatureNote: 'تم التحقق من التوقيع عند رفع هذا الدليل.',
+      kindFilter: 'عرض',
+      allKinds: 'كل التمارين',
+      outcomes: 'الناجحة والفاشلة، الأقدم أولًا',
       kind: {
         restore: 'استعادة',
         failover: 'تحويل تلقائي',

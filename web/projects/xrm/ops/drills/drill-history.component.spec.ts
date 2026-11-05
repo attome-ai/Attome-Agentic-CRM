@@ -83,6 +83,26 @@ describe('DrillHistoryComponent (AB4-T11)', () => {
     expect(component.packUrl()).toBe('https://crm.example/api/v1/ops/drills/auditor-pack?from=2026-01-01&to=2026-03-31');
   });
 
+  it('filters to chaos runs', () => {
+    const { fixture, get } = create([]);
+    const chaos: DrillRun = { ...RUN('c-1', '2026-10-02T00:00:00Z', 0, 0), kind: 'chaos', overall_ok: false, fault: 'redis_down' };
+    get.mockImplementation((url: string) => {
+      if (url === '/api/v1/ops/drills/freshness') return of(page(FRESHNESS));
+      if (url === '/api/v1/ops/drill-schedules') return of(page([RESTORE_OFF]));
+      return of(page([chaos]));
+    });
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('[data-testid="dh-kind"]');
+    select.value = 'chaos';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(get).toHaveBeenLastCalledWith('/api/v1/ops/drills', { page: '1', page_size: '20', kind: 'chaos' });
+    const kind: HTMLElement = fixture.nativeElement.querySelector('[data-testid="dh-run-kind"]');
+    expect(kind.textContent).toContain('ops.drills.kind.chaos');
+    expect(kind.textContent).toContain('redis_down');
+    const outcomes: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="dh-outcomes"] li'));
+    expect(outcomes.map(o => o.getAttribute('data-ok'))).toEqual(['false']);
+  });
+
   it('plots the trend oldest first', () => {
     const runs = [RUN('b', '2026-10-01T00:00:00Z', 30, 240), RUN('a', '2026-09-01T00:00:00Z', 60, 300)];
     expect(trendPoints(runs, 'rpo_seconds', 300)).toBe('0,64 320,72');

@@ -5634,6 +5634,9 @@ export const xrmEn = {
       version: 'Version',
       keyId: 'Signing key',
       signatureNote: 'The signature was verified when this evidence was uploaded.',
+      kindFilter: 'Show',
+      allKinds: 'Every drill',
+      outcomes: 'Passed and failed, oldest first',
       kind: {
         restore: 'Restore',
         failover: 'Failover',

@@ -31,7 +31,12 @@ export interface DrillRun {
   sha256: string;
   uploaded_by: string | null;
   created_at: string;
+  /** AB9-T8: the fault a chaos drill injected. */
+  fault?: string | null;
 }
+
+/** AB9-T8: the kinds the runs can be filtered to; empty is every kind. */
+export const KIND_FILTERS = ['', 'restore', 'failover', 'chaos', 'upgrade', 'recovery'] as const;
 
 /** `attome_ops::drill_schedules::DrillSchedule`. */
 export interface DrillSchedule {
@@ -119,7 +124,24 @@ export function trendPoints(
         }
       </ul>
 
+      <label class="dh-filter">
+        {{ 'ops.drills.kindFilter' | translate }}
+        <select data-testid="dh-kind" [value]="kind()" (change)="setKind($any($event.target).value)">
+          @for (k of kindFilters; track k) {
+            <option [value]="k" [selected]="k === kind()">
+              {{ (k ? 'ops.drills.kind.' + k : 'ops.drills.allKinds') | translate }}
+            </option>
+          }
+        </select>
+      </label>
+
       @if (runs().length > 0) {
+        <ol class="dh-outcomes" data-testid="dh-outcomes" [attr.aria-label]="'ops.drills.outcomes' | translate">
+          @for (r of oldestFirst(); track r.id) {
+            <li [attr.data-ok]="r.overall_ok"
+                [attr.title]="(r.overall_ok ? 'ops.drills.passed' : 'ops.drills.failed') | translate"></li>
+          }
+        </ol>
         <figure class="dh-chart">
           <svg [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" role="img"
                [attr.aria-label]="'ops.drills.trend' | translate">
@@ -147,7 +169,12 @@ export function trendPoints(
               @for (r of runs(); track r.id) {
                 <tr>
                   <td><a [routerLink]="[r.id]">{{ r.finished_at | localDate }}</a></td>
-                  <td>{{ 'ops.drills.kind.' + r.kind | translate }}</td>
+                  <td data-testid="dh-run-kind">
+                    {{ 'ops.drills.kind.' + r.kind | translate }}
+                    @if (r.fault) {
+                      · <span class="dh-fault" dir="ltr">{{ r.fault }}</span>
+                    }
+                  </td>
                   <td>{{ (r.overall_ok ? 'ops.drills.passed' : 'ops.drills.failed') | translate }}</td>
                   <td dir="ltr">{{ r.rpo_seconds ?? '—' }}</td>
                   <td dir="ltr">{{ r.rto_seconds ?? '—' }}</td>
@@ -216,6 +243,11 @@ export function trendPoints(
     .dh-pack { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; }
     .dh-pack label { display: flex; flex-direction: column; gap: 0.25rem; }
     .dh-error { color: var(--color-danger); }
+    .dh-filter { display: flex; gap: 0.5rem; align-items: center; margin-block: 0.75rem; }
+    .dh-outcomes { display: flex; gap: 0.25rem; padding: 0; margin-block: 0.5rem; list-style: none; }
+    .dh-outcomes li { inline-size: 0.75rem; block-size: 0.75rem; border-radius: 2px; background: var(--color-success); }
+    .dh-outcomes li[data-ok='false'] { background: var(--color-danger); }
+    .dh-fault { font-family: monospace; }
   `],
 })
 export class DrillHistoryComponent implements OnInit {
@@ -234,6 +266,12 @@ export class DrillHistoryComponent implements OnInit {
   readonly canManage = signal(false);
   readonly canAudit = signal(false);
   readonly pageSize = PAGE_SIZE;
+  readonly kindFilters = KIND_FILTERS;
+  /** AB9-T8: the kind the runs are filtered to; empty is every kind. */
+  readonly kind = signal<string>('');
+  /** The page's runs oldest first, for the pass/fail strip. */
+  readonly oldestFirst = computed(() =>
+    [...this.runs()].sort((a, b) => a.finished_at.localeCompare(b.finished_at)));
   readonly chartWidth = CHART_WIDTH;
   readonly chartHeight = CHART_HEIGHT;
 
@@ -262,13 +300,16 @@ export class DrillHistoryComponent implements OnInit {
     this.loadRuns(1);
   }
 
+  /** Shows only `kind`'s runs (every kind when empty), from the first page. */
+  setKind(kind: string): void {
+    this.kind.set(kind);
+    this.loadRuns(1);
+  }
+
   loadRuns(page: number): void {
-    this.sdk.get<Page<DrillRun>>(
-      '/api/v1/ops/drills',
-      { query: {
-      page: String(page), page_size: String(PAGE_SIZE),
-    } },
-    ).subscribe({
+    const query: Record<string, string> = { page: String(page), page_size: String(PAGE_SIZE) };
+    if (this.kind()) query['kind'] = this.kind();
+    this.sdk.get<Page<DrillRun>>('/api/v1/ops/drills', { query }).subscribe({
       next: p => {
         this.runs.set(p.items ?? []);
         this.total.set(p.total ?? 0);
