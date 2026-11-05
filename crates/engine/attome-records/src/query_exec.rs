@@ -2237,6 +2237,205 @@ pub struct PublishedDefinition {
     pub view_metadata: Option<Value>,
 }
 
+/// V2-D1808: a spec-only stored query (S4-T9) run for `query/execute`, so a
+/// query widget, an agent or a document reads it like any stored query. The
+/// same per-query privilege gate as SQL; then the QuerySpec engine
+/// (`query/run`'s), which applies the caller's record scope and field
+/// security before it aggregates, so a pack's KPI counts only what this
+/// reader may see. The request's filters narrow the spec's own condition;
+/// what a spec cannot honour (search, sort, keyset, seek, a relationship, a
+/// delta, a second offset page) is a 422 rather than silently ignored.
+async fn execute_saved_spec(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    db: &DbPool,
+    qrow: SqlQueryRow,
+    body: ExecuteQueryRequest,
+    definition: Option<PublishedDefinition>,
+) -> Result<ExecResponse, AppError> {
+    use crate::query_spec::model::Condition;
+
+    match &qrow.required_privilege {
+        Some(key) => ctx.require_key(key)?,
+        None => ctx.require_admin()?,
+    }
+    let unsupported = !body.search.is_empty()
+        || !body.order_by.is_empty()
+        || body.order_near.is_some()
+        || body.after_id.is_some()
+        || body.seek.is_some()
+        || body.related_to.is_some()
+        || body.delta_token.is_some();
+    if unsupported {
+        return Err(AppError::Validation(
+            "this stored query is a QuerySpec: search, order_by, order_near, after_id, seek, \
+             related_to and delta_token do not apply; filters do"
+                .into(),
+        ));
+    }
+    if !(1..=attome_types::MAX_PAGE_SIZE).contains(&body.page_size) {
+        return Err(AppError::Validation(format!(
+            "page_size must be between 1 and {}",
+            attome_types::MAX_PAGE_SIZE
+        )));
+    }
+    if body.page != 1 {
+        return Err(AppError::Validation(
+            "this stored query is a QuerySpec: it answers one page here; page through it with \
+             POST /api/v1/query/run and query_id"
+                .into(),
+        ));
+    }
+    let (spec, params) = match body.query_version_id {
+        Some(version_id) => {
+            let row: Option<(Option<Value>, Option<Value>)> =
+                sqlx::query_as(attome_db::tagged_sql!(
+                    "query.execute",
+                    "SELECT query_spec, parameters FROM sql_query_version \
+                     WHERE id = $1 AND query_id = $2"
+                ))
+                .bind(version_id)
+                .bind(qrow.id)
+                .fetch_optional(db)
+                .await
+                .map_err(AppError::internal)?;
+            let (spec, params) = row.ok_or_else(|| {
+                AppError::Validation("query_version_id does not belong to this query".into())
+            })?;
+            let spec = spec.ok_or_else(|| {
+                AppError::Validation("this version of the query has no query_spec".into())
+            })?;
+            let spec: crate::query_spec::QuerySpec = serde_json::from_value(spec).map_err(|e| {
+                AppError::internal(format!("pinned query_spec of {}: {e}", qrow.id))
+            })?;
+            let params: Vec<crate::query_spec::saved::ParamDecl> = match params {
+                Some(p) => serde_json::from_value(p).map_err(|e| {
+                    AppError::internal(format!("pinned parameters of {}: {e}", qrow.id))
+                })?,
+                None => Vec::new(),
+            };
+            (spec, params)
+        }
+        None => {
+            let saved = crate::query_spec::saved::load(db, qrow.id).await?;
+            (saved.spec, saved.params)
+        }
+    };
+    let mut spec = spec;
+    // A run here names no values: every parameter takes its default.
+    spec.params = crate::query_spec::saved::coerce(&params, &Default::default())?;
+    spec.cursor = None;
+    spec.explain = false;
+    let aggregate =
+        !(spec.aggregates.is_empty() && spec.group_by.is_empty() && spec.having.is_none());
+    if !body.filters.is_empty() {
+        let mut all: Vec<Condition> = spec.r#where.take().into_iter().collect();
+        all.extend(body.filters.iter().map(|f| Condition::Compare {
+            field: f.field.clone(),
+            op: f.op.clone(),
+            value: f.value.clone(),
+        }));
+        spec.r#where = Some(Condition::And { all });
+    }
+    if let Some(select) = &body.select {
+        if aggregate {
+            return Err(AppError::Validation(
+                "select: an aggregate QuerySpec returns groups, not records".into(),
+            ));
+        }
+        spec.select = select.clone();
+    }
+    if !aggregate {
+        spec.page_size = Some(body.page_size);
+    }
+    let group_names: Vec<String> = spec.group_by.iter().map(|g| g.field.clone()).collect();
+    let aggregate_names: Vec<String> = spec.aggregates.iter().map(|a| a.alias.clone()).collect();
+    let select_names = spec.select.clone();
+    let entity_logical_name = Some(spec.entity.clone());
+
+    let answer = crate::query_spec::routes::execute_spec_on(
+        state,
+        ctx,
+        spec,
+        attome_security::field_gate::Surface::Interactive,
+    )
+    .await?;
+    let (names, records, more): (Vec<String>, Vec<Value>, bool) = match answer {
+        crate::query_spec::routes::RunResponse::Aggregate(result) => {
+            let records = result
+                .groups
+                .into_iter()
+                .map(|group| {
+                    let mut row = group.keys;
+                    row.extend(group.values);
+                    Value::Object(row)
+                })
+                .collect();
+            (
+                group_names.into_iter().chain(aggregate_names).collect(),
+                records,
+                false,
+            )
+        }
+        crate::query_spec::routes::RunResponse::Rows(page) => {
+            let more = page.next_cursor.is_some();
+            let mut names = select_names;
+            if !names.iter().any(|n| n == "id") {
+                names.insert(0, "id".to_owned());
+            }
+            (
+                names,
+                page.items
+                    .into_iter()
+                    .map(|row| Value::Object(row.0))
+                    .collect(),
+                more,
+            )
+        }
+        _ => {
+            return Err(AppError::internal(
+                "a stored QuerySpec answered neither rows nor groups",
+            ));
+        }
+    };
+    let count = i64::try_from(records.len()).unwrap_or(i64::MAX);
+    tracing::info!(
+        query_id = %qrow.id,
+        caller_id = %ctx.user_id,
+        row_count = records.len(),
+        "query/execute served a stored QuerySpec"
+    );
+    Ok(ExecResponse {
+        metadata: ExecMeta {
+            query_id: qrow.id,
+            view_id: qrow.view_id,
+            record_no: qrow.record_no,
+            entity_logical_name,
+            can_edit_query: ctx.is_admin,
+            view_kind: definition
+                .as_ref()
+                .and_then(|d| d.view_kind.clone())
+                .or(qrow.view_kind),
+            view_metadata: definition
+                .as_ref()
+                .and_then(|d| d.view_metadata.clone())
+                .or(qrow.view_metadata),
+        },
+        data: ExecData {
+            columns: build_columns(None, &names),
+            records,
+            // A page that came back full has more rows behind it, which this
+            // route does not page to: no exact total then.
+            total: (!more).then_some(count),
+            total_estimated: false,
+            page: 1,
+            page_size: body.page_size,
+            total_pages: (!more).then_some(1),
+            next_cursor: None,
+        },
+    })
+}
+
 /// [`execute_stored_query`] with an optional published definition. The
 /// ordering is deliberate and must not change: `lookup` resolves the query,
 /// the pinned version is loaded, the per-query privilege gate and record
@@ -2266,12 +2465,10 @@ pub async fn execute_stored_query_with_definition(
         check_select_shape(names)?;
     }
     let qrow = lookup(db, &body).await?;
-    // S4-T9: a spec-only stored query has no SQL; it runs through query/run.
+    // V2-D1808: a spec-only stored query (S4-T9) runs through the QuerySpec
+    // engine, which applies the caller's record scope before any aggregate.
     if qrow.sql_query.trim().is_empty() {
-        return Err(AppError::Validation(
-            "this stored query is a QuerySpec; run it with POST /api/v1/query/run and query_id"
-                .into(),
-        ));
+        return execute_saved_spec(state, ctx, db, qrow, body, definition).await;
     }
     // D-521 — pinned SQL, live security: resolved before the privilege gate
     // below so a wrong version is refused the same way for every caller, but
