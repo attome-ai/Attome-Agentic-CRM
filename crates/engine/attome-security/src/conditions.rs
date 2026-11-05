@@ -46,6 +46,29 @@ use crate::rls_fragment::text_array_literal;
 pub const ME: &str = "@me";
 /// V2-D1532 (2): the condition value that names the calling user's teams.
 pub const MY_TEAMS: &str = "@my_teams";
+/// D13-T2 (V2-D1813): the condition value that names the accounts in the
+/// calling user's territories: `id` on `account`, or a lookup to `account`
+/// (an opportunity's `account_ref`), compared with eq or in.
+pub const MY_TERRITORIES: &str = "@my_territories";
+/// The key [`with_caller`] resolves [`MY_TERRITORIES`] to, carrying the
+/// caller's id for [`render_condition`].
+const TERRITORIES_OF: &str = "territories_of";
+
+/// D13-T2: the accounts a user's territories hold. Membership counts while
+/// live and inside its `starts_on`/`ends_on` window; an account is in a
+/// territory through a live `account_territory` row (a rule's or a manual
+/// one). Direct membership only: a member of a parent territory reaches its
+/// children's accounts through their own membership, not the hierarchy.
+fn territory_accounts_sql(placeholder: usize) -> String {
+    format!(
+        "SELECT at.account_ref FROM account_territory at \
+           JOIN territory_member tm ON tm.territory_ref = at.territory_ref \
+          WHERE tm.user_ref = ${placeholder}::uuid \
+            AND at.is_active IS NOT FALSE AND tm.is_active IS NOT FALSE \
+            AND (tm.starts_on IS NULL OR tm.starts_on <= now()) \
+            AND (tm.ends_on IS NULL OR tm.ends_on > now())"
+    )
+}
 
 /// V2-D1532 (2): the two halves of a one-hop field, `lookup.field`, each a
 /// plain lowercase identifier. `None` for a plain field.
@@ -93,8 +116,53 @@ pub fn with_caller<'a>(
             );
             Ok(Cow::Owned(resolved))
         }
+        Some(MY_TERRITORIES) => {
+            if !matches!(
+                condition.operator,
+                ConditionOperator::Eq | ConditionOperator::In
+            ) {
+                return Err("`@my_territories` compares with eq or in");
+            }
+            let mut resolved = condition.clone();
+            resolved.operator = ConditionOperator::Eq;
+            let mut caller = serde_json::Map::new();
+            caller.insert(
+                TERRITORIES_OF.to_owned(),
+                serde_json::Value::String(ctx.user_id.to_string()),
+            );
+            resolved.value = serde_json::Value::Object(caller);
+            Ok(Cow::Owned(resolved))
+        }
         _ => Ok(Cow::Borrowed(condition)),
     }
+}
+
+/// D13-T2: `condition` (resolved by [`with_caller`]) as membership of its
+/// field in the caller's territory accounts. The field is the record's own
+/// `id` (on `account`) or an eligible lookup.
+fn render_territories(
+    condition: &GrantCondition,
+    caller: &str,
+    attrs: &[AttrInfo],
+    table_alias: &str,
+    placeholder: usize,
+) -> Result<RenderedCondition, &'static str> {
+    let field = condition.field_logicalname.as_str();
+    if field != "id" {
+        let (attr, _) = eligible_condition_field(attrs, field)?;
+        if attr.storage_type() != FieldType::Lookup {
+            return Err("`@my_territories` compares the record's id or a lookup to account");
+        }
+    }
+    let col = if table_alias.is_empty() {
+        quote_ident(field)
+    } else {
+        format!("{table_alias}.{}", quote_ident(field))
+    };
+    Ok(RenderedCondition {
+        sql: format!("{col} IN ({})", territory_accounts_sql(placeholder)),
+        bind_text: caller.to_owned(),
+    })
 }
 
 /// `field_type_int` -> Postgres scalar type, for the condition-eligible
@@ -184,6 +252,13 @@ pub fn render_condition(
 ) -> Result<RenderedCondition, &'static str> {
     if condition.operator == ConditionOperator::Expression {
         return Err("an expression condition renders through render_expression");
+    }
+    if let Some(caller) = condition
+        .value
+        .get(TERRITORIES_OF)
+        .and_then(serde_json::Value::as_str)
+    {
+        return render_territories(condition, caller, attrs, table_alias, placeholder);
     }
     if let Some((lookup, far)) = split_hop(&condition.field_logicalname) {
         return render_hop(condition, (lookup, far), attrs, table_alias, placeholder);
@@ -536,6 +611,71 @@ mod tests {
             }),
             ..cond("partner_account_ref.partner_manager_ref", op, value)
         }
+    }
+
+    /// D13-T2: `@my_territories` resolves to the caller and renders as
+    /// membership of the record's id (an account) or its account lookup (an
+    /// opportunity) in the caller's live, current territory accounts.
+    #[test]
+    fn territory_access_names_the_callers_territory_accounts() {
+        let caller = ctx(HashMap::new());
+        let on_account = with_caller(
+            &cond("id", ConditionOperator::Eq, json!(MY_TERRITORIES)),
+            &caller,
+        )
+        .unwrap();
+        let rendered = render_condition(&on_account, &[], "t", 7).unwrap();
+        assert!(
+            rendered
+                .sql
+                .starts_with("t.\"id\" IN (SELECT at.account_ref FROM account_territory at"),
+            "{}",
+            rendered.sql
+        );
+        assert!(
+            rendered.sql.contains("tm.user_ref = $7::uuid"),
+            "{}",
+            rendered.sql
+        );
+        assert!(
+            rendered.sql.contains("tm.ends_on > now()"),
+            "{}",
+            rendered.sql
+        );
+        assert_eq!(rendered.bind_text, caller.user_id.to_string());
+
+        let attrs = vec![attr("account_ref", 11, false, true)];
+        let on_deal = with_caller(
+            &cond("account_ref", ConditionOperator::In, json!(MY_TERRITORIES)),
+            &caller,
+        )
+        .unwrap();
+        let rendered = render_condition(&on_deal, &attrs, "t", 1).unwrap();
+        assert!(
+            rendered.sql.starts_with("t.\"account_ref\" IN (SELECT"),
+            "{}",
+            rendered.sql
+        );
+    }
+
+    #[test]
+    fn territory_access_refuses_other_operators_and_fields() {
+        let caller = ctx(HashMap::new());
+        assert!(
+            with_caller(
+                &cond("id", ConditionOperator::Ne, json!(MY_TERRITORIES)),
+                &caller
+            )
+            .is_err()
+        );
+        // A text field is not an account lookup.
+        let attrs = vec![attr("name", 1, false, true)];
+        let on_name = with_caller(
+            &cond("name", ConditionOperator::Eq, json!(MY_TERRITORIES)),
+            &caller,
+        )
+        .unwrap();
+        assert!(render_condition(&on_name, &attrs, "t", 1).is_err());
     }
 
     #[test]

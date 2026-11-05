@@ -59,7 +59,7 @@ fn check_value(
             }
             _ => {
                 return Err(AppError::Validation(format!(
-                    "unknown condition value '{token}': use @me or @my_teams"
+                    "unknown condition value '{token}': use @me, @my_teams or @my_territories"
                 )));
             }
         };
@@ -273,6 +273,42 @@ pub(super) async fn create_condition(
                 "an expression condition names no field".into(),
             ));
         }
+    } else if body.value.as_str() == Some(crate::conditions::MY_TERRITORIES) {
+        // D13-T2 (V2-D1813): the accounts in the caller's territories, on
+        // the account's own id or a lookup to account, where the sales
+        // pack's territory membership exists.
+        if !matches!(operator, ConditionOperator::Eq | ConditionOperator::In) {
+            return Err(AppError::Validation(
+                "@my_territories compares with eq or in".into(),
+            ));
+        }
+        if registry.get("territory_member").is_none() || registry.get("account_territory").is_none()
+        {
+            return Err(AppError::Validation(
+                "@my_territories needs territory membership (territory_member and account_territory)"
+                    .into(),
+            ));
+        }
+        let names_account = match body.field_logicalname.as_str() {
+            "id" => entity_logicalname == "account",
+            field => {
+                let (attr, _) = eligible_condition_field(&attrs, field).map_err(|reason| {
+                    AppError::Validation(format!(
+                        "field '{field}' is not eligible for a condition: {reason}"
+                    ))
+                })?;
+                attr.storage_type() == FieldType::Lookup
+                    && attr
+                        .lookup_entity_ref
+                        .and_then(|id| registry.get_by_id(id))
+                        .is_some_and(|target| target.logicalname == "account")
+            }
+        };
+        if !names_account {
+            return Err(AppError::Validation(
+                "@my_territories compares an account's id or a lookup to account".into(),
+            ));
+        }
     } else {
         // V2-D1532 (2): `lookup.field` follows one lookup; both ends must be
         // eligible lookups, and the value is a caller token or an id.
@@ -331,7 +367,9 @@ pub(super) async fn create_condition(
 
     let names_caller = matches!(
         body.value.as_str(),
-        Some(crate::conditions::ME | crate::conditions::MY_TEAMS)
+        Some(
+            crate::conditions::ME | crate::conditions::MY_TEAMS | crate::conditions::MY_TERRITORIES
+        )
     );
     if operator == ConditionOperator::In && !names_caller {
         if !body.value.is_array() {

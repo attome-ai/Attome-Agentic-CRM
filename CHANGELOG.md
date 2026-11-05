@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A grant condition may name `@my_territories` (D13-T2): on `account`, `id eq @my_territories` lets a
+  role read the accounts in the caller's territories; on another entity, a lookup to account
+  (`account_ref`) reaches those accounts' deals, contacts and cases (`docs/access-model.md`).
 - An agent session token may carry the person the agent acts for (`act`, RFC 8693); a staff or portal
   session carrying one is refused. Acting for a person, the agent gets only what both may do: the
   person's record reach, the grants both hold, the lower access level per entity, never admin

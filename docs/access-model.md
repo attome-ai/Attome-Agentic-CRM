@@ -62,6 +62,14 @@ partners the caller manages. Both ends must be filterable, ungated lookups, chec
 resolved from live metadata when the grant loads, and a hop that no longer resolves denies rather than
 opens. A hop compares with `eq`, `ne` or `in`, with an id, a list of ids, `@me` or `@my_teams`.
 
+Where the sales pack's territories are installed, `@my_territories` (`eq` or `in`) names the accounts in
+the caller's territories: those an `account_territory` row places in a territory the caller is a live,
+current member of (`territory_member`, inside its `starts_on`/`ends_on` window). On `account` it compares
+the record's own `id` (`id eq @my_territories`); elsewhere a lookup to account, so `account_ref eq
+@my_territories` on `opportunity`, `contact` or `case` reaches the deals, people and cases of those
+accounts, as does an entity controlled by its account. Membership is direct: a parent territory's
+members do not reach its children's accounts through the hierarchy (D13-T2, V2-D1813).
+
 A condition narrows every path that reads records, at every access level: the record itself, lists and
 `query/execute` (a custom multi-entity query through each mapped id column), reports, exports, lookups and
 related columns, the change feed and live stream, and the engines' own lists (`attome_security::read_scope`
