@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:6a0ea3b872add94d19a77c1659d03d58b6d6ba69f2da88e8bcc5dbb40ac427ee",
+  "checksum": "sha256:a0596dfccb7d45fa5cd6c320779af3db63818dac544fc2a8bf93ebd8d6782556",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -493,6 +493,7 @@
               "nurture.draft_summary",
               "nurture.find_stalls",
               "nurture.suggest_content",
+              "ops.chaos_results",
               "ops.cluster_status",
               "ops.draft_incident_update",
               "ops.drill_evidence",

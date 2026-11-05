@@ -9,6 +9,10 @@
 //! - `ops.drill_evidence` (Read, `ops.read`) — one drill's numbers (RPO,
 //!   RTO, data size, the overall result) and its checks' names and results;
 //!   the free-text check details are left out.
+//! - `ops.chaos_results` (Read, `ops.read`, AB9-T9) — the latest chaos
+//!   drills: when each ran, the fault it injected and whether it passed.
+//!   No tool asks for or starts a chaos run: a production game day is a
+//!   person's request, approved by a second person (AB9-T7).
 
 use std::future::Future;
 use std::pin::Pin;
@@ -25,6 +29,10 @@ use crate::execute::{Action, ActionResult};
 
 pub const OPS_DRILL_FRESHNESS: &str = "ops.drill_freshness";
 pub const OPS_DRILL_EVIDENCE: &str = "ops.drill_evidence";
+pub const OPS_CHAOS_RESULTS: &str = "ops.chaos_results";
+
+/// Most chaos drills one read answers.
+pub const MAX_CHAOS_RESULTS: i64 = 50;
 
 pub fn descriptors() -> Vec<ActionDescriptor> {
     vec![
@@ -54,11 +62,29 @@ pub fn descriptors() -> Vec<ActionDescriptor> {
         .input_schema(
             r#"{"type": "object", "required": ["drill_id"], "properties": {"drill_id": {"type": "string", "format": "uuid"}}, "additionalProperties": false}"#,
         ),
+        ActionDescriptor::new(
+            OPS_CHAOS_RESULTS,
+            "Read the latest chaos (fault injection) drills, newest first: each one's id, when it \
+             finished, the fault it injected and whether it passed, with how many passed and \
+             failed. Reads only; a chaos run is never started from here.",
+            RiskTier::Read,
+            Effect::Read,
+            RetryClass::Idempotent,
+            MODULE_OPS,
+            &["ops.read"],
+        )
+        .input_schema(
+            r#"{"type": "object", "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 50}}, "additionalProperties": false}"#,
+        ),
     ]
 }
 
 pub fn executors() -> Vec<Box<dyn Action>> {
-    vec![Box::new(OpsDrillFreshness), Box::new(OpsDrillEvidence)]
+    vec![
+        Box::new(OpsDrillFreshness),
+        Box::new(OpsDrillEvidence),
+        Box::new(OpsChaosResults),
+    ]
 }
 
 /// The numbers and check results of one signed report; no free text. Pure.
@@ -128,6 +154,59 @@ impl Action for OpsDrillEvidence {
     }
 }
 
+/// The chaos results an agent reads: each drill's id, finish, fault and
+/// result, and the counts. Pure.
+pub fn chaos_results(runs: &[attome_ops::drills::DrillRun]) -> Value {
+    let passed = runs.iter().filter(|r| r.overall_ok).count();
+    json!({
+        "drills": runs
+            .iter()
+            .map(|r| json!({
+                "drill_id": r.id,
+                "finished_at": r.finished_at,
+                "fault": r.fault,
+                "overall_ok": r.overall_ok,
+            }))
+            .collect::<Vec<_>>(),
+        "passed": passed,
+        "failed": runs.len() - passed,
+    })
+}
+
+pub(crate) struct OpsChaosResults;
+
+impl Action for OpsChaosResults {
+    fn id(&self) -> ActionId {
+        ActionId(OPS_CHAOS_RESULTS)
+    }
+
+    fn execute<'a>(
+        &'a self,
+        state: &'a EngineState,
+        _ctx: &'a ActionContext,
+        args: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<ActionResult, AppError>> + Send + 'a>> {
+        Box::pin(async move {
+            let limit = match args.get("limit") {
+                None | Some(Value::Null) => 10,
+                Some(v) => v
+                    .as_i64()
+                    .filter(|n| (1..=MAX_CHAOS_RESULTS).contains(n))
+                    .ok_or_else(|| {
+                        AppError::Validation(format!("limit is 1 to {MAX_CHAOS_RESULTS}"))
+                    })?,
+            };
+            let runs = attome_ops::drills::recent_runs(
+                &state.base.db,
+                Some(attome_ops::evidence::EvidenceKind::Chaos),
+                limit,
+            )
+            .await?;
+            Ok(ActionResult::plain(chaos_results(&runs)))
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -149,6 +228,51 @@ mod tests {
             .map(|d| d.id.0)
             .collect();
         assert!(writes.is_empty(), "{writes:?}");
+    }
+
+    /// AB9-T9: no action can ask for or start a chaos run: every action
+    /// naming chaos only reads.
+    #[test]
+    fn no_production_chaos_tool() {
+        let chaos: Vec<_> = crate::actions::all()
+            .into_iter()
+            .filter(|d| d.id.0.contains("chaos"))
+            .collect();
+        assert!(
+            chaos.iter().any(|d| d.id.0 == OPS_CHAOS_RESULTS),
+            "the chaos read is registered"
+        );
+        for d in chaos {
+            assert_eq!(d.risk, RiskTier::Read, "{} only reads", d.id.0);
+            assert_eq!(d.effect, Effect::Read, "{} only reads", d.id.0);
+        }
+    }
+
+    #[test]
+    fn chaos_results_count_passed_and_failed() {
+        let at = chrono::Utc::now();
+        let run = |ok: bool, fault: &str| attome_ops::drills::DrillRun {
+            id: Uuid::now_v7(),
+            kind: "chaos".into(),
+            started_at: at,
+            finished_at: at,
+            overall_ok: ok,
+            restore_ok: true,
+            provenance_ok: true,
+            rpo_seconds: None,
+            rto_seconds: None,
+            data_size_bytes: None,
+            platform_version: "2.0.0".into(),
+            key_id: "k".into(),
+            sha256: "s".into(),
+            uploaded_by: None,
+            created_at: at,
+            fault: Some(fault.into()),
+        };
+        let out = chaos_results(&[run(true, "redis-down"), run(false, "process-kill")]);
+        assert_eq!(out["passed"], 1);
+        assert_eq!(out["failed"], 1);
+        assert_eq!(out["drills"][1]["fault"], "process-kill");
     }
 
     #[test]

@@ -263,6 +263,24 @@ async fn record_evidence(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
+/// AB9-T9: the latest `limit` drills of `kind` (every kind when `None`),
+/// newest first, for an agent's read.
+pub async fn recent_runs(
+    db: &attome_db::DbPool,
+    kind: Option<EvidenceKind>,
+    limit: i64,
+) -> Result<Vec<DrillRun>, AppError> {
+    sqlx::query_as(&format!(
+        "SELECT {COLUMNS} FROM ops_drill_run WHERE ($1::text IS NULL OR kind = $1) \
+          ORDER BY finished_at DESC, id DESC LIMIT $2"
+    ))
+    .bind(kind.map(kind_name))
+    .bind(limit)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
 async fn list_drills(
     State(state): State<EngineState>,
     _ctx: Authorized<Privilege<OpsRead>>,

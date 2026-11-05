@@ -344,7 +344,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   an agent, and only then does the server ask Patroni to move the leader.
 - Recovery drills (with the ops module, `ops.read`, reads only): `ops.drill_freshness` says whether each
   drill kind is fresh, stale, failed or never run, with the checks the last run failed;
-  `ops.drill_evidence` reads one drill's numbers and check results. No tool uploads or changes evidence.
+  `ops.drill_evidence` reads one drill's numbers and check results; `ops.chaos_results` reads the
+  latest chaos drills with the fault each injected and whether it passed. No tool uploads or changes
+  evidence, and none asks for or starts a chaos run.
 - File imports (the caller's own imports, or any for an administrator): `import.propose_mapping` proposes
   each column's field, transform and confidence from five sample values per column (none for a column
   named after a sensitive field) and never names a field the entity lacks; `import.status` and

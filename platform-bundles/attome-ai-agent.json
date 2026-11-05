@@ -78,7 +78,7 @@
               "model.stage_process.edit", "model.stage_process.list", "model.state_model.describe",
               "model.survey.describe", "model.survey.edit", "model.survey.list", "model.tour.describe",
               "model.tour.edit", "model.tour.list", "nurture.draft_summary", "nurture.find_stalls",
-              "nurture.suggest_content", "ops.cluster_status", "ops.draft_incident_update",
+              "nurture.suggest_content", "ops.chaos_results", "ops.cluster_status", "ops.draft_incident_update",
               "ops.drill_evidence", "ops.drill_freshness", "ops.live_rpo", "ops.propose_switchover",
               "ops.recovery_readiness", "ops.report", "ops.slo_health", "ops.status", "ops.upgrade_status",
               "page.draft", "partner.draft_registration", "partner.flag_registration_conflicts",
