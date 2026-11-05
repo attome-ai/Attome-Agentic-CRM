@@ -284,6 +284,7 @@ impl Parser {
                         field,
                         alias,
                         filter: None,
+                        since: None,
                     });
                 }
                 None => select.push(self.ident()?),

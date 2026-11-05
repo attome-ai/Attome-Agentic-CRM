@@ -18,7 +18,7 @@
   المخزن بلغة SQL على كيان واحد يُقصر على السجلات التي يحق لك قراءتها عبر عمود `id`؛ فإن لم يُرجع `id` (استعلام
   تجميعي) يُرد عليه بـ403 ما لم تكن تقرأ الكيان كله.
 - **الاستعلامات المنظّمة**: `POST /api/v1/query/run` مع `{spec}` (‏QuerySpec: ‏`entity` و`select` وشجرة `where`
-  و`sort` و`page_size` و`cursor`، أو `group_by` و`aggregates` (لكل منها `filter` اختياري خاص به) مع `having`
+  و`sort` و`page_size` و`cursor`، أو `group_by` و`aggregates` (لكل منها `filter` اختياري خاص به، و`since: {field, unit}` لقياس الزمن بين حقلي تاريخ) مع `having`
   و`totals`، أي `rollup` أو `cube`، وتسمّي صفوف الإجماليات الحقول التي تجمعها في `rolled_up`؛ وتُقارن التواريخ
   بـ`today` و`this_week` و`last_week` و`this_month` ونحوها) أو `{q}`
   (`SELECT name FROM account WHERE EXISTS(incident.customer WHERE statecode = 0)`)، ومع `params` لقيم `:name`.

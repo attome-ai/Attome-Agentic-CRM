@@ -177,6 +177,40 @@ pub struct Aggregate {
     /// on-track tickets side by side.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filter: Option<Condition>,
+    /// V2-D1808: measure the time from this date field to `field` instead of
+    /// `field` itself, in `unit`s (the hours from offer to response, say).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub since: Option<Since>,
+}
+
+/// The start of a time-difference measure: a date field and the unit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Since {
+    pub field: String,
+    pub unit: TimeUnit,
+}
+
+/// A time-difference measure's unit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TimeUnit {
+    Seconds,
+    Minutes,
+    Hours,
+    Days,
+}
+
+impl TimeUnit {
+    /// The unit's length in seconds.
+    pub fn seconds(self) -> u32 {
+        match self {
+            Self::Seconds => 1,
+            Self::Minutes => 60,
+            Self::Hours => 3_600,
+            Self::Days => 86_400,
+        }
+    }
 }
 
 #[cfg(test)]

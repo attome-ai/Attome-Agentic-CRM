@@ -404,6 +404,7 @@ pub fn rollup_specs(def: &ModelDef) -> Vec<(String, attome_records::query_spec::
                         },
                         alias: alias.clone(),
                         filter: None,
+                        since: None,
                     }],
                     having: None,
                     explain: false,

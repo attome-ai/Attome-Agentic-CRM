@@ -205,6 +205,7 @@ async fn count_of(
         field: None,
         alias: "n".into(),
         filter: None,
+        since: None,
     }];
     match execute_spec(state, ctx, counting).await? {
         RunResponse::Aggregate(result) => Ok(result

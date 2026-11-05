@@ -54,7 +54,8 @@ entities and fields.
   it to keep a local copy in step without re-reading the whole list.
 - **Structured queries**: `POST /api/v1/query/run` with `{spec}` (a QuerySpec: `entity`, `select`,
   a `where` tree, `sort`, `page_size`, `cursor`, or `group_by` and `aggregates` (each with an
-  optional `filter` of its own) with `having` and `totals`, `rollup` or `cube`, whose total rows
+  optional `filter` of its own, and `since: {field, unit}` to measure the time from one date
+  field to another) with `having` and `totals`, `rollup` or `cube`, whose total rows
   name the fields they add up in `rolled_up`; dates compare with `today`, `this_week`,
   `last_week`, `this_month` and the like) or
   `{q}` (`SELECT name FROM account WHERE EXISTS(incident.customer WHERE statecode = 0)`), with

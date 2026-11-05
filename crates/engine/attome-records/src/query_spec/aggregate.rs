@@ -212,6 +212,39 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<CompiledAggregate, App
             (_, None) => {
                 return Err(AppError::Validation(format!("{} needs a field", agg.alias)));
             }
+            // V2-D1808: the time from one date field to another, in a unit.
+            (func, Some(field)) if agg.since.is_some() => {
+                let since = agg
+                    .since
+                    .as_ref()
+                    .ok_or_else(|| AppError::internal("since"))?;
+                let end = b.resolve(&scope, field)?;
+                let start = b.resolve(&scope, &since.field)?;
+                if end.cast != "timestamptz" || start.cast != "timestamptz" {
+                    return Err(AppError::Validation(format!(
+                        "{} measures time between two date fields",
+                        agg.alias
+                    )));
+                }
+                let span = format!(
+                    "(EXTRACT(EPOCH FROM ({}::timestamptz - {}::timestamptz)) / {})",
+                    end.expr,
+                    start.expr,
+                    since.unit.seconds()
+                );
+                match func {
+                    AggFunc::Sum => format!("sum{span}"),
+                    AggFunc::Avg => format!("avg{span}"),
+                    AggFunc::Min => format!("min{span}"),
+                    AggFunc::Max => format!("max{span}"),
+                    AggFunc::Count | AggFunc::CountDistinct => {
+                        return Err(AppError::Validation(format!(
+                            "{} cannot count a time difference",
+                            agg.alias
+                        )));
+                    }
+                }
+            }
             (func, Some(field)) => {
                 let col = b.resolve(&scope, field)?;
                 let numeric = col.cast == "numeric";
@@ -480,6 +513,41 @@ mod tests {
         assert_eq!(result.groups[0].keys.get("owner_ref"), Some(&Value::Null));
         let too_many = vec![Map::new(); 1001];
         assert!(c.groups(too_many).is_err());
+    }
+
+    /// V2-D1808: a measure of the time between two date fields, in a unit,
+    /// and a measure over the rows its own filter admits.
+    #[test]
+    fn a_measure_takes_a_time_difference_and_a_filter() {
+        let c = run(
+            json!({"entity": "account",
+            "aggregates": [
+                {"func": "avg", "field": "created_on", "alias": "hours",
+                 "since": {"field": "created_on", "unit": "hours"}},
+                {"func": "count", "alias": "big",
+                 "filter": {"kind": "compare", "field": "revenue", "op": "gt", "value": 5}}
+            ]}),
+            &reader(),
+            &global(),
+        )
+        .unwrap();
+        assert!(
+            c.sql.contains(
+                "avg(EXTRACT(EPOCH FROM (t.\"created_on\"::timestamptz - t.\"created_on\"::timestamptz)) / 3600) AS a1"
+            ),
+            "{}",
+            c.sql
+        );
+        assert!(c.sql.contains("count(*) FILTER (WHERE "), "{}", c.sql);
+
+        let not_dates = refused(json!({"entity": "account",
+            "aggregates": [{"func": "avg", "field": "revenue", "alias": "x",
+                            "since": {"field": "created_on", "unit": "days"}}]}));
+        assert!(not_dates.contains("two date fields"), "{not_dates}");
+        let counted = refused(json!({"entity": "account",
+            "aggregates": [{"func": "count", "field": "created_on", "alias": "x",
+                            "since": {"field": "created_on", "unit": "days"}}]}));
+        assert!(counted.contains("cannot count"), "{counted}");
     }
 
     /// P1-T2: a matrix's totals both ways come from `CUBE`, each total row

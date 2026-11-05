@@ -359,6 +359,6 @@ empty rather than `0`. A measure may carry its own `filter` (`FILTER (WHERE ...)
 Compliance, the contract playbook deviation count and retail visit compliance use; `this_week`
 and `last_week` take a week from Monday, as healthcare appointments and retail visit compliance do
 (healthcare `0002`), and `after_today`/`before_today` every day after or before today, as partner
-certifications do for `expires_on`. One query stays SQL, as QuerySpec cannot average a time
-difference yet: partner lead accept hours, which runs for administrators and full-read readers
-only.
+certifications do for `expires_on`. A measure may also take the time from one date field to
+another (`since: {field, unit}`), as partner lead accept hours does in hours. Every pack KPI is
+now a QuerySpec.
