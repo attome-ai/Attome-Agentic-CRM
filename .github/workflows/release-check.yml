@@ -49,7 +49,10 @@ jobs:
   linux:
     name: release check (linux, gate steps)
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    # 2026-11-05: the gate step alone took 2 h 26 min on 41963612611 (and
+    # ran out on 41938248833 too), leaving the doctests and the lean build no
+    # time inside three hours.
+    timeout-minutes: 300
     services:
       postgres:
         image: pgvector/pgvector:pg18
