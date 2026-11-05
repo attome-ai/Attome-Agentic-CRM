@@ -159,6 +159,12 @@ pub async fn mirror_views(state: &EngineState) -> Result<usize, AppError> {
             ),
         }
     }
+    // The published views join the cooked snapshot, where AA4-T8 reads them.
+    if published > 0
+        && let Err(e) = crate::model_admin::refresh_cooked(state).await
+    {
+        tracing::warn!(error = %e, "views: the mirrored views were not cooked yet");
+    }
     Ok(published)
 }
 
