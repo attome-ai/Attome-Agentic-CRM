@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Breaking
+- The shipped KPI queries now answer through the QuerySpec engine (V2-D1808): the service queue
+  metrics name their queue column `work_queue_ref` (was `queue_ref`), the call trend reports name
+  their week `day` (the start of the week bucket, was `week`), and a sum or average over no rows is
+  `null` rather than `0`. A dashboard widget or metric reading those columns by name needs the new
+  name.
 - Four portal lists answer the standard `PaginatedResponse` envelope (`items`, `total`, `page`,
   `page_size`) instead of a bare array (Z14-T7): `GET /{keyword}/api/v1/billing/subscriptions`,
   `.../billing/invoices/open`, `.../billing/payment-methods` and `.../partner/members` (at most 500).
