@@ -486,6 +486,14 @@ impl DynamicsSource<'_> {
 }
 
 impl SourceConnector for DynamicsSource<'_> {
+    fn download<'a>(&'a mut self, file: &'a SourceFile) -> SourceFuture<'a, Vec<u8>> {
+        Box::pin(super::migration_source::download_with(
+            self.transport,
+            &file.url,
+            format!("Bearer {}", self.access_token.wire_value()),
+        ))
+    }
+
     fn read_users<'a>(&'a mut self) -> SourceFuture<'a, Vec<SourceUser>> {
         Box::pin(self.users())
     }

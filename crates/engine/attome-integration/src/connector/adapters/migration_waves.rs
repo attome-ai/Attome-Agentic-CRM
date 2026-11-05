@@ -86,6 +86,10 @@ pub enum MetadataStep {
     },
 }
 
+/// A24-T4 (V2-D1814): the multi-file field a migrated record's source
+/// attachments are copied into.
+pub const ATTACHMENTS: &str = "attachments";
+
 /// The key attribute that holds a source record's id: `salesforce_id`.
 pub fn key_attribute(system: &str) -> String {
     format!("{}_id", logical_name(system))
@@ -143,6 +147,17 @@ pub fn metadata_steps(
                 field_type: "text".into(),
                 lookup_entity: None,
                 options: Some(json!({ "external_id": { "system": system } })),
+            });
+        }
+        // A24-T4: the source's files land on one multi-file field.
+        if !has(ATTACHMENTS) {
+            steps.push(MetadataStep::CreateAttribute {
+                entity: e.target.clone(),
+                logicalname: ATTACHMENTS.to_owned(),
+                name: "Attachments".into(),
+                field_type: "file".into(),
+                lookup_entity: None,
+                options: Some(json!({ "multi": true })),
             });
         }
         let mut created = BTreeSet::new();
@@ -491,10 +506,12 @@ mod tests {
             [
                 "entity sf_account",
                 "field opportunity.salesforce_id text -",
+                "field opportunity.attachments file -",
                 "field opportunity.account_ref lookup sf_account",
                 // The source's users are not migrated: the link keeps the source id as text.
                 "field opportunity.owner_source text -",
                 "field sf_account.salesforce_id text -",
+                "field sf_account.attachments file -",
                 "field sf_account.name text -",
                 "choice opportunity.stage Parked",
             ]

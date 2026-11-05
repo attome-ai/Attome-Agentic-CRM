@@ -280,6 +280,32 @@ type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = Result<T, AppError>> + Send 
 /// Sends requests.
 pub trait Transport: Send + Sync {
     fn send<'a>(&'a self, request: Request) -> BoxFuture<'a, Response>;
+
+    /// A24-T4: [`Self::send`], with the answer's body as bytes (a file a
+    /// migration copies). The default reads the text answer's bytes, which
+    /// is what a recorded test transport holds; the deployment's transport
+    /// reads the bytes themselves, up to [`MAX_DOWNLOAD_BYTES`].
+    fn send_bytes<'a>(&'a self, request: Request) -> BoxFuture<'a, BytesResponse> {
+        Box::pin(async move {
+            let answer = self.send(request).await?;
+            Ok(BytesResponse {
+                status: answer.status,
+                headers: answer.headers,
+                body: answer.body.into_bytes(),
+            })
+        })
+    }
+}
+
+/// A24-T4: the largest body [`Transport::send_bytes`] reads (100 MiB).
+pub const MAX_DOWNLOAD_BYTES: u64 = 100 * 1024 * 1024;
+
+/// One answer whose body is bytes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BytesResponse {
+    pub status: u16,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
 }
 
 /// The deployment's transport: the SSRF-guarded client.
@@ -329,6 +355,60 @@ impl Transport for GuardedTransport {
                 status,
                 headers,
                 body,
+            })
+        })
+    }
+
+    fn send_bytes<'a>(&'a self, request: Request) -> BoxFuture<'a, BytesResponse> {
+        Box::pin(async move {
+            let url = url::Url::parse(&request.url)
+                .map_err(|e| AppError::Validation(format!("connector URL: {e}")))?;
+            let method = reqwest::Method::from_bytes(request.method.as_bytes())
+                .map_err(|_| AppError::Validation("connector method".into()))?;
+            let mut builder = self
+                .0
+                .request(method, url)
+                .map_err(|e| AppError::Validation(format!("connector URL refused: {e}")))?;
+            for (name, value) in &request.headers {
+                builder = builder.header(name, value);
+            }
+            if let Some(body) = request.body {
+                builder = builder.body(body);
+            }
+            let built = builder.build().map_err(AppError::internal)?;
+            let answer = self
+                .0
+                .execute(built)
+                .await
+                .map_err(|e| AppError::internal(format!("connector call failed: {e}")))?;
+            if answer
+                .content_length()
+                .is_some_and(|n| n > MAX_DOWNLOAD_BYTES)
+            {
+                return Err(AppError::Validation(format!(
+                    "the source's file is larger than {MAX_DOWNLOAD_BYTES} bytes"
+                )));
+            }
+            let status = answer.status().as_u16();
+            let headers = answer
+                .headers()
+                .iter()
+                .filter_map(|(n, v)| {
+                    v.to_str()
+                        .ok()
+                        .map(|v| (n.as_str().to_owned(), v.to_owned()))
+                })
+                .collect();
+            let body = answer.bytes().await.map_err(AppError::internal)?;
+            if u64::try_from(body.len()).unwrap_or(u64::MAX) > MAX_DOWNLOAD_BYTES {
+                return Err(AppError::Validation(format!(
+                    "the source's file is larger than {MAX_DOWNLOAD_BYTES} bytes"
+                )));
+            }
+            Ok(BytesResponse {
+                status,
+                headers,
+                body: body.to_vec(),
             })
         })
     }

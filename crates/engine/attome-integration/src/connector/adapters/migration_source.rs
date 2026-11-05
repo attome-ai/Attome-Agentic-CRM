@@ -205,6 +205,41 @@ pub trait SourceConnector: Send {
 
     /// What the source last said about its API allowance.
     fn rate_limit(&self) -> RateLimit;
+
+    /// A24-T4: the bytes of one file [`Self::read_files`] listed, read
+    /// with the source's credentials. A source that cannot hand them out
+    /// refuses.
+    fn download<'a>(&'a mut self, _file: &'a SourceFile) -> SourceFuture<'a, Vec<u8>> {
+        Box::pin(async {
+            Err(AppError::Validation(
+                "this source does not hand out its files".into(),
+            ))
+        })
+    }
+}
+
+/// A24-T4: `url`'s bytes, sent with `authorization`; any answer but a 2xx
+/// is refused.
+pub async fn download_with(
+    transport: &dyn Transport,
+    url: &str,
+    authorization: String,
+) -> Result<Vec<u8>, AppError> {
+    let answer = transport
+        .send_bytes(Request {
+            method: "GET".into(),
+            url: url.to_owned(),
+            headers: vec![("Authorization".to_owned(), authorization)],
+            body: None,
+        })
+        .await?;
+    if !(200..300).contains(&answer.status) {
+        return Err(AppError::Validation(format!(
+            "the source answered {} for a file",
+            answer.status
+        )));
+    }
+    Ok(answer.body)
 }
 
 /// An answer's header, by name in any case.
