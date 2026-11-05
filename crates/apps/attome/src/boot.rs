@@ -1296,6 +1296,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         // The Queue Claim-To-Resolve report's GROUP BY (0040 shipped it
         // without one).
         "attome-service-queue-claim-report",
+        // V2-D1808: the call trend reports as QuerySpecs.
+        "attome-callintel-trends-queryspec",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

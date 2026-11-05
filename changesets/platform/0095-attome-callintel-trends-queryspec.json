@@ -1,0 +1,163 @@
+{
+  "author": "attome-callintel",
+  "checksum": "sha256:2c525c9e5629d896ab1bbbd92d2d7fdd0a1ef07bd771d6fbcf028ff3c114fed6",
+  "closed_at": "2026-11-05T00:00:00Z",
+  "description": "The call trend reports as QuerySpecs (V2-D1808): their SQL returned no id, so the record filter could not narrow them to a reader below full read access; the QuerySpec engine scopes them before it aggregates. The week column is now named day (the start of the week bucket).",
+  "format": "attome-changeset/v1",
+  "id": "01a1aa8e-ba87-725c-8fab-b2dba61a32b0",
+  "layer": "platform",
+  "name": "attome-callintel-trends-queryspec",
+  "opened_at": "2026-11-05T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "call_daily_aggregate",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": true,
+          "name": "Call trackers by week",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "hits",
+                "field": "value",
+                "func": "sum"
+              }
+            ],
+            "entity": "call_daily_aggregate",
+            "group_by": [
+              {
+                "bucket": "week",
+                "field": "day"
+              },
+              {
+                "field": "tracker_ref"
+              }
+            ],
+            "where": {
+              "field": "metric",
+              "kind": "compare",
+              "op": "eq",
+              "value": "tracker_hits"
+            }
+          },
+          "required_privilege": "call_daily_aggregate.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "call_daily_aggregate",
+        "query": "Call trackers by week"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_daily_aggregate",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": true,
+          "name": "Call talk share by team",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "staff_talk_share",
+                "field": "value",
+                "func": "avg"
+              }
+            ],
+            "entity": "call_daily_aggregate",
+            "group_by": [
+              {
+                "field": "team_ref"
+              },
+              {
+                "bucket": "week",
+                "field": "day"
+              }
+            ],
+            "where": {
+              "field": "metric",
+              "kind": "compare",
+              "op": "eq",
+              "value": "staff_talk_share"
+            }
+          },
+          "required_privilege": "call_daily_aggregate.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "call_daily_aggregate",
+        "query": "Call talk share by team"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "call_daily_aggregate",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": true,
+          "name": "Call scorecard results by team",
+          "parameters": [],
+          "query_spec": {
+            "aggregates": [
+              {
+                "alias": "yes_rate",
+                "field": "value",
+                "func": "avg"
+              }
+            ],
+            "entity": "call_daily_aggregate",
+            "group_by": [
+              {
+                "field": "team_ref"
+              },
+              {
+                "bucket": "week",
+                "field": "day"
+              }
+            ],
+            "where": {
+              "field": "metric",
+              "kind": "compare",
+              "op": "eq",
+              "value": "scorecard_yes_rate"
+            }
+          },
+          "required_privilege": "call_daily_aggregate.read",
+          "sql": "",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "call_daily_aggregate",
+        "query": "Call scorecard results by team"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 95,
+  "title": "Platform definitions: attome-callintel-trends-queryspec"
+}

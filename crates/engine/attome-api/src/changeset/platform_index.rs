@@ -562,6 +562,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0094-attome-service-queue-claim-report.json"
         ),
     },
+    PlatformChangeset {
+        file: "0095-attome-callintel-trends-queryspec.json",
+        name: "attome-callintel-trends-queryspec",
+        json: include_str!(
+            "../../../../../changesets/platform/0095-attome-callintel-trends-queryspec.json"
+        ),
+    },
 ];
 
 #[cfg(test)]
