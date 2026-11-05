@@ -618,6 +618,167 @@ async fn enqueue(
     Ok((StatusCode::ACCEPTED, Json(response)))
 }
 
+/// S5-T1: the options of a JSON-lines bulk submission, which in the JSON
+/// body sit beside `records`.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct BulkLinesQuery {
+    /// `create`, `update`, `upsert` or `delete`, as the JSON body's `operation`.
+    operation: String,
+    #[serde(default)]
+    strict: Option<bool>,
+    /// `partial` (default) or `atomic`.
+    #[serde(default)]
+    batch_mode: Option<String>,
+    /// `false` leaves empty fields empty on create. Default true.
+    #[serde(default)]
+    apply_defaults: Option<bool>,
+    /// `true` runs without automation; needs `records.bulk_quiet`.
+    #[serde(default)]
+    quiet: Option<bool>,
+}
+
+/// The records of a JSON-lines body, one `{id?, expected_row_version?,
+/// data}` object per line; blank lines are skipped. Refuses text that is not
+/// UTF-8 and a line that is not a record (naming it). Stops reading once it
+/// holds more than `max_records`, which the request's shape check then
+/// refuses with the standard limit error. Pure.
+fn parse_record_lines(
+    body: &[u8],
+    max_records: usize,
+) -> Result<Vec<BulkRecordEnvelope>, AppError> {
+    let text = std::str::from_utf8(body)
+        .map_err(|_| AppError::Validation("the body is not UTF-8 text".into()))?;
+    let mut records = Vec::new();
+    for (number, line) in text.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if records.len() > max_records {
+            break;
+        }
+        let record = serde_json::from_str(line).map_err(|e| {
+            AppError::Validation(format!("line {}: not a bulk record: {e}", number + 1))
+        })?;
+        records.push(record);
+    }
+    if records.is_empty() {
+        return Err(AppError::Validation("the body has no records".into()));
+    }
+    Ok(records)
+}
+
+/// Start a bulk operation from JSON lines
+///
+/// The same durable bulk operation as `POST /api/v1/{entity}/bulk`, with the records sent as JSON lines (`application/x-ndjson`, one `{id?, expected_row_version?, data}` per line) and the options as query parameters. Follow it with `GET /api/v1/{entity}/bulk/{id}`, and fetch the per-row results from `GET /api/v1/{entity}/bulk/{id}/results`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/bulk/lines",
+    tag = "entity",
+    params(("entity" = String, Path, description = "The entity's logical name"), BulkLinesQuery),
+    request_body(content = String, content_type = "application/x-ndjson", description = "One bulk record per line"),
+    responses(
+        (status = 202, description = "Accepted", body = BulkOperationResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+        (status = 503, description = "No batch worker is running", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::BulkAccepted)])))),
+)]
+async fn enqueue_lines(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Bulk>>,
+    _jobs: Available<BatchJobs>,
+    Extension(claims): Extension<SessionClaims>,
+    Path(entity_input): Path<String>,
+    Query(query): Query<BulkLinesQuery>,
+    body: axum::body::Bytes,
+) -> Result<(StatusCode, Json<BulkOperationResponse>), AppError> {
+    let body = BulkRequestBody {
+        operation: query.operation,
+        strict: query.strict,
+        batch_mode: query.batch_mode,
+        mapping_ref: None,
+        mode: None,
+        apply_defaults: query.apply_defaults,
+        quiet: query.quiet,
+        records: parse_record_lines(&body, bulk_cap(&state))?,
+    };
+    let response = enqueue_inner(&state, &ctx, claims.sub, &entity_input, body, None).await?;
+    Ok((StatusCode::ACCEPTED, Json(response)))
+}
+
+/// Most result lines one results file carries.
+const MAX_RESULT_LINES: i64 = 100_000;
+
+/// A bulk operation's per-row results
+///
+/// The result file of a bulk operation the caller started: one JSON line per record in request order, `{index, ok: {record_id, attempts}}` when it applied, `{index, problem: {code, message, detail?}}` when it did not, and `{index}` while it has not run.
+#[utoipa::path(
+    get,
+    path = "/api/v1/{entity}/bulk/{id}/results",
+    tag = "entity",
+    params(
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The bulk operation"),
+    ),
+    responses(
+        (status = 200, description = "One result per line", content_type = "application/x-ndjson", body = String),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such bulk operation of the caller's", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_results(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Extension(claims): Extension<SessionClaims>,
+    Path((entity_input, bulk_op_id)): Path<(String, Uuid)>,
+) -> Result<axum::response::Response, AppError> {
+    use axum::response::IntoResponse as _;
+    let (_, entity_name, _, _) = entity_crud::resolve_entity(&state, &entity_input).await?;
+    let found: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM automation_bulk_operation
+         WHERE id = $1 AND entity_logicalname = $2 AND is_deleted = false
+           AND (created_by = $3 OR $4)",
+    )
+    .bind(bulk_op_id)
+    .bind(&entity_name)
+    .bind(claims.sub)
+    .bind(ctx.is_admin)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    found.ok_or(AppError::NotFound)?;
+    let items: Vec<BulkItemStatus> = sqlx::query_as(&format!(
+        "SELECT item_index, record_id, status, {ITEM_OUTCOME_SQL} AS outcome, error, conflict,
+                attempts
+         FROM automation_bulk_operation_item
+         WHERE bulk_operation_id = $1 AND is_deleted = false
+         ORDER BY item_index
+         LIMIT $2"
+    ))
+    .bind(bulk_op_id)
+    .bind(MAX_RESULT_LINES)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut body = String::new();
+    for item in items {
+        body.push_str(&serde_json::to_string(&item.into_result()).map_err(AppError::internal)?);
+        body.push('\n');
+    }
+    Ok((
+        [(axum::http::header::CONTENT_TYPE, "application/x-ndjson")],
+        body,
+    )
+        .into_response())
+}
+
 /// One record of a bulk submission made in code ([`submit_bulk`]): the
 /// record's id (for update and delete), the row version it was read at
 /// (optional), and its values (for create and update).
@@ -1022,9 +1183,11 @@ async fn status_inner(
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/{entity}/bulk", post(enqueue))
+        .route("/api/v1/{entity}/bulk/lines", post(enqueue_lines))
         .merge(crate::bulk_edit::routes())
         .merge(crate::mass::routes())
         .route("/api/v1/{entity}/bulk/{id}", get(get_status))
+        .route("/api/v1/{entity}/bulk/{id}/results", get(get_results))
         .route("/api/v1/{entity}/staged-import", post(staged_import))
         .route(
             "/api/v1/{entity}/staged-import/{id}/approve",
@@ -2796,6 +2959,36 @@ mod tests {
     use serde_json::json;
     use uuid::Uuid;
 
+    /// S5-T1: a JSON-lines body is read one record per line, blank lines
+    /// skipped; a bad line is named, and reading stops past the cap.
+    #[test]
+    fn json_lines_become_bulk_records() {
+        let body = concat!(
+            "{\"data\": {\"name\": \"a\"}}\n",
+            "\n",
+            "{\"id\": \"0190f0e0-0000-7000-8000-000000000001\", ",
+            "\"expected_row_version\": 3, \"data\": {}}\r\n",
+        );
+        let records = super::parse_record_lines(body.as_bytes(), 10).unwrap();
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].data["name"], "a");
+        assert_eq!(records[1].expected_row_version, Some(3));
+
+        let err = super::parse_record_lines(b"{\"data\": {}}\nnot json\n", 10).unwrap_err();
+        assert!(
+            matches!(&err, super::AppError::Validation(m) if m.contains("line 2")),
+            "{err:?}"
+        );
+        assert!(super::parse_record_lines(b"\n\n", 10).is_err());
+        assert!(super::parse_record_lines(&[0xff, 0xfe], 10).is_err());
+
+        let many = "{\"data\": {}}\n".repeat(50);
+        assert_eq!(
+            super::parse_record_lines(many.as_bytes(), 3).unwrap().len(),
+            4
+        );
+    }
+
     /// AA9-T3: the cap is the one passed in (the runtime setting's value).
     #[test]
     fn bulk_cap_follows_setting() {
@@ -2840,7 +3033,14 @@ mod tests {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(enqueue, get_status, staged_import, approve_staged_import))]
+#[openapi(paths(
+    enqueue,
+    enqueue_lines,
+    get_status,
+    get_results,
+    staged_import,
+    approve_staged_import
+))]
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {

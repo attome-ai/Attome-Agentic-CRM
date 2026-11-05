@@ -95,6 +95,12 @@ const GATED_HANDLERS: &[(&str, &str, &str)] = &[
          (EngineJob::is_batch). With no live batch worker, 'later' is never.",
     ),
     (
+        "enqueue_lines",
+        "BatchJobs",
+        "The JSON-lines form of `enqueue` (S5-T1): the same batch job, and the same \
+         'applied later' that never comes without a live batch worker.",
+    ),
+    (
         "bulk_edit",
         "BatchJobs",
         "Returns 202 for a bulk update the batch worker applies (B5-T1); with no worker the \
