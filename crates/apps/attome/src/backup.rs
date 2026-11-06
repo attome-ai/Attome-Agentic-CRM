@@ -35,7 +35,7 @@ const SUFFIX: &str = ".dump";
 /// Beside each archive: the files it holds.
 const FILES_SUFFIX: &str = ".files.json";
 /// The folder under `backup.dir` that holds file copies.
-const FILES_DIR: &str = "files";
+pub(crate) const FILES_DIR: &str = "files";
 /// The mirror's record of what it holds, so unchanged objects are not
 /// read again.
 const INDEX_FILE: &str = ".index.json";

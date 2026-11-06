@@ -14,6 +14,13 @@
 //!    deployment's newest one: the writes a restore now would lose.
 //! 3. Provenance: the SHA-256 of `--server-binary` against
 //!    `--expected-digest`.
+//! 3a. AB4-T5, on the copy: up to 200 clean uploads' recorded SHA-256
+//!    against the backup's own file copies (`files_byte_identical`, with
+//!    matched, differing, missing and orphan counts; never the live store),
+//!    the sealed attribute values opened with the deployment's key ring
+//!    (`encrypted_values_decrypt`, counts only), the restored search index
+//!    against its records (`search_index_restored`), and the copy's size
+//!    (`pg_database_size`).
 //! 4. Boots that binary (`serve`) against the copy on `--port` with a
 //!    throwaway configuration: the deployment's own file (placeholders kept,
 //!    so no secret is written) with the database name and port replaced, the
@@ -311,6 +318,256 @@ async fn run_audit_chain(binary: &Path, config: &Path) -> Result<(), String> {
     }
 }
 
+/// How many uploaded files a drill compares.
+const FILE_SAMPLE: i64 = 200;
+/// How many manifest keys the orphan count reads.
+const ORPHAN_SCAN_LIMIT: usize = 10_000;
+
+/// What comparing the restored copy's files with the backup's file copies
+/// found.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FileTally {
+    /// The backup's copy has the checksum the copy's upload row records.
+    pub matched: usize,
+    /// A copy exists and its checksum differs.
+    pub mismatched: usize,
+    /// The upload row names a file the backup holds no copy of.
+    pub missing: usize,
+    /// The backup holds a file no row of the copy names.
+    pub orphans: usize,
+}
+
+/// `sha256:<hex>` or `<hex>`, lowercased, for comparing. Pure.
+fn bare_sha256(s: &str) -> String {
+    s.trim().trim_start_matches("sha256:").to_ascii_lowercase()
+}
+
+/// Compares each `(key, recorded sha256)` with the checksum of the backup's
+/// copy (`None`: no copy), and counts the manifest keys no row names. Pure.
+pub fn file_compare_counts(
+    expected: &[(String, String)],
+    found: &std::collections::HashMap<String, Option<String>>,
+    manifest_keys: &[String],
+    referenced: &std::collections::HashSet<String>,
+) -> FileTally {
+    let mut tally = FileTally::default();
+    for (key, recorded) in expected {
+        match found.get(key) {
+            Some(Some(actual)) if bare_sha256(actual) == bare_sha256(recorded) => {
+                tally.matched += 1;
+            }
+            Some(Some(_)) => tally.mismatched += 1,
+            _ => tally.missing += 1,
+        }
+    }
+    tally.orphans = manifest_keys
+        .iter()
+        .filter(|k| !referenced.contains(*k))
+        .count();
+    tally
+}
+
+/// The `files_byte_identical` check: no copy differs and none is missing;
+/// orphans are reported, not failed (the backup may hold files a record
+/// later dropped). Pure.
+pub fn files_check(t: &FileTally) -> Check {
+    check(
+        "files_byte_identical",
+        t.mismatched == 0 && t.missing == 0,
+        format!(
+            "{} matched, {} differ, {} missing, {} orphan",
+            t.matched, t.mismatched, t.missing, t.orphans
+        ),
+    )
+}
+
+/// The `encrypted_values_decrypt` check: counts only, never a value. Pure.
+pub fn decrypt_check(opened: usize, failed: usize) -> Check {
+    check(
+        "encrypted_values_decrypt",
+        failed == 0,
+        format!("{opened} sealed values opened, {failed} did not"),
+    )
+}
+
+async fn files_byte_identical(
+    config: &attome_config::AppConfig,
+    copy: &attome_db::DbPool,
+    archive: &Path,
+) -> Check {
+    let expected: Vec<(String, String)> = match sqlx::query_as(
+        "SELECT final_key, actual_checksum_sha256 FROM upload_session \
+          WHERE status = 'clean' AND NOT is_deleted \
+            AND final_key IS NOT NULL AND actual_checksum_sha256 IS NOT NULL \
+          ORDER BY created_at DESC LIMIT $1",
+    )
+    .bind(FILE_SAMPLE)
+    .fetch_all(copy)
+    .await
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            return check(
+                "files_byte_identical",
+                false,
+                format!("read the uploads: {e}"),
+            );
+        }
+    };
+    let dir = archive
+        .parent()
+        .map_or_else(|| crate::backup::backup_dir(config), Path::to_path_buf);
+    let mirror = dir.join(crate::backup::FILES_DIR);
+    let mut found = std::collections::HashMap::new();
+    for (key, _) in &expected {
+        let actual = match crate::backup::mirror_path(&mirror, key) {
+            Some(path) => sha256_file(&path).await.ok(),
+            None => None,
+        };
+        found.insert(key.clone(), actual);
+    }
+    let name = archive
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let manifest_keys: Vec<String> = tokio::fs::read(dir.join(crate::backup::manifest_name(&name)))
+        .await
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Vec<crate::backup::FileCopy>>(&bytes).ok())
+        .map(|files| {
+            files
+                .into_iter()
+                .map(|f| f.key)
+                .take(ORPHAN_SCAN_LIMIT)
+                .collect()
+        })
+        .unwrap_or_default();
+    let referenced: std::collections::HashSet<String> = sqlx::query_scalar(
+        "SELECT k FROM unnest($1::text[]) AS k \
+          WHERE EXISTS (SELECT 1 FROM upload_session u WHERE u.final_key = k) \
+             OR EXISTS (SELECT 1 FROM file_version f WHERE f.object_key = k)",
+    )
+    .bind(&manifest_keys)
+    .fetch_all(copy)
+    .await
+    .unwrap_or_default()
+    .into_iter()
+    .collect();
+    files_check(&file_compare_counts(
+        &expected,
+        &found,
+        &manifest_keys,
+        &referenced,
+    ))
+}
+
+/// The search index came back with the copy: for the entity with the most
+/// indexed records, every indexed record exists in its table. v2 has no
+/// rebuild entry point to run against a copy (the source-scan backfill has
+/// no production caller), so this checks the restored index (V2-D1929).
+async fn search_index_restored(copy: &attome_db::DbPool) -> Check {
+    let top: Option<(String, i64)> = match sqlx::query_as(
+        "SELECT entity_logicalname, count(*) FROM search_index \
+          GROUP BY entity_logicalname ORDER BY 2 DESC LIMIT 1",
+    )
+    .fetch_optional(copy)
+    .await
+    {
+        Ok(top) => top,
+        Err(e) => {
+            return check(
+                "search_index_restored",
+                false,
+                format!("read the index: {e}"),
+            );
+        }
+    };
+    let Some((entity, indexed)) = top else {
+        return check(
+            "search_index_restored",
+            true,
+            "the copy holds no search documents",
+        );
+    };
+    if !attome_db::ident::is_identifier(&entity) {
+        return check(
+            "search_index_restored",
+            false,
+            "the index names an invalid entity",
+        );
+    }
+    let dangling: Result<i64, sqlx::Error> = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM search_index s WHERE s.entity_logicalname = $1 \
+            AND NOT EXISTS (SELECT 1 FROM {} t WHERE t.id = s.record_id)",
+        attome_core::quote_ident(&entity)
+    ))
+    .bind(&entity)
+    .fetch_one(copy)
+    .await;
+    match dangling {
+        Ok(0) => check(
+            "search_index_restored",
+            true,
+            format!("{indexed} {entity} documents, each with its record"),
+        ),
+        Ok(n) => check(
+            "search_index_restored",
+            false,
+            format!("{n} of {indexed} {entity} documents name no record"),
+        ),
+        Err(e) => check(
+            "search_index_restored",
+            false,
+            format!("compare the index: {e}"),
+        ),
+    }
+}
+
+/// AB4-T5's checks on the restored copy, and its size.
+async fn copy_checks(
+    config: &attome_config::AppConfig,
+    archive: &Path,
+    temp: &str,
+) -> (Vec<Check>, Option<u64>) {
+    let copy = match sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect_with(crate::backup::connect_options(config, temp))
+        .await
+    {
+        Ok(pool) => pool,
+        Err(e) => {
+            let why = format!("open the copy: {e}");
+            return (
+                vec![
+                    check("files_byte_identical", false, why.clone()),
+                    check("encrypted_values_decrypt", false, why.clone()),
+                    check("search_index_restored", false, why),
+                ],
+                None,
+            );
+        }
+    };
+    let mut checks = vec![files_byte_identical(config, &copy, archive).await];
+    let ring = &config.storage.attribute_encryption_key;
+    checks.push(
+        match attome_records::attr_crypto::sample_open(&copy, ring).await {
+            Ok((opened, failed)) => decrypt_check(opened, failed),
+            Err(e) => check(
+                "encrypted_values_decrypt",
+                false,
+                format!("read the sealed values: {e}"),
+            ),
+        },
+    );
+    checks.push(search_index_restored(&copy).await);
+    let size: Option<i64> = sqlx::query_scalar("SELECT pg_database_size(current_database())")
+        .fetch_one(&copy)
+        .await
+        .ok();
+    copy.close().await;
+    (checks, size.and_then(|n| u64::try_from(n).ok()))
+}
+
 /// What the drill measured, for the evidence.
 struct Measured {
     checks: Vec<Check>,
@@ -320,6 +577,8 @@ struct Measured {
     postgres_rto_seconds: Option<f64>,
     app_rto_seconds: Option<f64>,
     digest: Option<String>,
+    /// AB4-T5: `pg_database_size` of the copy.
+    data_size_bytes: Option<u64>,
 }
 
 /// Steps 2 to 6 against the restored copy `temp`. Never drops it: the caller
@@ -348,6 +607,7 @@ async fn exercise(
         postgres_rto_seconds: None,
         app_rto_seconds: None,
         digest: None,
+        data_size_bytes: None,
     };
 
     match sha256_file(&args.server_binary).await {
@@ -380,7 +640,14 @@ async fn exercise(
         Err(e) => check("database_restore", false, e.clone()),
     });
     if restored.is_err() {
-        for name in ["readiness", "audit_chain_verify", "sample_api_reads"] {
+        for name in [
+            "files_byte_identical",
+            "encrypted_values_decrypt",
+            "search_index_restored",
+            "readiness",
+            "audit_chain_verify",
+            "sample_api_reads",
+        ] {
             m.checks.push(skipped(name, "the restore failed"));
         }
         return m;
@@ -403,6 +670,11 @@ async fn exercise(
         .map(DateTime::<Utc>::from)
         .unwrap_or(started);
     m.rpo_seconds = Some(rpo_seconds(live_newest, restored_newest, written, started));
+
+    // AB4-T5: files, sealed values and the search index of the copy.
+    let (copy_checks, size) = copy_checks(config, archive, temp).await;
+    m.checks.extend(copy_checks);
+    m.data_size_bytes = size;
 
     // The throwaway configuration, from the deployment's own file.
     let base: Value = match tokio::fs::read_to_string(config_path)
@@ -590,7 +862,10 @@ pub async fn run_cli(args: &[String]) -> u8 {
     ));
     let _ = admin.close().await;
 
-    let data_size_bytes = tokio::fs::metadata(&archive).await.ok().map(|m| m.len());
+    let data_size_bytes = match measured.data_size_bytes {
+        Some(size) => Some(size),
+        None => tokio::fs::metadata(&archive).await.ok().map(|m| m.len()),
+    };
     let mut extra = Map::new();
     extra.insert(
         "archive".into(),
@@ -729,6 +1004,58 @@ mod tests {
             ))
             .is_err()
         );
+    }
+
+    #[test]
+    fn file_compare_counts_missing_and_orphans() {
+        use std::collections::{HashMap, HashSet};
+        let expected = vec![
+            ("a".to_owned(), "sha256:AA".to_owned()),
+            ("b".to_owned(), "bb".to_owned()),
+            ("c".to_owned(), "cc".to_owned()),
+        ];
+        let found: HashMap<String, Option<String>> = [
+            ("a".to_owned(), Some("aa".to_owned())),
+            ("b".to_owned(), Some("xx".to_owned())),
+            ("c".to_owned(), None),
+        ]
+        .into_iter()
+        .collect();
+        let manifest = vec!["a".to_owned(), "b".to_owned(), "old".to_owned()];
+        let referenced: HashSet<String> = ["a".to_owned(), "b".to_owned()].into_iter().collect();
+        let t = file_compare_counts(&expected, &found, &manifest, &referenced);
+        assert_eq!(
+            t,
+            FileTally {
+                matched: 1,
+                mismatched: 1,
+                missing: 1,
+                orphans: 1,
+            }
+        );
+        assert_eq!(files_check(&t).result, CheckResult::Fail);
+        let clean = FileTally {
+            matched: 3,
+            orphans: 2,
+            ..FileTally::default()
+        };
+        assert_eq!(
+            files_check(&clean).result,
+            CheckResult::Pass,
+            "orphans are reported, not failed"
+        );
+    }
+
+    #[test]
+    fn decrypt_check_reports_count_only() {
+        let ok = decrypt_check(12, 0);
+        assert_eq!(ok.name, "encrypted_values_decrypt");
+        assert_eq!(ok.result, CheckResult::Pass);
+        assert_eq!(
+            ok.detail.as_deref(),
+            Some("12 sealed values opened, 0 did not")
+        );
+        assert_eq!(decrypt_check(3, 1).result, CheckResult::Fail);
     }
 
     #[test]

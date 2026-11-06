@@ -22,6 +22,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `attome drill restore` also checks the restored files against the backup's copies, opens the sealed values and
+  checks the restored search index, and records the copy's database size (AB4-T5).
 - `attome upgrade rehearse` (AB8-T4): an upgrade tried on a restored copy, with the schema change, the new
   binary's reads and customer tests, the old binary's reads against the new schema, step timings, an impact
   report and signed Upgrade evidence; `attome upgrade apply --rehearsal <file>` keeps the report with the upgrade.

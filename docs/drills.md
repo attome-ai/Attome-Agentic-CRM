@@ -31,6 +31,12 @@ database server's credentials from the configuration) and leaves nothing behind:
    recovery time.
 2. The recovery point is how far the copy's newest audit row is behind the live deployment's.
 3. The SHA-256 of `--server-binary` must be `--expected-digest` (the release's published digest).
+   On the copy it also checks the files, the sealed values and the search index: up to 200 recent
+   clean uploads' recorded SHA-256 against the backup's own file copies (never the live file store;
+   files the backup holds that no record names are counted as orphans, not failures), every sealed
+   attribute value it samples opened with the deployment's key ring (counts only), and every search
+   document of the most indexed entity naming a record of the copy. The evidence's data size is
+   the copy's `pg_database_size`.
 4. It starts that binary against the copy on `--port` with a throwaway configuration made from the
    deployment's own file: the copy's database, the cache in process memory (the live Redis is never
    touched), no job worker or scheduler, no email and no backup, so the copy sends nothing. The time
