@@ -22,7 +22,7 @@ use axum::{
     http::{HeaderMap, StatusCode, header::IF_MATCH},
     routing::{get, post},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -85,15 +85,26 @@ pub struct CustomerTestRunAll {
     pub results: Vec<CustomerTestRunResult>,
 }
 
+/// Y11-T13: only the tests guarding one customisation (both or neither).
+#[derive(Debug, Default, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct TestTargetQuery {
+    /// The customisation's kind (`form`, `extension`, `entity`, ...).
+    pub target_kind: Option<String>,
+    /// The customisation's key.
+    pub target_key: Option<String>,
+}
+
 /// List customer tests
 ///
-/// List customer tests. Administrators only.
+/// List customer tests, or only those guarding one customisation
+/// (`target_kind` and `target_key`, Y11-T13). Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/customer-tests",
     tag = "admin",
     operation_id = "list_customer_tests",
-    params(OnePageQuery),
+    params(OnePageQuery, TestTargetQuery),
     responses(
         (status = 200, description = "Customer tests by name, with each one's latest result", body = PaginatedResponse<CustomerTest>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -105,13 +116,28 @@ async fn list_tests(
     State(state): State<EngineState>,
     _ctx: Authorized<Privilege<area::Deployment>>,
     Query(paging): Query<OnePageQuery>,
+    Query(target): Query<TestTargetQuery>,
 ) -> Result<Json<PaginatedResponse<CustomerTest>>, AppError> {
     let PageWindow {
         page,
         page_size,
         offset,
     } = paging.window();
-    let (items, total) = store::list_tests(&state.base.db, page_size, offset).await?;
+    let target = match (target.target_kind, target.target_key) {
+        (None, None) => None,
+        (Some(kind), Some(key)) => {
+            let target = store::TestTarget { kind, key };
+            store::validate_target(&target)?;
+            Some(target)
+        }
+        _ => {
+            return Err(AppError::Validation(
+                "target_kind and target_key come together".into(),
+            ));
+        }
+    };
+    let (items, total) =
+        store::list_tests(&state.base.db, target.as_ref(), page_size, offset).await?;
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
@@ -196,6 +222,7 @@ async fn create_from_record(
     let (suggested, definition) =
         store::draft_from_record(&state, &ctx, &body.entity, body.record_id).await?;
     let test = CustomerTestBody {
+        target: None,
         name: body
             .name
             .filter(|n| !n.trim().is_empty())

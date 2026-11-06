@@ -1111,6 +1111,10 @@ pub struct CustomerTest {
     /// The latest run's result, when the test has run.
     pub last_passed: Option<bool>,
     pub last_run_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// Y11-T13: the kind of the customisation the test guards.
+    pub target_kind: Option<String>,
+    /// Y11-T13: that customisation's key.
+    pub target_key: Option<String>,
 }
 
 /// A test to create, or one entry of an import.
@@ -1126,6 +1130,55 @@ pub struct CustomerTestBody {
     /// T7-T3: run every night against the live configuration.
     #[serde(default)]
     pub live_safe: bool,
+    /// Y11-T13: the customisation the test guards, if it names one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<TestTarget>,
+}
+
+/// Y11-T13: the customisation a test guards: a model object by kind and key
+/// (`form` / `account.main`, `extension` / `erp_sync`, `entity` /
+/// `account`). Kept as text: the test survives the object being renamed or
+/// removed, and then reads as guarding something that is gone.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct TestTarget {
+    pub kind: String,
+    pub key: String,
+}
+
+/// The longest target key accepted.
+pub const MAX_TARGET_KEY: usize = 200;
+
+/// A target is a lower-case kind (letters, digits, `_`, at most 63) and a
+/// key of 1 to [`MAX_TARGET_KEY`] characters with no control characters.
+/// Pure.
+pub fn validate_target(target: &TestTarget) -> Result<(), AppError> {
+    let kind = target.kind.trim();
+    let kind_ok = !kind.is_empty()
+        && kind.len() <= 63
+        && kind.starts_with(|c: char| c.is_ascii_lowercase())
+        && kind
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
+    if !kind_ok {
+        return Err(AppError::Validation(
+            "a test's target kind is lower-case letters, digits and `_`".into(),
+        ));
+    }
+    let key = target.key.trim();
+    if key.is_empty() || key.chars().count() > MAX_TARGET_KEY || key.chars().any(char::is_control) {
+        return Err(AppError::Validation(format!(
+            "a test's target key is 1 to {MAX_TARGET_KEY} characters"
+        )));
+    }
+    Ok(())
+}
+
+/// `null` clears the target, an object sets it, absence keeps it.
+fn set_or_clear<'de, D>(d: D) -> Result<Option<Option<TestTarget>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Some(Option::<TestTarget>::deserialize(d)?))
 }
 
 /// The fields a PATCH may change; an absent field keeps its value.
@@ -1139,6 +1192,10 @@ pub struct CustomerTestPatch {
     pub is_active: Option<bool>,
     #[serde(default)]
     pub live_safe: Option<bool>,
+    /// Y11-T13: an object sets the target, `null` clears it.
+    #[serde(default, deserialize_with = "set_or_clear")]
+    #[schema(value_type = Option<TestTarget>)]
+    pub target: Option<Option<TestTarget>>,
 }
 
 /// One recorded run.
@@ -1345,7 +1402,7 @@ pub async fn record_checklist_run(
 
 const TEST_COLUMNS: &str = "t.id, t.name, t.description, t.definition, t.blocking, t.is_active, \
      t.row_version, t.created_at, t.updated_at, t.created_by, t.live_safe, t.flaky_since, \
-     r.passed AS last_passed, r.started_at AS last_run_at";
+     r.passed AS last_passed, r.started_at AS last_run_at, t.target_kind, t.target_key";
 
 const LAST_RUN: &str = "LEFT JOIN LATERAL (SELECT passed, started_at FROM customer_test_run \
      WHERE test_id = t.id ORDER BY started_at DESC, id DESC LIMIT 1) r ON true";
@@ -1353,19 +1410,31 @@ const LAST_RUN: &str = "LEFT JOIN LATERAL (SELECT passed, started_at FROM custom
 /// A page of tests, by name, and the total.
 pub async fn list_tests(
     db: &attome_db::DbPool,
+    target: Option<&TestTarget>,
     limit: i64,
     offset: i64,
 ) -> Result<(Vec<CustomerTest>, i64), AppError> {
-    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM customer_test")
-        .fetch_one(db)
-        .await
-        .map_err(attome_db::classify)?;
+    // Y11-T13: only the tests guarding one customisation, when one is named.
+    let kind = target.map(|t| t.kind.trim());
+    let key = target.map(|t| t.key.trim());
+    let total: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM customer_test t \
+          WHERE ($1::text IS NULL OR (t.target_kind = $1 AND t.target_key = $2))",
+    )
+    .bind(kind)
+    .bind(key)
+    .fetch_one(db)
+    .await
+    .map_err(attome_db::classify)?;
     let items = sqlx::query_as(&format!(
         "SELECT {TEST_COLUMNS} FROM customer_test t {LAST_RUN} \
+          WHERE ($3::text IS NULL OR (t.target_kind = $3 AND t.target_key = $4)) \
          ORDER BY t.name, t.id LIMIT $1 OFFSET $2"
     ))
     .bind(limit)
     .bind(offset)
+    .bind(kind)
+    .bind(key)
     .fetch_all(db)
     .await
     .map_err(attome_db::classify)?;
@@ -1415,10 +1484,14 @@ pub async fn insert_test(
     by: Uuid,
 ) -> Result<CustomerTest, AppError> {
     validate(&body.name, &body.definition)?;
+    if let Some(target) = &body.target {
+        validate_target(target)?;
+    }
     let id = Uuid::now_v7();
     sqlx::query(
-        "INSERT INTO customer_test (id, name, description, definition, blocking, created_by, live_safe) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        "INSERT INTO customer_test (id, name, description, definition, blocking, created_by, live_safe, \
+                                    target_kind, target_key) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     )
     .bind(id)
     .bind(body.name.trim())
@@ -1427,6 +1500,8 @@ pub async fn insert_test(
     .bind(body.blocking)
     .bind(by)
     .bind(body.live_safe)
+    .bind(body.target.as_ref().map(|t| t.kind.trim()))
+    .bind(body.target.as_ref().map(|t| t.key.trim()))
     .execute(&mut *conn)
     .await
     .map_err(attome_db::classify)?;
@@ -1444,9 +1519,22 @@ pub async fn update_test(
     let name = patch.name.as_deref().unwrap_or(&current.name);
     let definition = patch.definition.as_ref().unwrap_or(&current.definition);
     validate(name, definition)?;
+    let target = match &patch.target {
+        Some(Some(target)) => {
+            validate_target(target)?;
+            Some(target.clone())
+        }
+        Some(None) => None,
+        None => current
+            .target_kind
+            .clone()
+            .zip(current.target_key.clone())
+            .map(|(kind, key)| TestTarget { kind, key }),
+    };
     let updated = sqlx::query(
         "UPDATE customer_test SET name = $3, description = $4, definition = $5, blocking = $6, \
                 is_active = $7, live_safe = $8, flaky_since = NULL, \
+                target_kind = $9, target_key = $10, \
                 row_version = row_version + 1, updated_at = now() \
           WHERE id = $1 AND row_version = $2",
     )
@@ -1458,6 +1546,8 @@ pub async fn update_test(
     .bind(patch.blocking.unwrap_or(current.blocking))
     .bind(patch.is_active.unwrap_or(current.is_active))
     .bind(patch.live_safe.unwrap_or(current.live_safe))
+    .bind(target.as_ref().map(|t| t.kind.trim()))
+    .bind(target.as_ref().map(|t| t.key.trim()))
     .execute(&mut *conn)
     .await
     .map_err(attome_db::classify)?;
@@ -1566,8 +1656,16 @@ pub async fn insert_run(
 
 /// Every test, active or not, in the portable form.
 pub async fn export_tests(db: &attome_db::DbPool) -> Result<CustomerTestExport, AppError> {
-    let rows: Vec<(String, Option<String>, Value, bool)> = sqlx::query_as(
-        "SELECT name, description, definition, blocking FROM customer_test ORDER BY name, id",
+    let rows: Vec<(
+        String,
+        Option<String>,
+        Value,
+        bool,
+        Option<String>,
+        Option<String>,
+    )> = sqlx::query_as(
+        "SELECT name, description, definition, blocking, target_kind, target_key \
+               FROM customer_test ORDER BY name, id",
     )
     .fetch_all(db)
     .await
@@ -1577,12 +1675,13 @@ pub async fn export_tests(db: &attome_db::DbPool) -> Result<CustomerTestExport, 
         tests: rows
             .into_iter()
             .map(
-                |(name, description, definition, blocking)| CustomerTestBody {
+                |(name, description, definition, blocking, kind, key)| CustomerTestBody {
                     name,
                     description,
                     definition,
                     blocking,
                     live_safe: false,
+                    target: kind.zip(key).map(|(kind, key)| TestTarget { kind, key }),
                 },
             )
             .collect(),
@@ -1619,6 +1718,10 @@ pub async fn import_tests(
     for (n, test) in document.tests.iter().enumerate() {
         validate(&test.name, &test.definition)
             .map_err(|e| AppError::Validation(format!("test {}: {e}", n + 1)))?;
+        if let Some(target) = &test.target {
+            validate_target(target)
+                .map_err(|e| AppError::Validation(format!("test {}: {e}", n + 1)))?;
+        }
         if !names.insert(test.name.trim().to_owned()) {
             return Err(AppError::Validation(format!(
                 "test {}: the name {} is used twice",
@@ -1631,6 +1734,7 @@ pub async fn import_tests(
     for test in &document.tests {
         let replaced = sqlx::query(
             "UPDATE customer_test SET description = $2, definition = $3, blocking = $4, \
+                    target_kind = $5, target_key = $6, \
                     row_version = row_version + 1, updated_at = now() \
               WHERE name = $1",
         )
@@ -1638,6 +1742,8 @@ pub async fn import_tests(
         .bind(&test.description)
         .bind(&test.definition)
         .bind(test.blocking)
+        .bind(test.target.as_ref().map(|t| t.kind.trim()))
+        .bind(test.target.as_ref().map(|t| t.key.trim()))
         .execute(&mut *conn)
         .await
         .map_err(attome_db::classify)?;
@@ -1649,6 +1755,40 @@ pub async fn import_tests(
         }
     }
     Ok(result)
+}
+
+#[cfg(test)]
+mod target_tests {
+    use super::*;
+
+    fn target(kind: &str, key: &str) -> TestTarget {
+        TestTarget {
+            kind: kind.into(),
+            key: key.into(),
+        }
+    }
+
+    #[test]
+    fn a_target_names_a_kind_and_a_key() {
+        assert!(validate_target(&target("form", "account.main")).is_ok());
+        assert!(validate_target(&target("extension", "erp_sync")).is_ok());
+        assert!(validate_target(&target("Form", "x")).is_err());
+        assert!(validate_target(&target("", "x")).is_err());
+        assert!(validate_target(&target("form", " ")).is_err());
+        assert!(validate_target(&target("form", &"k".repeat(MAX_TARGET_KEY + 1))).is_err());
+        assert!(validate_target(&target("form", "a\nb")).is_err());
+    }
+
+    #[test]
+    fn a_patch_sets_clears_or_keeps_the_target() {
+        let keep: CustomerTestPatch = serde_json::from_str("{}").unwrap();
+        assert_eq!(keep.target, None);
+        let clear: CustomerTestPatch = serde_json::from_str(r#"{"target": null}"#).unwrap();
+        assert_eq!(clear.target, Some(None));
+        let set: CustomerTestPatch =
+            serde_json::from_str(r#"{"target": {"kind": "form", "key": "account.main"}}"#).unwrap();
+        assert_eq!(set.target, Some(Some(target("form", "account.main"))));
+    }
 }
 
 #[cfg(test)]

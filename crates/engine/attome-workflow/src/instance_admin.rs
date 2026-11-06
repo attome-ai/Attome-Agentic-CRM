@@ -514,6 +514,7 @@ async fn test_from_run(
         }));
     }
     let test = store::CustomerTestBody {
+        target: None,
         name: body
             .name
             .filter(|n| !n.trim().is_empty())

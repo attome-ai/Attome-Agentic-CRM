@@ -115,6 +115,14 @@ with `If-Match`, delete, `/{id}/run`, `/{id}/runs`, `/run-all`, and `/export` an
 `attome-customer-tests/v1` document, which carries tests only; configuration travels as
 changesets).
 
+A test can name the customisation it guards (Y11-T13): `"target": {"kind": "form", "key":
+"account.main"}` on create, import or PATCH (`null` clears it), any model object by its kind and
+key. `GET /api/v1/admin/customer-tests?target_kind=form&target_key=account.main` lists the tests
+guarding that one object, so whoever changes it can run them first. The target is kept as text, so a
+test outlives a renamed or removed object and then reads as guarding something that is gone. The
+upgrade rehearsal (`attome release`, `--customer-tests <dir>`) runs every exported test, targets
+included, against the new release.
+
 Mark a test **blocking** and turn on the deployment setting
 `customer_tests.require_pass_before_publish` to make every changeset apply, model publish and
 blueprint apply run the blocking tests first; a failure refuses the publish with

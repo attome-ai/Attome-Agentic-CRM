@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A customer test can name the customisation it guards (Y11-T13): `target` `{kind, key}` on create,
+  import, export and PATCH, and `GET /api/v1/admin/customer-tests?target_kind=&target_key=` lists one
+  object's tests. Migration `0402_customer_test_target.sql`.
 - The entity schema's fields carry `is_sensitive` (additive). The phone app uses it: a record with a
   sensitive field turns the privacy screen on while it is open, and an MDM's `block_copy` refuses copying
   a sensitive field's value (B17-T5, B17-T9).
