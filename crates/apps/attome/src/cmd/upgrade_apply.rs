@@ -46,7 +46,7 @@ use uuid::Uuid;
 use crate::cmd::output::{take_flag, take_value};
 use crate::cmd::upgrade_check::{self, CheckArgs};
 
-const USAGE: &str = "usage: attome upgrade apply --manifest <file> --new-binary <path> --restart <command> --ready-url <url> --base-url <url> --admin-key-file <path> --no-role-key-file <path> [--evidence-dir <dir>] [--pgbackrest-stanza <name>] [--config <path>] [--free-bytes <n>] --yes\n       attome upgrade rollback --to <version> --restart <command> [--config <path>] --yes\n       attome upgrade contract --manifest <file> --dir <dir> [--config <path>] --yes";
+const USAGE: &str = "usage: attome upgrade apply --manifest <file> --new-binary <path> --restart <command> --ready-url <url> --base-url <url> --admin-key-file <path> --no-role-key-file <path> [--evidence-dir <dir>] [--pgbackrest-stanza <name>] [--config <path>] [--free-bytes <n>] [--rehearsal <file>] --yes\n       attome upgrade rollback --to <version> --restart <command> [--config <path>] --yes\n       attome upgrade contract --manifest <file> --dir <dir> [--config <path>] --yes";
 /// Exit code of a refused or failed step.
 const REFUSED: u8 = 5;
 /// How long a restarted service has to answer ready.
