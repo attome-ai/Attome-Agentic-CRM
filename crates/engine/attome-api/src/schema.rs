@@ -46,6 +46,10 @@ struct FieldSchemaDef {
     options: Value,
     sort_order: i32,
     is_required: bool,
+    /// B17-T5: the attribute holds sensitive data (`is_sensitive`), so a
+    /// phone hides the record from screenshots and the app switcher while
+    /// it is shown. Additive.
+    is_sensitive: bool,
 }
 
 /// M01 Core P3 gap (D-455) — one `relationship_info` row touching
@@ -344,6 +348,16 @@ async fn build_schema(
             })
             .unwrap_or_default()
     };
+    let sensitive: std::collections::HashSet<String> = registry
+        .get(logicalname)
+        .map(|meta| {
+            meta.attrs
+                .iter()
+                .filter(|a| a.is_sensitive)
+                .map(|a| a.logicalname.clone())
+                .collect()
+        })
+        .unwrap_or_default();
     let fields: Vec<FieldSchemaDef> = facts
         .fields
         .into_iter()
@@ -352,6 +366,7 @@ async fn build_schema(
         .map(|(i, row)| {
             let field_type = int_to_type(row.field_type_int.unwrap_or(3)).to_owned();
             let name = row.logicalname.clone().unwrap_or_default();
+            let is_sensitive = sensitive.contains(&name);
             let base_display_name = row.display_name.clone().unwrap_or_else(|| name.clone());
             // D-426 fallback chain: requested locale -> deployment default ->
             // this base column (never overwritten — see `label_store`'s
@@ -422,6 +437,7 @@ async fn build_schema(
                 options,
                 sort_order: i as i32,
                 is_required: row.required.unwrap_or(false),
+                is_sensitive,
             }
         })
         .collect();

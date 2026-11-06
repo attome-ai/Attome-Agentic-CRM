@@ -79,6 +79,8 @@ export interface FieldSchema {
   options:      ChoiceOptions | LookupOptions | FileOptions | TextOptions | FormulaOptions | DateOptions | NumberOptions | null;
   sort_order:   number;
   is_required:  boolean;
+  /** B17-T5: holds sensitive data; the phone app hides the record from screenshots. */
+  is_sensitive?: boolean;
 }
 
 // ── Business rules (D-789) ────────────────────────────────────────────────────

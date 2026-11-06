@@ -33,10 +33,9 @@ People sign in exactly as they do in a browser, with your sign-in method, MFA an
   unlocks.
 - **Wipe check**: when a person signs in, and every time the app is brought back, it asks the server
   whether the phone has been wiped (next section).
-- **Privacy screen, not yet applied**: the app can hide its content from the app switcher (and,
-  on Android, from screenshots) while a record with a **sensitive** field is open. Record pages do
-  not turn it on yet, because the record form does not yet say which fields are sensitive (owed,
-  B17-T5). Until then, treat a phone's screen like any other screen.
+- **Privacy screen**: while a record whose form has any **sensitive** field is open, the app hides
+  its content from the app switcher (and, on Android, from screenshots), and shows it again when the
+  record is closed. Mark a field sensitive in the entity's field settings; every phone follows it.
 
 ## 3. Devices and remote wipe
 
@@ -74,7 +73,7 @@ configurations, iOS `com.apple.configuration.managed`):
 | Key | Value | Effect |
 |---|---|---|
 | `deployment_url` | your `https://` address | The app opens it directly and never shows the connect page. |
-| `block_copy` | `true` | Read by the app, **not yet applied**: copying is not blocked yet (owed with the privacy screen). |
+| `block_copy` | `true` | Copying or cutting the value of a sensitive field is refused. |
 | `lock_timeout_minutes` | a number | Minutes away before the app asks for the fingerprint, face or PIN again (default 5). |
 
 Microsoft Intune's app protection without enrolment (the Intune App SDK) needs a separately
@@ -91,8 +90,8 @@ customer's own Google Play and Apple developer accounts, following the release c
 ## Rollout checklist
 
 1. Confirm people can sign in to the deployment in a phone's browser first.
-2. Mark sensitive fields in each entity's field settings. They are already masked in audit history
-   and import previews, and the privacy screen will use them once it is applied (section 2).
+2. Mark sensitive fields in each entity's field settings: the privacy screen and the copy block
+   follow them (sections 2 and 4).
 3. Choose how phones connect: an address, a QR code on your intranet, MDM configuration, or a
    branded app.
 4. Pilot with a few people, then check `GET /api/v1/admin/devices` shows their phones.

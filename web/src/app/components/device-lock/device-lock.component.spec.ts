@@ -16,9 +16,11 @@ describe('DeviceLockComponent', () => {
     register: ReturnType<typeof vi.fn>;
     checkWipe: ReturnType<typeof vi.fn>;
     unlock: ReturnType<typeof vi.fn>;
+    copyBlocked: ReturnType<typeof signal<boolean>>;
+    refusesCopy: ReturnType<typeof vi.fn>;
   };
 
-  function setUp(native: boolean, lockMinutes: number | null = null) {
+  function setUp(native: boolean, lockMinutes: number | null = null, blockCopy = false) {
     loggedIn.set(false);
     security = {
       locked: signal(false),
@@ -27,6 +29,8 @@ describe('DeviceLockComponent', () => {
       register: vi.fn(async () => 'device-1'),
       checkWipe: vi.fn(async () => false),
       unlock: vi.fn(async () => undefined),
+      copyBlocked: signal(false),
+      refusesCopy: vi.fn(() => true),
     };
     TestBed.configureTestingModule({
       imports: [DeviceLockComponent],
@@ -35,7 +39,7 @@ describe('DeviceLockComponent', () => {
         {
           provide: ManagedConfigService,
           useValue: {
-            get: async () => ({ deployment_url: null, block_copy: false, lock_timeout_minutes: lockMinutes }),
+            get: async () => ({ deployment_url: null, block_copy: blockCopy, lock_timeout_minutes: lockMinutes }),
           },
         },
         { provide: NativeService, useValue: { isNative: () => native } },
@@ -87,5 +91,15 @@ describe('DeviceLockComponent', () => {
     expect(button).not.toBeNull();
     button.click();
     expect(security.unlock).toHaveBeenCalled();
+  });
+
+  it("applies the MDM's copy block to sensitive fields", async () => {
+    setUp(true, null, true);
+    await settle();
+    expect(security.copyBlocked()).toBe(true);
+    const copy = new Event('copy', { cancelable: true });
+    document.dispatchEvent(copy);
+    expect(security.refusesCopy).toHaveBeenCalled();
+    expect(copy.defaultPrevented).toBe(true);
   });
 });

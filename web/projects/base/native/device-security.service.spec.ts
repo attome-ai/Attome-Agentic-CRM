@@ -75,3 +75,23 @@ describe('DeviceSecurityService (B17-T5)', () => {
     expect(mustUnlock(60_000)).toBe(false);
   });
 });
+
+describe('DeviceSecurityService — copy block (B17-T9)', () => {
+  it('refuses a copy only from a sensitive field, and only when blocked', () => {
+    const { service } = setup();
+    const field = document.createElement('div');
+    field.setAttribute('data-sensitive', '');
+    const input = document.createElement('input');
+    field.appendChild(input);
+    const plain = document.createElement('input');
+    document.body.append(field, plain);
+    expect(service.refusesCopy(input)).toBe(false);
+    service.copyBlocked.set(true);
+    expect(service.refusesCopy(input)).toBe(true);
+    expect(service.refusesCopy(plain)).toBe(false);
+    expect(service.refusesCopy(null)).toBe(false);
+    field.remove();
+    plain.remove();
+  });
+});
+

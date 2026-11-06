@@ -52,6 +52,20 @@ export class DeviceSecurityService {
   /** Whether the app's content is covered until the person unlocks. */
   readonly locked = signal(false);
 
+  /** B17-T9: whether copying a sensitive field is refused (the MDM's `block_copy`). */
+  readonly copyBlocked = signal(false);
+
+  /**
+   * Whether a copy from `target` is refused: copying is blocked and the
+   * target sits inside a field marked `data-sensitive`. Pure but for its
+   * input.
+   */
+  refusesCopy(target: EventTarget | null): boolean {
+    if (!this.copyBlocked()) return false;
+    const element = target instanceof Element ? target : target instanceof Node ? target.parentElement : null;
+    return element?.closest('[data-sensitive]') != null;
+  }
+
   /**
    * Starts following the shell's pause and resume (the `App` plugin's
    * `appStateChange`) with `lockMs` as the lock timeout (an MDM's

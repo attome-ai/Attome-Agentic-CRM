@@ -14,6 +14,7 @@ import { DEFAULT_LOCK_MS, DeviceSecurityService, ManagedConfigService, NativeSer
 @Component({
   selector: 'app-device-lock',
   standalone: true,
+  host: { '(document:copy)': 'onCopy($event)', '(document:cut)': 'onCopy($event)' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
@@ -64,11 +65,12 @@ export class DeviceLockComponent {
     // A browser has no lock, no privacy screen and no wipe to act on, and
     // is not registered as a device.
     if (!this.native.isNative()) return;
-    void this.managed.get().then(config =>
+    void this.managed.get().then(config => {
+      this.security.copyBlocked.set(config.block_copy);
       this.security.start(
         config.lock_timeout_minutes ? config.lock_timeout_minutes * 60_000 : DEFAULT_LOCK_MS,
-      ),
-    );
+      );
+    });
     // Register once per app run, after sign-in; a failure is tried again at
     // the next sign-in. The wipe check runs at once, so a phone wiped while
     // the app was closed is cleared on opening, not only on a resume.
@@ -83,5 +85,10 @@ export class DeviceLockComponent {
           this.registered = false;
         });
     });
+  }
+
+  /** B17-T9: refuses copying or cutting a sensitive field when the MDM blocks it. */
+  protected onCopy(event: Event): void {
+    if (this.security.refusesCopy(event.target)) event.preventDefault();
   }
 }

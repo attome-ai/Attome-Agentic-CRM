@@ -8,6 +8,7 @@ import {
   Announcer, ApiError, CommandRegistry, LangService, MetadataVersion, RulesEvaluatorService, VersionConflictState,
 } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
+import { DeviceSecurityService, NativeService } from '@attome/base/native';
 import { firstValueFrom } from 'rxjs';
 import { BusinessRuleClient, ChoiceOptions, EntitySchema, FieldSchema } from '@attome/xrm';
 import { fieldKindResolver, rulesTypesOf } from '../business-rules/business-rule-condition';
@@ -383,6 +384,7 @@ export abstract class EngineFormBase implements OnInit {
     this.svc.getSchema(this.entityLogicalName).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: schema => {
         this.schema.set(schema);
+        this.applyPrivacyScreen(schema);
         this.onSchemaLoaded(schema);
         const fg = this.buildFormGroup(schema);
         this.policyLocked.clear();
@@ -467,6 +469,19 @@ export abstract class EngineFormBase implements OnInit {
 
   /** Hook — override to react when schema arrives (e.g. add cross-field validators). */
   protected onSchemaLoaded(_schema: EntitySchema): void {}
+
+  /**
+   * B17-T5: in the phone app, a record with any sensitive field hides from
+   * screenshots and the app switcher while its form is open, and shows
+   * again when the form closes. The device service is resolved only inside
+   * the shell, so a browser (and a spec) never needs it.
+   */
+  private applyPrivacyScreen(schema: EntitySchema): void {
+    if (!this.formInjector.get(NativeService).isNative()) return;
+    const security = this.formInjector.get(DeviceSecurityService);
+    void security.privacyFor(schema.fields);
+    this.destroyRef.onDestroy(() => void security.privacy(false));
+  }
 
   /**
    * Hook — called with the server's copy of the record every time the base

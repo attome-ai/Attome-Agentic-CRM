@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The entity schema's fields carry `is_sensitive` (additive). The phone app uses it: a record with a
+  sensitive field turns the privacy screen on while it is open, and an MDM's `block_copy` refuses copying
+  a sensitive field's value (B17-T5, B17-T9).
 - The phone app now runs its device security (B17-T5): it registers after sign-in, asks for the
   fingerprint, face or PIN after the lock timeout (an MDM's `lock_timeout_minutes`, else five minutes),
   covers the app until an unlock succeeds, and checks for a remote wipe at sign-in and on every resume.

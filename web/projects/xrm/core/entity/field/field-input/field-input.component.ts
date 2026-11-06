@@ -67,6 +67,9 @@ export function fromLocalDateTimeInput(raw: string): string | null | undefined {
     // D-789 section 5: a field a business rule hides takes no grid cell.
     '[style.display]':                "policyHidden() ? 'none' : null",
     '(document:keydown.escape)':      'onEscape()',
+    // B17-T9: a sensitive field, whose value an MDM's `block_copy` keeps
+    // from being copied in the phone app (`<app-device-lock>`).
+    '[attr.data-sensitive]':          'field().is_sensitive ? "" : null',
   },
   // Shares the form design language with the rest of the platform's forms, so
   // a generic metadata-driven field looks the same as a hand-written one.
