@@ -190,7 +190,7 @@ fn skipped(name: &str, why: &str) -> Check {
     }
 }
 
-async fn sha256_file(path: &Path) -> Result<String, String> {
+pub(crate) async fn sha256_file(path: &Path) -> Result<String, String> {
     let bytes = tokio::fs::read(path)
         .await
         .map_err(|e| format!("read {}: {e}", path.display()))?;
@@ -200,7 +200,7 @@ async fn sha256_file(path: &Path) -> Result<String, String> {
     Ok(hex::encode(digest))
 }
 
-async fn newest_audit(conn: &mut sqlx::PgConnection) -> Option<DateTime<Utc>> {
+pub(crate) async fn newest_audit(conn: &mut sqlx::PgConnection) -> Option<DateTime<Utc>> {
     sqlx::query_scalar::<_, Option<DateTime<Utc>>>("SELECT max(created_at) FROM audit_header")
         .fetch_one(conn)
         .await
@@ -208,7 +208,7 @@ async fn newest_audit(conn: &mut sqlx::PgConnection) -> Option<DateTime<Utc>> {
         .flatten()
 }
 
-async fn wait_ready(base: &str) -> Result<(), String> {
+pub(crate) async fn wait_ready(base: &str) -> Result<(), String> {
     let url = format!("{base}/health/ready");
     let client = attome_outbound::http::client(
         attome_outbound::http::Purpose::public("restore_drill_ready").with_private_urls([base]),
@@ -231,7 +231,7 @@ async fn wait_ready(base: &str) -> Result<(), String> {
 
 /// A first page of the first [`SAMPLE_ENTITIES`] entities, with the drill's
 /// key: each entity's status. Only statuses are kept, never bodies.
-async fn sample_reads(base: &str, key: &str) -> Result<Vec<(String, u16)>, String> {
+pub(crate) async fn sample_reads(base: &str, key: &str) -> Result<Vec<(String, u16)>, String> {
     let client = attome_outbound::http::client(
         attome_outbound::http::Purpose::public("restore_drill_reads").with_private_urls([base]),
         |builder| builder.timeout(Duration::from_secs(30)),

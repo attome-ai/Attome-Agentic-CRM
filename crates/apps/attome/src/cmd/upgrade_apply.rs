@@ -5,7 +5,8 @@
 //!                      --ready-url <url> --base-url <url> --admin-key-file <path>
 //!                      --no-role-key-file <path> [--evidence-dir <dir>]
 //!                      [--pgbackrest-stanza <name>] [--config <path>]
-//!                      [--free-bytes <n>] [--key <cosign.pub>] [--allow-unsigned --reason <text>] --yes
+//!                      [--free-bytes <n>] [--key <cosign.pub>] [--allow-unsigned --reason <text>]
+//!                      [--rehearsal <rehearsal.json>] --yes
 //! attome upgrade rollback --to <version> --restart <command> [--config <path>] --yes
 //! attome upgrade contract --manifest <file> --dir <dir> [--config <path>] --yes
 //! ```
@@ -334,6 +335,17 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
         .transpose()?;
     let verify_key = take_value(&mut args, "--key")?;
     let unsigned_reason = crate::cmd::verify::take_override(&mut args)?;
+    // AB8-T8: the impact report `attome upgrade rehearse` wrote, kept with
+    // the upgrade for the Upgrades page.
+    let rehearsal: Option<Value> = take_value(&mut args, "--rehearsal")?
+        .map(|path| {
+            std::fs::read(&path)
+                .map_err(|error| format!("read {path}: {error}"))
+                .and_then(|bytes| {
+                    serde_json::from_slice(&bytes).map_err(|error| format!("{path}: {error}"))
+                })
+        })
+        .transpose()?;
     if !args.is_empty() || !yes {
         return Err(USAGE.to_owned());
     }
@@ -380,6 +392,9 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
     // with the upgrade so the upgrade page can show it without the manifest
     // file (the page filters it to the modules switched on).
     record["impact"] = json!(release.impact);
+    if let Some(rehearsal) = rehearsal {
+        record["rehearsal"] = rehearsal;
+    }
     let name = restore_point_name(
         &report.to_version,
         &chrono::Utc::now().format("%Y%m%d%H%M%S").to_string(),

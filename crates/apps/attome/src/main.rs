@@ -104,6 +104,10 @@ Usage:
                                 verify each, and resume where a stop left off
   attome upgrade check --manifest <file> [--free-bytes <n>] [--json]
   attome upgrade sign-manifest --in <file> --key <file> --out <file>
+  attome upgrade rehearse --manifest <file> --old-binary <path> --new-binary <path>
+                --admin-key-file <path> --key <file> --out <dir> [--archive <name>] [--base-url <url>]
+                                Try an upgrade on a restored copy: schema change,
+                                both binaries, customer tests; signed evidence
   attome upgrade apply|rollback|contract
                   apply a signed release, go back to the old binary, or run
                   its held-back removals
@@ -299,6 +303,10 @@ fn main() -> ExitCode {
         ["upgrade", "apply" | "rollback" | "contract", ..] => {
             let rest: Vec<String> = args[1..].iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::upgrade_apply::run(&rest)
+        }
+        ["upgrade", "rehearse", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::upgrade_rehearse::run(&rest)
         }
         ["upgrade", "check" | "sign-manifest", ..] => {
             let rest: Vec<String> = args[1..].iter().map(|arg| (*arg).to_owned()).collect();

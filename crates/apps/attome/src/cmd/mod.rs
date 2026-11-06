@@ -65,6 +65,8 @@ pub mod supervise;
 pub mod upgrade;
 pub mod upgrade_apply;
 pub mod upgrade_check;
+/// AB8-T4: `attome upgrade rehearse`, an upgrade tried on a restored copy.
+pub mod upgrade_rehearse;
 pub mod verify_audit_chain;
 pub mod worker;
 /// T4-T3: `attome workspace list|create|switch|preview|publish|refresh|rollback`.
