@@ -66,6 +66,8 @@ pub mod flags;
 pub mod flow_draft;
 pub mod followup;
 pub mod form_draft;
+/// AD9-T1: a record hook extension and its tests, written from a description.
+pub mod extension_draft;
 /// AD5-T1: model.from_files, a model from several sheets and their import.
 pub mod from_files;
 /// L3-T8: governance.list_overdue, governance.propose_domains, governance.draft_policy.
@@ -206,6 +208,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(draft_model::descriptors());
     all.extend(app_draft::descriptors());
     all.extend(form_draft::descriptors());
+    all.extend(extension_draft::descriptors());
     all.extend(flow_draft::descriptors());
     all.extend(import_config::descriptors());
     all.extend(review_model::descriptors());
@@ -335,6 +338,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(draft_model::executors());
     all.extend(app_draft::executors());
     all.extend(form_draft::executors());
+    all.extend(extension_draft::executors());
     all.extend(flow_draft::executors());
     all.extend(import_config::executors());
     all.extend(review_model::executors());

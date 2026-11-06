@@ -2,6 +2,8 @@
 //! own paths and changes no metadata; the documentation job writes only its
 //! own table.
 
+/// AD9-T1: a hook extension and its tests from a description, as files.
+pub mod code;
 /// AD6-T2: documentation for every published metadata version.
 pub mod docs;
 /// AD1-T1: reuse, extend, ask or create for each drafted entity.
