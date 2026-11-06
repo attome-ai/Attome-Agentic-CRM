@@ -163,6 +163,18 @@ and the Regulation on Personal Data Transfer outside the Kingdom (2024). SDAIA h
 adequacy list, so `adequacy` is the controller's own call until it does. Request deadlines (30 days)
 and breach notification (72 hours) are already the platform's when `core.country` is `SA`.
 
+`0003` (AG6-T1) adds the UAE and Egypt laws as `jurisdiction` values.
+
+- **UAE** (Federal Decree-Law 45 of 2021): a transfer abroad goes to a country with adequate protection
+  that the UAE Data Office approves (Article 22), or rests on one of Article 23's cases: a contract binding
+  the recipient where no data protection law exists, express consent, legal claims, a contract with or for
+  the data subject, international judicial cooperation, or the public interest. Rules refuse a UAE
+  transfer that names no mechanism, or a mechanism outside those cases.
+- **Egypt** (Law 151 of 2020, Executive Regulations by Decision 816 of 2025, enforced from 1 November
+  2026): every transfer abroad, cloud hosting included, needs a licence or permit from the Personal Data
+  Protection Centre, recorded in `transfer_licence_ref`; a rule refuses a transfer without one. A warning
+  flags sensitive data resting on anything but explicit consent, because a law can allow otherwise.
+
 ## internal-audit
 
 Internal audit (R13): engagements, workpapers with evidence files, findings with rating, owner and

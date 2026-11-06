@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- UAE and Egypt privacy content in the privacy pack (1.3.0, AG6-T1): their transfer rules on the record of
+  processing (UAE adequacy or Article 23 cases; Egypt's PDPC transfer licence) and a warning for Egyptian
+  sensitive data processed without explicit consent.
 - PDPL content in the privacy pack (1.2.0, AG5-T2): PDPL legal bases, the law an activity follows, the
   legitimate-interest assessment, transfer mechanisms and their risk assessment, with business rules that
   refuse a PDPL processing activity breaking those conditions.

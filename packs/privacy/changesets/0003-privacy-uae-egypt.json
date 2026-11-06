@@ -1,0 +1,587 @@
+{
+  "author": "packs",
+  "checksum": "sha256:118afcdacc0b7186d3e2e4424c88ee1451810ffddea9b1d0a40c98a9dad40fcb",
+  "closed_at": "2026-11-06T00:00:00Z",
+  "description": "UAE and Egypt privacy content (AG6-T1): the UAE's Federal Decree-Law 45 of 2021 (adequacy approved by the UAE Data Office, or Article 23's cases) and Egypt's Law 151 of 2020 with its Executive Regulations (a PDPC licence for every transfer abroad; sensitive data on explicit written consent), as values on the record of processing and business rules for activities under those laws.",
+  "format": "attome-changeset/v1",
+  "id": "019a5a40-0000-7000-8000-00000000a603",
+  "layer": "product",
+  "name": "privacy-uae-egypt",
+  "opened_at": "2026-11-06T00:00:00Z",
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "privacy",
+  "seq": 3,
+  "title": "Pack: privacy, UAE and Egypt content",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Law",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "jurisdiction",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "pdpl",
+              "gdpr",
+              "uae_pdpl",
+              "egypt_pdpl",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "processing_activity",
+        "field": "jurisdiction"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Transfer Mechanism",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "transfer_mechanism",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "adequacy",
+              "standard_contractual_clauses",
+              "binding_common_rules",
+              "accreditation_certificate",
+              "central_operations",
+              "service_to_subject",
+              "scientific_research",
+              "derogation",
+              "contract_binding_recipient",
+              "express_consent",
+              "legal_claims",
+              "contract_with_subject",
+              "judicial_cooperation",
+              "public_interest",
+              "pdpc_licence"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "processing_activity",
+        "field": "transfer_mechanism"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Transfer Licence",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "transfer_licence_ref",
+          "lookup_entity": null,
+          "max_length": 120,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "processing_activity",
+        "field": "transfer_licence_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": [
+              {
+                "field": "jurisdiction",
+                "op": "eq",
+                "value": "uae_pdpl"
+              },
+              {
+                "field": "transferred_abroad",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "transfer_mechanism",
+                "op": "is_empty"
+              }
+            ]
+          },
+          "description": "Under Federal Decree-Law 45 of 2021, a transfer outside the UAE goes to a country with adequate protection approved by the UAE Data Office (Article 22) or rests on one of Article 23's cases.",
+          "display_name": "UAE PDPL: a transfer abroad names how it is allowed",
+          "display_order": 0,
+          "entity_logicalname": "processing_activity",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "uae_transfer_has_a_mechanism",
+          "policies": [
+            {
+              "field": "transfer_mechanism",
+              "message": "Name how this transfer abroad is allowed.",
+              "type": "error"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "processing_activity",
+        "rule": "uae_transfer_has_a_mechanism"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": [
+              {
+                "field": "jurisdiction",
+                "op": "eq",
+                "value": "uae_pdpl"
+              },
+              {
+                "field": "transferred_abroad",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "transfer_mechanism",
+                "op": "not_in",
+                "value": [
+                  "adequacy",
+                  "contract_binding_recipient",
+                  "express_consent",
+                  "legal_claims",
+                  "contract_with_subject",
+                  "judicial_cooperation",
+                  "public_interest"
+                ]
+              },
+              {
+                "field": "transfer_mechanism",
+                "op": "is_not_empty"
+              }
+            ]
+          },
+          "description": "Article 22's adequacy or one of Article 23's cases: a contract binding a recipient where no data protection law exists, express consent, legal claims, a contract with or for the data subject, international judicial cooperation, or the public interest.",
+          "display_name": "UAE PDPL: only the UAE's transfer cases",
+          "display_order": 0,
+          "entity_logicalname": "processing_activity",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "uae_transfer_mechanism_is_the_uae_s",
+          "policies": [
+            {
+              "field": "transfer_mechanism",
+              "message": "This is not one of the UAE law's transfer cases.",
+              "type": "error"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "processing_activity",
+        "rule": "uae_transfer_mechanism_is_the_uae_s"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": [
+              {
+                "field": "jurisdiction",
+                "op": "eq",
+                "value": "egypt_pdpl"
+              },
+              {
+                "field": "transferred_abroad",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "transfer_licence_ref",
+                "op": "is_empty"
+              }
+            ]
+          },
+          "description": "Under Law 151 of 2020 and its Executive Regulations (Decision 816 of 2025), a transfer outside Egypt, cloud hosting included, needs a licence or permit from the Personal Data Protection Centre.",
+          "display_name": "Egypt PDPL: a transfer abroad is licensed",
+          "display_order": 0,
+          "entity_logicalname": "processing_activity",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "egypt_transfer_is_licensed",
+          "policies": [
+            {
+              "field": "transfer_licence_ref",
+              "message": "Record the PDPC licence or permit for this transfer.",
+              "type": "error"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "processing_activity",
+        "rule": "egypt_transfer_is_licensed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": [
+              {
+                "field": "jurisdiction",
+                "op": "eq",
+                "value": "egypt_pdpl"
+              },
+              {
+                "field": "special_categories",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "lawful_basis",
+                "op": "ne",
+                "value": "consent"
+              }
+            ]
+          },
+          "description": "Egypt's law gives sensitive data stronger protection: explicit written consent, unless a law allows otherwise. A warning, so a basis set by law can still be recorded.",
+          "display_name": "Egypt PDPL: sensitive data on explicit consent",
+          "display_order": 0,
+          "entity_logicalname": "processing_activity",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "egypt_sensitive_data_on_consent",
+          "policies": [
+            {
+              "field": "lawful_basis",
+              "message": "Sensitive data in Egypt needs explicit written consent unless a law allows otherwise.",
+              "type": "error",
+              "severity": "warning"
+            }
+          ],
+          "severity": "warning",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "processing_activity",
+        "rule": "egypt_sensitive_data_on_consent"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ترخيص النقل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_licence_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "UAE PDPL"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.jurisdiction.uae_pdpl",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قانون حماية البيانات الشخصية (الإمارات)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.jurisdiction.uae_pdpl",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Egypt PDPL"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.jurisdiction.egypt_pdpl",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قانون حماية البيانات الشخصية (مصر)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.jurisdiction.egypt_pdpl",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Contract binding the recipient"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.contract_binding_recipient",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عقد يُلزم الجهة المستلمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.contract_binding_recipient",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Express consent"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.express_consent",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "موافقة صريحة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.express_consent",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Legal claims"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.legal_claims",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مطالبات قضائية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.legal_claims",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Contract with or for the data subject"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.contract_with_subject",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عقد مع صاحب البيانات أو لمصلحته"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.contract_with_subject",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "International judicial cooperation"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.judicial_cooperation",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تعاون قضائي دولي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.judicial_cooperation",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Public interest"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.public_interest",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المصلحة العامة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.public_interest",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "PDPC licence"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.pdpc_licence",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ترخيص مركز حماية البيانات الشخصية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.pdpc_licence",
+        "object_kind": "choice_option"
+      }
+    }
+  ]
+}
