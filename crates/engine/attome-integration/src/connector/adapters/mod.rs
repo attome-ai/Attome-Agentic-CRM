@@ -48,6 +48,10 @@ pub mod search_console;
 /// F8-T2: what an online shop exchanges with Attome, the same for every
 /// platform.
 pub mod shop_sync;
+/// F8-T3: Salla, on the shop-sync platform trait.
+pub mod salla;
+/// F8-T3: Zid, on the shop-sync platform trait.
+pub mod zid;
 /// C6-T1: a Slack app: install, events, approvals, unfurls, `/attome search`.
 pub mod slack;
 /// J4-T1: SMS segments, senders and the provider codecs.

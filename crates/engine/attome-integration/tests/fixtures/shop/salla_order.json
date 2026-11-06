@@ -1,0 +1,75 @@
+{
+  "_source": "Built from the examples in Salla's API reference (docs.salla.dev: Order Details GET /orders/{id}?format=light, List Order Items GET /orders/items), read 2026-11-06. Not a recorded payload: replace with one once there is partner access (F8-T3). Values changed so the totals add up.",
+  "order": {
+    "status": 200,
+    "success": true,
+    "data": {
+      "id": 1333249299,
+      "external_reference_id": null,
+      "reference_id": 275839672,
+      "date": { "date": "2026-08-31 17:04:00.000000", "timezone_type": 3, "timezone": "Asia/Riyadh" },
+      "source": "store",
+      "status": { "id": 566146469, "name": "بإنتظار المراجعة", "slug": "under_review", "customized": { "id": 2046121387, "name": "بإنتظار المراجعة" } },
+      "payment_method": "cod",
+      "currency": "SAR",
+      "amounts": {
+        "sub_total": { "amount": 250, "currency": "SAR" },
+        "shipping_cost": { "amount": 25, "currency": "SAR" },
+        "cash_on_delivery": { "amount": 0, "currency": "SAR" },
+        "tax": { "percent": "15.00", "amount": { "amount": 41.25, "currency": "SAR" } },
+        "discounts": [],
+        "total": { "amount": 316.25, "currency": "SAR" }
+      },
+      "exchange_rate": { "base_currency": "SAR", "exchange_currency": "SAR", "rate": "1.00000000" },
+      "customer": {
+        "id": 1994632555,
+        "full_name": "Mohammed Ahmed",
+        "first_name": "Mohammed",
+        "last_name": "Ahmed",
+        "mobile": 553333333,
+        "mobile_code": "+966",
+        "email": "test-email@example.com",
+        "city": "الرياض",
+        "country": "السعودية",
+        "country_code": "SA",
+        "currency": "SAR"
+      }
+    }
+  },
+  "items": {
+    "status": 200,
+    "success": true,
+    "data": [
+      {
+        "id": 365435777,
+        "name": "Perfumes Package",
+        "sku": "PRF-100",
+        "quantity": 1,
+        "currency": "SAR",
+        "weight": 0.51,
+        "amounts": {
+          "price_without_tax": { "amount": 150, "currency": "SAR" },
+          "total_discount": { "amount": 0, "currency": "SAR" },
+          "tax": { "percent": "15.00", "amount": { "amount": 22.5, "currency": "SAR" } },
+          "total": { "amount": 150, "currency": "SAR" }
+        },
+        "options": []
+      },
+      {
+        "id": 365435778,
+        "name": "Dress",
+        "sku": "",
+        "quantity": 2,
+        "currency": "SAR",
+        "weight": 0.3,
+        "amounts": {
+          "price_without_tax": { "amount": 50, "currency": "SAR" },
+          "total_discount": { "amount": 0, "currency": "SAR" },
+          "tax": { "percent": "15.00", "amount": { "amount": 15, "currency": "SAR" } },
+          "total": { "amount": 100, "currency": "SAR" }
+        },
+        "options": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "_source": "Built from the View Order example in Zid's API reference (docs.zid.sa: GET /v1/managers/store/orders/{order-id}/view), read 2026-11-06. Not a recorded payload: replace with one once there is partner access (F8-T3). Values changed to a SAR cash-on-delivery order whose totals add up.",
+  "order": {
+    "id": 68340124,
+    "invoice_number": 68340124,
+    "code": "rEXuB20myr",
+    "store_id": 3,
+    "currency_code": "SAR",
+    "order_status": { "code": "new", "name": "New" },
+    "display_status": { "id": 1, "code": "new", "name": "New", "color": "#3498db" },
+    "created_at": "2026-04-21 15:12:07",
+    "updated_at": "2026-04-21 15:12:23",
+    "customer": {
+      "id": 31504,
+      "name": "test user",
+      "email": "test@example.com",
+      "mobile": "966533333333",
+      "note": "",
+      "verified": 0,
+      "type": null
+    },
+    "order_total": "287.50000000000000",
+    "order_total_string": "287.50 SAR",
+    "shipping": {
+      "method": { "id": 432533, "name": "Store pickup", "code": "pickup", "is_system_option": false, "waybill": null },
+      "address": {
+        "formatted_address": "King Fahd Rd, Al Olaya, Riyadh 12212",
+        "street": "King Fahd Rd",
+        "district": "Al Olaya",
+        "short_address": "ABCD1234",
+        "city": { "id": 1, "name": "Riyadh" },
+        "country": { "id": 184, "name": "Saudi Arabia" }
+      }
+    },
+    "payment": {
+      "method": { "name": "Cash on Delivery", "code": "zid_cod", "type": "zid_cod" },
+      "invoice": [
+        { "code": "sub_totals_before_vat", "value": 250, "value_string": "250.00 SAR", "title": "Total without VAT" },
+        { "code": "taxable_amount", "value": 250, "value_string": "250.00 SAR", "title": "Taxable amount" },
+        { "code": "vat", "value": 37.5, "value_string": "37.50 SAR", "title": "VAT (15%)" },
+        { "code": "sub_totals_after_vat", "value": 287.5, "value_string": "287.50 SAR", "title": "Total Inc. VAT" },
+        { "code": "total", "value": 287.5, "value_string": "287.50 SAR", "title": "Total" }
+      ]
+    },
+    "products": [
+      {
+        "id": "1696a85e-419e-4092-a54d-d4afac8289d6",
+        "order_product_id": 117402431,
+        "name": "Prada La Femme Intense - 100 ml",
+        "sku": "Z.217795.16883190964075553",
+        "barcode": null,
+        "quantity": 2,
+        "is_taxable": true,
+        "is_discounted": false,
+        "tax_percentage": 0.15,
+        "tax_amount": "30.00",
+        "net_price": 100,
+        "gross_price": 115,
+        "price": 115,
+        "total": 230
+      },
+      {
+        "id": "2b0c4d1e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+        "order_product_id": 117402432,
+        "name": "Gift wrap",
+        "sku": "",
+        "barcode": null,
+        "quantity": 1,
+        "is_taxable": true,
+        "is_discounted": false,
+        "tax_percentage": 0.15,
+        "tax_amount": "7.50",
+        "net_price": 50,
+        "gross_price": 57.5,
+        "price": 57.5,
+        "total": 57.5
+      }
+    ],
+    "products_count": 2,
+    "cod_confirmed": false,
+    "source": "Store",
+    "language": "ar"
+  }
+}

@@ -177,6 +177,150 @@ pub fn sum_lines(lines: &[ShopOrderLine]) -> Decimal {
         .sum()
 }
 
+/// F8-T3: how long one call to a shop platform may take.
+pub const SHOP_TIMEOUT_SECS: u64 = 15;
+
+/// F8-T3: the most items one backfill page asks a platform for.
+pub const SHOP_PAGE_SIZE: u32 = 100;
+
+/// F8-T3: one shop platform's HTTP: every call through the SSRF-guarded
+/// client with [`SHOP_TIMEOUT_SECS`], JSON in and out. A transport failure,
+/// a 429 or a 5xx is the `commerce` capability being down (retry later);
+/// any other answer that is not 2xx is refused with its status only, never
+/// the body (it can carry customer data).
+#[derive(Clone)]
+pub struct ShopHttp {
+    platform: &'static str,
+    base_url: String,
+    client: std::sync::Arc<attome_server::ssrf_guard::GuardedClient>,
+}
+
+impl std::fmt::Debug for ShopHttp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ShopHttp")
+            .field("platform", &self.platform)
+            .field("base_url", &self.base_url)
+            .finish_non_exhaustive()
+    }
+}
+
+impl ShopHttp {
+    /// The guarded client for `base_url` (no trailing slash needed).
+    pub fn new(platform: &'static str, base_url: &str) -> Result<Self, AppError> {
+        let client = attome_server::ssrf_guard::GuardedClient::new(SHOP_TIMEOUT_SECS)
+            .map_err(AppError::internal)?;
+        Ok(Self {
+            platform,
+            base_url: base_url.trim_end_matches('/').to_owned(),
+            client: std::sync::Arc::new(client),
+        })
+    }
+
+    /// `method` on `path` (under the base URL) with `query`, `headers` and
+    /// an optional JSON `body`; the answer's JSON.
+    pub async fn call(
+        &self,
+        method: reqwest::Method,
+        path: &str,
+        query: &[(&str, String)],
+        headers: &[(&str, String)],
+        body: Option<&serde_json::Value>,
+    ) -> Result<serde_json::Value, AppError> {
+        let mut url = reqwest::Url::parse(&format!("{}{path}", self.base_url)).map_err(|_| {
+            AppError::Validation(format!("{} base URL is not a URL", self.platform))
+        })?;
+        if !query.is_empty() {
+            url.query_pairs_mut()
+                .extend_pairs(query.iter().map(|(k, v)| (*k, v.as_str())));
+        }
+        let mut request = self
+            .client
+            .request(method, url)
+            .map_err(|e| AppError::Validation(format!("{}: {e}", self.platform)))?
+            .header(reqwest::header::ACCEPT, "application/json");
+        for (name, value) in headers {
+            request = request.header(*name, value.as_str());
+        }
+        if let Some(body) = body {
+            request = request.json(body);
+        }
+        let response = request.send().await.map_err(|e| {
+            tracing::warn!(platform = self.platform, error = %e.without_url(), "shop platform unreachable");
+            AppError::CapabilityUnavailable("commerce")
+        })?;
+        let status = response.status();
+        if status.is_server_error() || status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            tracing::warn!(platform = self.platform, %status, "shop platform unavailable");
+            return Err(AppError::CapabilityUnavailable("commerce"));
+        }
+        if !status.is_success() {
+            return Err(AppError::Validation(format!(
+                "{} answered {status}",
+                self.platform
+            )));
+        }
+        let text = response.text().await.map_err(|e| {
+            tracing::warn!(platform = self.platform, error = %e.without_url(), "shop answer not read");
+            AppError::CapabilityUnavailable("commerce")
+        })?;
+        if text.trim().is_empty() {
+            return Ok(serde_json::Value::Null);
+        }
+        serde_json::from_str(&text).map_err(|_| {
+            AppError::Validation(format!(
+                "{} answered a body that is not JSON",
+                self.platform
+            ))
+        })
+    }
+}
+
+/// F8-T3: a money or quantity value as a platform sends it: a JSON number
+/// or a numeric string (`"6954.63998402370000"`, `"15.00"`). Pure.
+pub fn decimal_of(value: &serde_json::Value) -> Option<Decimal> {
+    use std::str::FromStr;
+    match value {
+        serde_json::Value::Number(n) => Decimal::from_str(&n.to_string())
+            .or_else(|_| Decimal::from_scientific(&n.to_string()))
+            .ok(),
+        serde_json::Value::String(s) => Decimal::from_str(s.trim().replace(',', "").as_str()).ok(),
+        _ => None,
+    }
+}
+
+/// F8-T3: an id as a platform sends it (a number or a string), as text.
+pub fn id_of(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::Number(n) => Some(n.to_string()),
+        serde_json::Value::String(s) if !s.trim().is_empty() => Some(s.trim().to_owned()),
+        _ => None,
+    }
+}
+
+/// F8-T3: the UTC offset of the Gulf time zones a Saudi shop reports its
+/// times in, in seconds; `None` for any other zone (there is no time-zone
+/// database in this crate, and a guessed offset would misdate the order).
+pub fn gulf_offset_secs(zone: &str) -> Option<i32> {
+    match zone.trim() {
+        "Asia/Riyadh" | "Asia/Kuwait" | "Asia/Qatar" | "Asia/Bahrain" | "Asia/Aden"
+        | "Asia/Baghdad" | "+03:00" => Some(3 * 3600),
+        "Asia/Dubai" | "Asia/Muscat" | "+04:00" => Some(4 * 3600),
+        "UTC" | "Etc/UTC" | "+00:00" | "Z" => Some(0),
+        _ => None,
+    }
+}
+
+/// F8-T3: a local `YYYY-MM-DD HH:MM:SS[.ffffff]` in `zone` as UTC. Pure.
+pub fn local_time_utc(raw: &str, zone: &str) -> Option<DateTime<Utc>> {
+    use chrono::{FixedOffset, NaiveDateTime, TimeZone};
+    let naive = NaiveDateTime::parse_from_str(raw.trim(), "%Y-%m-%d %H:%M:%S%.f").ok()?;
+    let offset = FixedOffset::east_opt(gulf_offset_secs(zone)?)?;
+    offset
+        .from_local_datetime(&naive)
+        .single()
+        .map(|t| t.with_timezone(&Utc))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,5 +388,31 @@ mod tests {
             dec("25.25")
         );
         assert_eq!(sum_lines(&[]), Decimal::ZERO);
+    }
+
+    #[test]
+    fn reads_platform_numbers_ids_and_local_times() {
+        assert_eq!(decimal_of(&serde_json::json!(16.39)), Some(dec("16.39")));
+        assert_eq!(
+            decimal_of(&serde_json::json!("6954.63998402370000")),
+            Some(dec("6954.63998402370000"))
+        );
+        assert_eq!(
+            decimal_of(&serde_json::json!("1,159.11")),
+            Some(dec("1159.11"))
+        );
+        assert_eq!(decimal_of(&serde_json::json!(null)), None);
+        assert_eq!(
+            id_of(&serde_json::json!(1333249299)).as_deref(),
+            Some("1333249299")
+        );
+        assert_eq!(id_of(&serde_json::json!(" ab ")).as_deref(), Some("ab"));
+        assert_eq!(id_of(&serde_json::json!("")), None);
+        let t = local_time_utc("2026-08-02 18:08:47.000000", "Asia/Riyadh").unwrap();
+        assert_eq!(t.to_rfc3339(), "2026-08-02T15:08:47+00:00");
+        assert!(
+            local_time_utc("2026-08-02 18:08:47", "Europe/Paris").is_none(),
+            "no guessed offset"
+        );
     }
 }

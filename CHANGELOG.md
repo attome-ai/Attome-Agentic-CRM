@@ -22,6 +22,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Salla and Zid shop adapters (F8-T3): orders with their lines, VAT, totals, cash on delivery and the
+  customer's phone, paged by `updated_at`, through the guarded HTTP client; Salla customers and
+  products too, and Salla webhook signatures checked. Built from the platforms' published API
+  references; not yet run against a live store (`docs/shop-sync.md`).
 - The extension developer guide (M17-T5, `docs/content/extensions/`): when to write code, one page per
   kind (record hook, job, webhook handler) with Rust and TypeScript examples, the host API, limits,
   testing, publishing and the compatibility promise.

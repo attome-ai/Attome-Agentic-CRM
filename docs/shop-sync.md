@@ -40,3 +40,29 @@ written, the half-written order is deleted again and the next sync retries it.
 
 The sync matches exact phone and email only. The duplicate rules (A15) still
 scan contacts and find what an exact match misses.
+
+## Salla and Zid (F8-T3)
+
+`attome_integration::connector::adapters::salla` and `::zid` implement the shop platform trait.
+Every call goes through the SSRF-guarded client with a 15-second timeout. A platform that is
+unreachable, rate-limited (429) or failing (5xx) is reported as the `commerce` capability being
+down; any other refusal names only its status, never the body.
+
+| | Salla | Zid |
+|---|---|---|
+| API | `https://api.salla.dev/admin/v2`, the store's OAuth token as a bearer | `https://api.zid.sa/v1`, the partner token as a bearer plus the store's `X-Manager-Token` |
+| Orders | `GET /orders` (sorted by `updated_at`), then each order's amounts (`/orders/{id}?format=light`) and lines (`/orders/items`) | `GET /managers/store/orders?payload_type=default` (lines included), by `updated_at`, 100 a page |
+| Line prices | net of VAT, with the VAT rate | including VAT, with the VAT rate |
+| Line product | the SKU (Salla's order items carry no product id), or `item:<id>` | the product's id |
+| Backfill cursor | the page number | the page number; a short page is the last |
+| Times | local, with their zone; an order outside the Gulf zones is refused, not misdated | no zone; read as Saudi time (UTC+3) |
+| Webhooks | `order.created`, `order.updated`, signed (`salla` inbound preset) | the order; the signature scheme is unconfirmed, so the inbound hook uses its own secret |
+| Customers, products | listed | not built (customers arrive with orders) |
+| Writing stock or products | not built | not built |
+
+The order shapes come from the platforms' published API references (read 2026-11-06). The test
+fixtures in `crates/engine/attome-integration/tests/fixtures/shop/` are built from those
+references, not recorded from a live store: no partner access exists yet. Replace each with a
+recorded payload once there is one, and confirm the points marked as owed in each adapter's
+module notes: Zid's time zone, shipping lines and webhook signature, and the Salla product and
+delivery-address shapes.
