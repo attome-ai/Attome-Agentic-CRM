@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Release signing covers more than the gate reports (AC7-T5): the tag also signs the SBOMs and a locally
+  built binary, and the release workflow signs every published archive and package with cosign when the key
+  is configured (`docs/release-signing.md`).
 - UAE and Egypt privacy content in the privacy pack (1.3.0, AG6-T1): their transfer rules on the record of
   processing (UAE adequacy or Article 23 cases; Egypt's PDPC transfer licence) and a warning for Egyptian
   sensitive data processed without explicit consent.

@@ -62,3 +62,22 @@ other value is a warning to look by hand.
 Make a new key pair as above, commit the new `deploy/cosign.pub`, and say in
 the next release's notes that the old key is revoked and from which version
 the new one signs.
+
+## What is signed (AC7-T5)
+
+v2 ships binaries and installers, not container images (V2-D471), so nothing is signed as an image.
+
+- **At the tag** (`attome release tag`, on the maintainer's machine): the two gate reports, the SBOMs
+  the gate wrote (`sbom-rust.cdx.json`, `sbom-web.cdx.json`) and the release binary if this machine
+  built one, each with `cosign sign-blob` into `<file>.sig` and verified against `deploy/cosign.pub`.
+- **In the release workflow**: every published archive and package (`.tar.gz`, `.zip`, `.msi`,
+  `.deb`, `.rpm`) is signed the same way and its `.sig` published beside it, when the repository
+  secrets `COSIGN_KEY_PEM` (the encrypted private key) and `COSIGN_PASSWORD` are set; otherwise the
+  release is published unsigned with a warning. Putting the key in a CI secret is the owner's custody
+  decision (D-673); keeping it offline means signing the downloaded files at the tag instead.
+- **The MSI** is also signed with Authenticode when `AUTHENTICODE_PFX` is set (U1-T2); until a
+  certificate is bought, Windows shows it as from an unknown publisher.
+
+Verify a download: `cosign verify-blob --insecure-ignore-tlog=true --key cosign.pub --signature
+<file>.sig <file>`.
+

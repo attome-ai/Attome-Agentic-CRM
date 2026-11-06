@@ -138,13 +138,40 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
+      # deploy/cosign.pub, to verify each signature.
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v4
         with:
           pattern: attome-*
           merge-multiple: true
+      # AC7-T5: every published file signed with the release key (D-673) and
+      # verified against deploy/cosign.pub, offline (no transparency log).
+      # COSIGN_KEY_PEM holds the encrypted private key, COSIGN_PASSWORD its
+      # password; without them the release is published unsigned, with a warning.
+      - name: sign with cosign
+        env:
+          COSIGN_KEY_PEM: ${{ secrets.COSIGN_KEY_PEM }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          if [ -z "$COSIGN_KEY_PEM" ] || [ ! -f deploy/cosign.pub ]; then
+            echo '::warning::COSIGN_KEY_PEM or deploy/cosign.pub is missing: the release files are not cosign-signed (AC7-T5).'
+            exit 0
+          fi
+          curl -sSfL -o /usr/local/bin/cosign https://github.com/sigstore/cosign/releases/download/v2.4.1/cosign-linux-amd64
+          chmod +x /usr/local/bin/cosign
+          key="$RUNNER_TEMP/cosign.key"
+          printf '%s' "$COSIGN_KEY_PEM" > "$key"
+          for f in attome-*.tar.gz attome-*.zip attome-*.msi attome-*.deb attome-*.rpm; do
+            [ -f "$f" ] || continue
+            cosign sign-blob --yes --tlog-upload=false --key "$key" --output-signature "$f.sig" "$f"
+            cosign verify-blob --insecure-ignore-tlog=true --key deploy/cosign.pub --signature "$f.sig" "$f"
+          done
+          rm -f "$key"
       - uses: softprops/action-gh-release@v2
         with:
+          fail_on_unmatched_files: false
           files: |
+            attome-*.sig
             attome-linux-x86_64.tar.gz
             attome-linux-x86_64.tar.gz.sha256
             attome-windows-x86_64.zip

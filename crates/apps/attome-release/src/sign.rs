@@ -69,6 +69,32 @@ fn cosign(root: &Path, args: &[&str], what: &str) -> Result<(), String> {
     }
 }
 
+/// The SBOMs the gate writes beside its reports (AC7-T4).
+pub const SBOMS: [&str; 2] = ["sbom-rust.cdx.json", "sbom-web.cdx.json"];
+
+/// AC7-T5: every file the tag signs: the gate reports, the SBOMs the gate
+/// wrote into `gate_dir`, and the release binary when this machine built one
+/// (`target/release/attome`, `.exe` on Windows). The binaries published from
+/// the release workflow are signed there (`.github/workflows/release.yml`).
+/// v2 ships binaries and installers, not container images (V2-D471), so
+/// there is no image to sign.
+pub fn release_blobs(root: &Path, gate_dir: &Path, reports: &[PathBuf]) -> Vec<PathBuf> {
+    let mut blobs: Vec<PathBuf> = reports.to_vec();
+    blobs.extend(
+        SBOMS
+            .iter()
+            .map(|name| gate_dir.join(name))
+            .filter(|path| path.is_file()),
+    );
+    blobs.extend(
+        ["target/release/attome", "target/release/attome.exe"]
+            .iter()
+            .map(|rel| root.join(rel))
+            .filter(|path| path.is_file()),
+    );
+    blobs
+}
+
 /// Signs each report and verifies the signature; the first failure refuses.
 pub fn sign_reports(root: &Path, reports: &[PathBuf]) -> Result<(), String> {
     let public = root.join(PUBLIC_KEY);
@@ -126,6 +152,26 @@ pub fn sign_reports(root: &Path, reports: &[PathBuf]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn blob_list_includes_sboms_and_binaries() {
+        let root = std::env::temp_dir().join(format!("attome-sign-blobs-{}", std::process::id()));
+        let gate = root.join("target").join("release-gate");
+        std::fs::create_dir_all(&gate).unwrap();
+        std::fs::create_dir_all(root.join("target").join("release")).unwrap();
+        std::fs::write(gate.join("sbom-rust.cdx.json"), "{}").unwrap();
+        std::fs::write(root.join("target").join("release").join("attome"), "bin").unwrap();
+        let reports = vec![gate.join("gate-windows.json"), gate.join("gate-linux.json")];
+        let blobs = release_blobs(&root, &gate, &reports);
+        assert_eq!(&blobs[..2], &reports[..], "the reports first");
+        assert!(blobs.contains(&gate.join("sbom-rust.cdx.json")));
+        assert!(
+            !blobs.contains(&gate.join("sbom-web.cdx.json")),
+            "only SBOMs that exist"
+        );
+        assert!(blobs.contains(&root.join("target").join("release").join("attome")));
+        std::fs::remove_dir_all(&root).ok();
+    }
 
     /// A fresh directory under the system temp directory.
     fn scratch(name: &str) -> PathBuf {

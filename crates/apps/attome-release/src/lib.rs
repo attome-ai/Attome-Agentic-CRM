@@ -799,12 +799,14 @@ fn tag_release(version: &str) -> Result<String, (u8, String)> {
         return Err((3u8, lines.join("\n")));
     }
     // AC4-T9: each report signed with the release key and verified against
-    // deploy/cosign.pub before anything is written.
+    // deploy/cosign.pub before anything is written; AC7-T5: the SBOMs and a
+    // locally built release binary with them.
     let reports: Vec<PathBuf> = parity::RELEASE_OSES
         .iter()
         .map(|os| parity::report_path(&gate_dir(&root), os))
         .collect();
-    sign::sign_reports(&root, &reports).map_err(|error| (3u8, error))?;
+    let blobs = sign::release_blobs(&root, &gate_dir(&root), &reports);
+    sign::sign_reports(&root, &blobs).map_err(|error| (3u8, error))?;
 
     let today = test_flaky::date_from_unix(unix_seconds());
     let read = |rel: &str| {
