@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `attome drill recover` (AB3-T3): with an approved disaster approval or two named people, restores the backup
+  into a new or side-copy database, proves the configuration's secrets resolve and the server binary's digest,
+  and writes `recover-state.json` for the next step.
 - `attome drill restore` also checks the restored files against the backup's copies, opens the sealed values and
   checks the restored search index, and records the copy's database size (AB4-T5).
 - `attome upgrade rehearse` (AB8-T4): an upgrade tried on a restored copy, with the schema change, the new

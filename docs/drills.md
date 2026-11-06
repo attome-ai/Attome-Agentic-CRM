@@ -50,6 +50,21 @@ database server's credentials from the configuration) and leaves nothing behind:
 Exit 0 when every check passed, 3 when one failed. pgBackRest restores are not part of it (v2 backs
 up with `pg_dump`).
 
+## Recovering after a disaster
+
+`attome drill recover` is part 1 of rebuilding a deployment on a new host: it never starts without a
+second person, either an approved disaster approval (`--approval-id <id> --base-url <url>
+--api-key-file <file>`, the request made under **Ops → Recovery**) or, when the deployment cannot
+answer, two different people named with `--offline-two-person <name1>,<name2>`, both kept in the
+record. It loads the configuration with every secret resolved from the configured secret sources
+and key service (a failure names the placeholder, never a value), checks the SHA-256 of
+`--server-binary` against `--expected-digest`, and restores the backup (`--archive`, the newest by
+default) into the configured database, which must not exist yet, or into a new database named with
+`--side-copy <name>`, never the configured one. It writes `recover-state.json` (who approved, the
+archive, the target, the database's recovery time, the digest; no secret) into `--out` for part 2.
+v2 backs up with `pg_dump`, so the newest archive is the recovery point; there is no point-in-time
+target.
+
 ## The chaos faults
 
 Each fault of the catalogue (`attome_release::chaos::CATALOGUE`), what a correct deployment does
