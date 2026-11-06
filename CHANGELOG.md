@@ -22,6 +22,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- SLSA v1 provenance for each release, attested with the release key on every signed file, and the Rust
+  SBOM attested on the release binary (AC7-T6).
 - Release signing covers more than the gate reports (AC7-T5): the tag also signs the SBOMs and a locally
   built binary, and the release workflow signs every published archive and package with cosign when the key
   is configured (`docs/release-signing.md`).

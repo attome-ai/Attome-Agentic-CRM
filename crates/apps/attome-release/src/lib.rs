@@ -38,6 +38,8 @@ pub mod notes;
 pub mod packs;
 pub mod parity;
 pub mod perf;
+/// AC7-T6: SLSA provenance of a release, attested with the release key.
+pub mod provenance;
 /// AC4-T7: the previous release upgraded by this commit must boot.
 pub mod rehearsal;
 pub mod release;
@@ -809,6 +811,18 @@ fn tag_release(version: &str) -> Result<String, (u8, String)> {
     sign::sign_reports(&root, &blobs).map_err(|error| (3u8, error))?;
 
     let today = test_flaky::date_from_unix(unix_seconds());
+    // AC7-T6: the provenance of this release, attested on every signed file.
+    let provenance = provenance::write(
+        &root,
+        &gate_dir(&root),
+        &name,
+        head.trim(),
+        &reports,
+        &format!("{today}T00:00:00Z"),
+    )
+    .map_err(|error| (3u8, error))?;
+    provenance::attest_all(&root, &gate_dir(&root), &provenance, &blobs)
+        .map_err(|error| (3u8, error))?;
     let read = |rel: &str| {
         std::fs::read_to_string(root.join(rel)).map_err(|e| (2u8, format!("{rel}: {e}")))
     };

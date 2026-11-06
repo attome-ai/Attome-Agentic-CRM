@@ -95,7 +95,7 @@ pub fn step(root: &Path) -> Result<(), String> {
 
 /// SHA-256 without a crypto dependency in this tool: the gate shells out to
 /// the platform's own hashing command.
-mod sha2_free {
+pub(crate) mod sha2_free {
     use std::path::Path;
     use std::process::Command;
 

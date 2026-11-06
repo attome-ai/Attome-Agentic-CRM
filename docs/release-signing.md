@@ -81,3 +81,13 @@ v2 ships binaries and installers, not container images (V2-D471), so nothing is 
 Verify a download: `cosign verify-blob --insecure-ignore-tlog=true --key cosign.pub --signature
 <file>.sig <file>`.
 
+## Provenance (AC7-T6)
+
+After signing, the tag writes `target/release-gate/provenance.json`, a SLSA v1 provenance predicate:
+the builder (the machine's name and operating system), the source (tag and commit), `Cargo.lock` and
+`web/package-lock.json` by SHA-256, and the gate reports' SHA-256s. Every signed file is attested
+with it (`cosign attest-blob --type slsaprovenance1`, into `<file>.slsa.intoto.jsonl`), and a release
+binary also with the Rust SBOM (`--type cyclonedx`, into `<file>.sbom.intoto.jsonl`). Check one with
+`cosign verify-blob-attestation --insecure-ignore-tlog=true --key cosign.pub --type slsaprovenance1
+--signature <file>.slsa.intoto.jsonl <file>`.
+
