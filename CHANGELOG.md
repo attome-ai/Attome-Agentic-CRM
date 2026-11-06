@@ -22,6 +22,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The install guide (English and Arabic) says how to check a download's signature and provenance, online or
+  air-gapped (AC7-T12); the release page carries `cosign.pub`, each file's `.sig` and its SLSA attestation.
 - `attome verify file|dir` checks a release file's signature offline, and `attome upgrade apply` refuses an
   unsigned or altered new binary unless `--allow-unsigned --reason` is given, which is logged (AC7-T8).
 - SLSA v1 provenance for each release, attested with the release key on every signed file, and the Rust

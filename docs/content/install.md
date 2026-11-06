@@ -134,5 +134,42 @@ Each release also ships as an operating system package, with the same files as t
 | Debian, Ubuntu | `attome-linux-amd64.deb` (`sudo apt install ./attome-linux-amd64.deb`) | `/usr/bin/attome`, `/usr/share/attome` |
 | RHEL, Fedora | `attome-linux-x86_64.rpm` (`sudo dnf install ./attome-linux-x86_64.rpm`) | `/usr/bin/attome`, `/usr/share/attome` |
 
-Each file has a `.sha256` beside it on the release page; check it before installing.
+Each file has a `.sha256` beside it on the release page, and a signature; check it before installing
+([Checking a download](#checking-a-download)).
+
+## Checking a download
+
+Every release file is signed with Attome's release key: `<file>.sig` sits beside it on the release
+page, with `cosign.pub`, the public key. To check a file before installing it, with nothing sent
+anywhere:
+
+```sh
+attome verify file attome-linux-x86_64.tar.gz --key cosign.pub
+```
+
+Or, without `attome` yet, with [cosign](https://docs.sigstore.dev/cosign/system_config/installation/):
+
+```sh
+cosign verify-blob --insecure-ignore-tlog=true --key cosign.pub \
+  --signature attome-linux-x86_64.tar.gz.sig attome-linux-x86_64.tar.gz
+```
+
+On Windows, `attome verify file` also checks the MSI's Authenticode signature. On a machine without
+internet, copy the release files and their `.sig` files into one folder and run `attome verify dir
+<folder> --key cosign.pub`, which checks each of them. Exit code 0 means verified; 5 means a file is
+unsigned or was changed after signing: do not install it.
+
+Each signed file also has a SLSA provenance attestation, `<file>.slsa.intoto.jsonl`, saying which
+commit and tag it was built from:
+
+```sh
+cosign verify-blob-attestation --insecure-ignore-tlog=true --key cosign.pub \
+  --type slsaprovenance1 --signature attome-linux-x86_64.tar.gz.slsa.intoto.jsonl \
+  attome-linux-x86_64.tar.gz
+```
+
+`attome upgrade apply` checks the new binary the same way before it runs it. If you must install a
+file that cannot be verified (one you built yourself from the tag, say), add `--allow-unsigned
+--reason "<why you trust it>"`; the run goes on and the reason is written to `attome-overrides.log`
+beside the program, for your auditors.
 

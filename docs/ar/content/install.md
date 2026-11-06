@@ -90,3 +90,29 @@ attome service install --dir /var/lib/attome                                 # �
 
 يطبع `attome service install --dry-run` الخطوات دون تنفيذها. ويعرض `attome sovereignty report` أماكن نسخ
 البيانات وكل وجهة خارجية تذكرها الإعدادات.
+
+## التحقق من الملف المُنزَّل
+
+كل ملف في الإصدار موقَّع بمفتاح إصدارات أتوم: بجانبه في صفحة الإصدار الملف `<file>.sig`، ومعه المفتاح العام
+`cosign.pub`. للتحقق من ملف قبل تثبيته دون إرسال أي شيء إلى الإنترنت:
+
+```sh
+attome verify file attome-linux-x86_64.tar.gz --key cosign.pub
+```
+
+أو باستخدام [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) قبل تثبيت `attome`:
+
+```sh
+cosign verify-blob --insecure-ignore-tlog=true --key cosign.pub \
+  --signature attome-linux-x86_64.tar.gz.sig attome-linux-x86_64.tar.gz
+```
+
+على Windows يتحقق `attome verify file` أيضًا من توقيع Authenticode لملف MSI. وعلى جهاز بلا إنترنت، انسخ
+ملفات الإصدار وملفات `.sig` الخاصة بها إلى مجلد واحد وشغّل `attome verify dir <folder> --key cosign.pub`
+ليتحقق منها كلها. رمز الخروج 0 يعني أن التحقق نجح، و5 يعني أن الملف غير موقَّع أو تغيّر بعد التوقيع: لا تثبّته.
+
+ولكل ملف موقَّع شهادة منشأ (SLSA) في `<file>.slsa.intoto.jsonl` تذكر الإيداع والوسم اللذين بُني منهما.
+
+يتحقق `attome upgrade apply` من البرنامج الجديد بالطريقة نفسها قبل تشغيله. وإن اضطررت لتثبيت ملف لا يمكن
+التحقق منه (ملف بنيته بنفسك من الوسم مثلًا)، فأضف `--allow-unsigned --reason "<سبب ثقتك به>"`، فيستمر
+التشغيل ويُكتب السبب في `attome-overrides.log` بجانب البرنامج ليطّلع عليه المدققون.

@@ -112,7 +112,10 @@ It never pushes: push the branch and the tag yourself once you are satisfied.
 
 Pushing the tag starts `.github/workflows/release.yml`, which builds the web app and the `attome`
 binary for Linux and Windows, packs each with the web app as `attome-<os>-x86_64.(tar.gz|zip)` plus
-a `.sha256` file, and attaches them to the GitHub release of the tag. `scripts/install.sh` and
+a `.sha256` file, signs each with cosign when the key secrets are set (AC7-T5; see [release
+signing](release-signing.md)), and attaches them and their `.sig` files to the GitHub release of
+the tag. The tag step itself also signs the SBOMs and writes and attests the SLSA provenance
+(AC7-T6). Customers check a download with `attome verify` ([install guide](content/install.md#checking-a-download)). `scripts/install.sh` and
 `scripts/install.ps1` download the latest of these, or the one `--version`/`-Version` names.
 
 ## 7. After the release

@@ -161,17 +161,34 @@ jobs:
           chmod +x /usr/local/bin/cosign
           key="$RUNNER_TEMP/cosign.key"
           printf '%s' "$COSIGN_KEY_PEM" > "$key"
+          # AC7-T6: a SLSA v1 provenance predicate for this run (source tag and
+          # commit, the lockfiles by SHA-256, the builder), attested on each file.
+          cargo_lock=$(sha256sum Cargo.lock | cut -d' ' -f1)
+          npm_lock=$(sha256sum web/package-lock.json | cut -d' ' -f1)
+          cat > "$RUNNER_TEMP/provenance.json" <<JSON
+          {"buildDefinition": {"buildType": "https://attome.io/release-workflow/v1",
+            "externalParameters": {"source": {"tag": "$GITHUB_REF_NAME", "commit": "$GITHUB_SHA"}},
+            "resolvedDependencies": [
+              {"name": "Cargo.lock", "digest": {"sha256": "$cargo_lock"}},
+              {"name": "web/package-lock.json", "digest": {"sha256": "$npm_lock"}}]},
+           "runDetails": {"builder": {"id": "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"}}}
+          JSON
           for f in attome-*.tar.gz attome-*.zip attome-*.msi attome-*.deb attome-*.rpm; do
             [ -f "$f" ] || continue
             cosign sign-blob --yes --tlog-upload=false --key "$key" --output-signature "$f.sig" "$f"
             cosign verify-blob --insecure-ignore-tlog=true --key deploy/cosign.pub --signature "$f.sig" "$f"
+            cosign attest-blob --yes --tlog-upload=false --key "$key" --type slsaprovenance1 \
+              --predicate "$RUNNER_TEMP/provenance.json" --output-attestation "$f.slsa.intoto.jsonl" "$f"
           done
+          cp deploy/cosign.pub cosign.pub
           rm -f "$key"
       - uses: softprops/action-gh-release@v2
         with:
           fail_on_unmatched_files: false
           files: |
             attome-*.sig
+            attome-*.intoto.jsonl
+            cosign.pub
             attome-linux-x86_64.tar.gz
             attome-linux-x86_64.tar.gz.sha256
             attome-windows-x86_64.zip
