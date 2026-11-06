@@ -263,6 +263,8 @@ export const xrmEn = {
     saveBeforeHistory: 'Save the record to see its change history.',
     saveBeforeApprovals: 'Save the record to see its approvals.',
     saveBeforeGolden: 'Save the record to see its golden record.',
+    // D24-T11: sections the CRM pack's metadata forms show only when filled.
+    formSections: { companyDetails: 'Company details', profile: 'Profile' },
     tabs: {
       // The generated entity forms' own "Details" tab and section
       // (scripts/bundle-to-form-component.mjs, SYSTEM-CHANGES.md Topic 14).

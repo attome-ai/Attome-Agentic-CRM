@@ -1306,6 +1306,9 @@ struct CookedSection {
     fields: Vec<Uuid>,
     #[serde(default)]
     columns: Option<u8>,
+    /// D24-T11: `always` (absent) or `any_filled`.
+    #[serde(default)]
+    visible_when: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -1342,6 +1345,10 @@ pub(crate) struct FormPlanSection {
     label: String,
     /// A12-T2: the columns its fields are laid out in, 1 to 4.
     columns: u8,
+    /// D24-T11: `any_filled` when the section is shown only while one of its
+    /// fields has a value; absent when it is always shown.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    visible_when: Option<String>,
     fields: Vec<FormPlanField>,
 }
 
@@ -1499,6 +1506,7 @@ async fn form_plan(
         .map(|section| FormPlanSection {
             label: section.label.clone(),
             columns: section.columns.unwrap_or(1).clamp(1, 4),
+            visible_when: section.visible_when.clone().filter(|v| v == "any_filled"),
             // A field whose attribute has since been removed, or that the
             // caller may not read, is left out.
             fields: section

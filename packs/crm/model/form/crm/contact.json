@@ -1,0 +1,44 @@
+{
+  "app": "crm",
+  "doc": {
+    "entity": "@entity:contact",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:contact.full_name",
+              "@attribute:contact.job_title",
+              "@attribute:contact.account_ref",
+              "@attribute:contact.email",
+              "@attribute:contact.phone",
+              "@attribute:contact.preferred_language",
+              "@attribute:contact.preferred_channel"
+            ],
+            "label": "xrmForm.tabs.details"
+          },
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:contact.seniority",
+              "@attribute:contact.department",
+              "@attribute:contact.email_verification_status",
+              "@attribute:contact.mobile_phone",
+              "@attribute:contact.city",
+              "@attribute:contact.country_code",
+              "@attribute:contact.linkedin_url"
+            ],
+            "label": "xrmForm.formSections.profile",
+            "visible_when": "any_filled"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "contact",
+  "schema_version": 1
+}

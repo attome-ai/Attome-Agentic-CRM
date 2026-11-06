@@ -332,6 +332,14 @@ and opportunities its holder owns and those owned by everyone under them in the 
 its subsidiaries, put the subsidiaries' account managers in positions under the global manager's;
 nothing else widens, and being on an account's team still grants nothing by itself.
 
+## crm: forms for accounts, contacts and leads
+
+`model/form/crm/account.json`, `contact.json` and `lead.json` (D24-T11) are metadata forms for the
+three CRM entities: their main fields, then a section shown only when filled (`visible_when:
+any_filled`) with the enrichment fields from `0003`: **Company details** on the account, **Profile** on
+contacts and leads. They name only the CRM pack's own attributes. Like the other pack forms, they are
+drawn once the entity is listed in `forms.runtime_entities`.
+
 ## crm: industry codes
 
 `0013` ships the whole ISIC Rev.4 list as `isic_code` records (D24-T3): 21 sections, 88 divisions,

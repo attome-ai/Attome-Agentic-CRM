@@ -1,0 +1,43 @@
+{
+  "app": "crm",
+  "doc": {
+    "entity": "@entity:lead",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:lead.name",
+              "@attribute:lead.company_name",
+              "@attribute:lead.email",
+              "@attribute:lead.phone",
+              "@attribute:lead.lead_status",
+              "@attribute:lead.source"
+            ],
+            "label": "xrmForm.tabs.details"
+          },
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:lead.seniority",
+              "@attribute:lead.department",
+              "@attribute:lead.email_verification_status",
+              "@attribute:lead.mobile_phone",
+              "@attribute:lead.city",
+              "@attribute:lead.country_code",
+              "@attribute:lead.linkedin_url"
+            ],
+            "label": "xrmForm.formSections.profile",
+            "visible_when": "any_filled"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "lead",
+  "schema_version": 1
+}

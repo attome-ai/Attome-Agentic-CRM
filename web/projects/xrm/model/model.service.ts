@@ -27,7 +27,31 @@ export interface FormPlanSection {
   label:    string;
   /** A12-T2: the columns its fields are laid out in, 1 to 4. */
   columns?: number;
+  /** D24-T11: `any_filled`: shown only while one of its fields has a value. */
+  visible_when?: 'any_filled';
   fields:   FormPlanField[];
+}
+
+/** Whether a form value counts as filled: not null, not blank, not an empty list. Pure. */
+export function isFilled(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim() !== '';
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+
+/**
+ * D24-T11: whether a section is shown. An `any_filled` section shows while
+ * one of its fields has a value in any of `sources` (the stored record and
+ * the values being edited, so it does not vanish while someone clears it).
+ * Pure.
+ */
+export function sectionShown(
+  section: FormPlanSection,
+  ...sources: readonly (Record<string, unknown> | null | undefined)[]
+): boolean {
+  if (section.visible_when !== 'any_filled') return true;
+  return section.fields.some(f => sources.some(src => isFilled(src?.[f.attribute])));
 }
 
 /** A12-T2: one tab, holding the next `sections` of the plan's sections. */

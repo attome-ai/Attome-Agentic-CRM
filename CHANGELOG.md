@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A form section can be shown only when filled: `visible_when: any_filled` on a section of a `form`
+  object, carried in the form plan and applied by the runtime renderer (D24-T11). The CRM pack (1.15.0)
+  ships account, contact and lead forms whose enrichment fields sit in such a section.
 - In the phone app the power dialer calls through the phone's own dialer and asks for the outcome when
   the app comes back, timing the call by the time away (D21-T12); in a browser it rings through telephony
   as before.

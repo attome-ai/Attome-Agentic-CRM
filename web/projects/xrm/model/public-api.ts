@@ -1,4 +1,4 @@
-export { ModelService } from './model.service';
+export { ModelService, isFilled, sectionShown, tabSections } from './model.service';
 export type {
   FormPlan, FormPlanField, FormPlanSection, RecordView,
   Page, KindView, ObjectSummary, VersionSummary, ObjectVersion, PatchOp,

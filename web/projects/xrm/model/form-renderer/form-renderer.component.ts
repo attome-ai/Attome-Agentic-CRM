@@ -6,7 +6,7 @@ import {
 } from '@attome/xrm/core/entity';
 
 import { LiveService } from '../live.service';
-import { FormPlan, FormPlanField, ModelService, RecordView, tabSections } from '../model.service';
+import { FormPlan, FormPlanField, ModelService, RecordView, tabSections, sectionShown } from '../model.service';
 import { CHANGE_DEBOUNCE_MS, FormHookAnswer, FormHookEvent, rejectionText, withChanges } from './form-hooks';
 
 /** How a field is edited, from its attribute's field type number. */
@@ -76,12 +76,18 @@ export class FormRendererComponent {
   readonly record  = signal<RecordView | null>(null);
   /** A12-T2: the tab shown, by index. */
   readonly activeTab = signal(0);
-  /** The sections of the tab shown (all of them without tabs). */
+  readonly values  = signal<Record<string, unknown>>({});
+  /**
+   * The sections of the tab shown (all of them without tabs); D24-T11: a
+   * section shown only when filled is left out while all its fields are empty.
+   */
   readonly sections = computed(() => {
     const plan = this.plan();
-    return plan ? tabSections(plan, this.activeTab()) : [];
+    if (!plan) return [];
+    const stored = this.record()?.data;
+    const editing = this.values();
+    return tabSections(plan, this.activeTab()).filter(s => sectionShown(s, stored, editing));
   });
-  readonly values  = signal<Record<string, unknown>>({});
   readonly loading = signal(true);
   readonly saving  = signal(false);
   readonly saved   = signal(false);

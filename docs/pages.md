@@ -101,3 +101,9 @@ renderer (tabs, columns, live rules, field security, form hooks) and creates or 
 through it; `GET /api/v1/model/entities/{entity}/runtime-form` answers the form, or 404 when the
 entity keeps its own. The hand-written form stays in the code until the switch is verified; removing
 the entity from the setting brings it back.
+
+A form section can be shown only when it has something to show (D24-T11): `"visible_when":
+"any_filled"` on the section hides it while all of its fields are empty, and shows it once one has a
+value, in the stored record or the values being edited. Use it for data that arrives filled (company
+enrichment, an integration) rather than typed in; the default is `"always"`. The CRM pack's account
+form shows **Company details** this way, and its contact and lead forms **Profile**.

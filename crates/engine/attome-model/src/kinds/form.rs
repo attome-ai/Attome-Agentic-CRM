@@ -32,6 +32,11 @@
 //! list reads its entity, a component the `component` object, a record type
 //! the `record_type` object. [`default_form`] is the form an entity has when
 //! none is published.
+//!
+//! D24-T11: a section may say when it is shown: `"visible_when": "always"`
+//! (the default) or `"any_filled"`, shown only while at least one of its own
+//! fields has a value, for data that arrives filled (enrichment, an
+//! integration) rather than typed in.
 
 use attome_types::AppError;
 use serde_json::{Value, json};
@@ -64,7 +69,17 @@ const COMPONENT: KindName = KindName("component");
 const RECORD_TYPE: KindName = KindName("record_type");
 
 const TOP_KEYS: [&str; 5] = ["entity", "sections", "tabs", "form_kind", "targeting"];
-const SECTION_KEYS: [&str; 5] = ["label", "fields", "columns", "related", "components"];
+const SECTION_KEYS: [&str; 6] = [
+    "label",
+    "fields",
+    "columns",
+    "related",
+    "components",
+    "visible_when",
+];
+
+/// D24-T11: when a section is shown.
+pub const SECTION_VISIBILITY: [&str; 2] = ["always", "any_filled"];
 const TARGETING_KEYS: [&str; 3] = ["roles", "record_types", "stages"];
 
 /// Every section of a form with its JSON pointer: the top-level sections,
@@ -217,6 +232,17 @@ fn check_section(section: &Value, path: &str, issues: &mut Vec<Issue>) -> usize 
             "a section has a label",
         ));
     }
+    if !section["visible_when"].is_null()
+        && !section["visible_when"]
+            .as_str()
+            .is_some_and(|v| SECTION_VISIBILITY.contains(&v))
+    {
+        issues.push(Issue::new(
+            format!("{path}/visible_when"),
+            "invalid_value",
+            "a section is shown `always` or when `any_filled`",
+        ));
+    }
     if !section["columns"].is_null()
         && !section["columns"]
             .as_u64()
@@ -317,6 +343,7 @@ impl Kind for FormKind {
                 "label": { "type": "string", "minLength": 1 },
                 "fields": ids,
                 "columns": { "type": "integer", "minimum": 1, "maximum": MAX_COLUMNS },
+                "visible_when": { "type": "string", "enum": SECTION_VISIBILITY },
                 "related": {
                     "type": "array",
                     "items": {
@@ -637,6 +664,21 @@ impl Kind for FormKind {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_section_says_when_it_is_shown() {
+        let entity = Uuid::now_v7();
+        let attr = Uuid::now_v7();
+        let mut doc = json!({ "entity": entity.to_string(), "sections": [
+            { "label": "Company details", "fields": [attr.to_string()], "visible_when": "any_filled" } ] });
+        assert!(FormKind.validate_shape(&doc).is_ok());
+        doc["sections"][0]["visible_when"] = json!("sometimes");
+        let issues = FormKind.validate_shape(&doc).unwrap_err();
+        assert!(
+            issues.iter().any(|i| i.path == "/sections/0/visible_when"),
+            "{issues:?}"
+        );
+    }
 
     fn form(fields: &[Uuid]) -> Value {
         json!({

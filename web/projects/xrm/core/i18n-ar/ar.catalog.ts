@@ -242,6 +242,7 @@ export const xrmAr = {
     saveBeforeHistory: 'احفظ السجل لعرض سجل التغييرات.',
     saveBeforeApprovals: 'احفظ السجل لعرض موافقاته.',
     saveBeforeGolden: 'احفظ السجل لعرض سجله الذهبي.',
+    formSections: { companyDetails: 'بيانات الشركة', profile: 'الملف المهني' },
     tabs: {
       details: 'التفاصيل',
       documents: 'المستندات', communications: 'المراسلات', notes: 'الملاحظات', activities: 'الأنشطة',

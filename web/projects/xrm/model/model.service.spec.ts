@@ -4,6 +4,7 @@ import { firstValueFrom, of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ModelService } from './model.service';
+import { isFilled, sectionShown, type FormPlanSection } from './model.service';
 import { PlanStore } from './plan-store';
 import { sdkFromApi } from '../testing/sdk-from-api';
 
@@ -48,3 +49,23 @@ describe('ModelService.formPlan (Y14-T2)', () => {
     expect(api.getIfChanged).toHaveBeenCalledTimes(2);
   });
 });
+
+// D24-T11: a section shown only when filled.
+describe('account form hides empty company details section', () => {
+  const field = (attribute: string) => ({ attribute, label: attribute, field_type: 1, required: false, ai: false });
+  const details: FormPlanSection = {
+    label: 'Company details', visible_when: 'any_filled',
+    fields: [field('industry_code'), field('employee_count'), field('annual_revenue')],
+  };
+
+  it('is hidden while every field is empty and shown once one is filled', () => {
+    expect(sectionShown(details, { industry_code: null, employee_count: '', annual_revenue: [] }, {})).toBe(false);
+    expect(sectionShown(details, { employee_count: 250 }, {})).toBe(true);
+    expect(sectionShown(details, {}, { industry_code: 'C10' }), 'a value being edited keeps it').toBe(true);
+    expect(sectionShown({ ...details, visible_when: undefined }, {}, {}), 'always shown by default').toBe(true);
+    expect(isFilled(0)).toBe(true);
+    expect(isFilled(false)).toBe(true);
+    expect(isFilled('  ')).toBe(false);
+  });
+});
+

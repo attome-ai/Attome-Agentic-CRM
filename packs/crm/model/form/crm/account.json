@@ -1,0 +1,50 @@
+{
+  "app": "crm",
+  "doc": {
+    "entity": "@entity:account",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:account.name",
+              "@attribute:account.account_type",
+              "@attribute:account.industry",
+              "@attribute:account.phone",
+              "@attribute:account.website",
+              "@attribute:account.email_domain",
+              "@attribute:account.annual_revenue",
+              "@attribute:account.parent_account_ref"
+            ],
+            "label": "xrmForm.tabs.details"
+          },
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:account.legal_name_en",
+              "@attribute:account.legal_name_ar",
+              "@attribute:account.cr_number",
+              "@attribute:account.vat_number",
+              "@attribute:account.isic_code_ref",
+              "@attribute:account.employee_band",
+              "@attribute:account.revenue_band",
+              "@attribute:account.founded_year",
+              "@attribute:account.hq_address",
+              "@attribute:account.logo_url",
+              "@attribute:account.social_links",
+              "@attribute:account.technologies"
+            ],
+            "label": "xrmForm.formSections.companyDetails",
+            "visible_when": "any_filled"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "account",
+  "schema_version": 1
+}
