@@ -1223,6 +1223,16 @@ async fn do_create_attribute_one(
         )
         .await?;
     }
+    // Y2-T6: a single-value choice list is held by a database check too.
+    if provision::choice_check::wants_choice_check(&field_type, body.options.as_ref()) {
+        provision::choice_check::request_choice_check(
+            &state.base.db_migrator,
+            &entity_logicalname,
+            &logicalname,
+            provision::choice_check::CHOICE_CHECK_INLINE_ROW_LIMIT,
+        )
+        .await?;
+    }
     if attome_records::attr_crypto::wants_index(body.options.as_ref()) {
         provision::ensure_blind_index(
             &state.base.db_migrator,
@@ -1629,6 +1639,11 @@ pub(crate) async fn do_update_attribute_recorded(
         attome_field::number_range(&new_ft_str, new_options.as_ref()),
         attome_field::strict_required(new_req, new_options.as_ref()),
     );
+    // Y2-T6: a single-value choice list is held by a database check too,
+    // rebuilt whenever the field's options change.
+    let choice_check_changed = cur.options != new_options
+        && (provision::choice_check::wants_choice_check(current_ft, cur.options.as_ref())
+            || provision::choice_check::wants_choice_check(&new_ft_str, new_options.as_ref()));
     let constraints_changed = (
         attome_field::number_range(current_ft, cur.options.as_ref()),
         attome_field::strict_required(cur.required.unwrap_or(false), cur.options.as_ref()),
@@ -1897,6 +1912,17 @@ pub(crate) async fn do_update_attribute_recorded(
             },
         )
         .await?;
+    if choice_check_changed {
+        // The old check could refuse a value just added: dropped with the
+        // change, rebuilt from the committed choices below.
+        provision::field_change::set_ddl_bounds_in_tx(&mut tx).await?;
+        provision::choice_check::drop_choice_check_in_tx(
+            &mut tx,
+            &entity_logicalname,
+            &field_logicalname,
+        )
+        .await?;
+    }
     attome_db::tx::commit(tx).await?;
 
     // P1.11(h): index sync runs after commit, outside the transaction, on the
@@ -1921,6 +1947,15 @@ pub(crate) async fn do_update_attribute_recorded(
             &field_logicalname,
             new_constraints.0,
             new_constraints.1,
+        )
+        .await?;
+    }
+    if choice_check_changed {
+        provision::choice_check::request_choice_check(
+            &state.base.db_migrator,
+            &entity_logicalname,
+            &field_logicalname,
+            provision::choice_check::CHOICE_CHECK_INLINE_ROW_LIMIT,
         )
         .await?;
     }

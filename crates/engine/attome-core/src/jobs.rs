@@ -143,6 +143,16 @@ pub enum EngineJob {
         entity_logicalname: String,
         field_logicalname: String,
     },
+    /// Y2-T6: rebuilds a single-value choice field's database CHECK on a
+    /// table above the size gate: reads the values the column still holds
+    /// outside the choices, adds the check `NOT VALID`, validates it. Re-reads
+    /// the committed choices, so a stale or repeated job is harmless.
+    /// Enqueued dedup-keyed `choice-check:<entity>.<field>`
+    /// (`attome_metadata::provision::choice_check::request_choice_check`).
+    SyncChoiceCheck {
+        entity_logicalname: String,
+        field_logicalname: String,
+    },
     /// F024 (P2.2) — chunked bulk create/update/delete against a provisioned
     /// entity table. `records` is pure JSON (attome-jobs cannot depend on
     /// xrm-*'s `AttrInfo`/validation types) — `crates/server`'s job handler maps
@@ -1131,7 +1141,9 @@ impl EngineJob {
             | Self::LegalMatterCollect { .. }
             | Self::LegalMatterRelease { .. }
             | Self::DataMatchScan { .. }
-            | Self::ValidateLookupForeignKey { .. } => true,
+            | Self::ValidateLookupForeignKey { .. }
+            | Self::SyncChoiceCheck { .. }
+            | Self::SyncChoiceCheck { .. } => true,
 
             // Everything else: bounded work, latency-sensitive, or cheap.
             Self::SendEmail(_)
@@ -1283,6 +1295,7 @@ impl EngineJob {
             EngineJob::BuildAttributeIndex { .. } => "BuildAttributeIndex",
             EngineJob::BuildBusinessKeyIndex { .. } => "BuildBusinessKeyIndex",
             EngineJob::ValidateLookupForeignKey { .. } => "ValidateLookupForeignKey",
+            EngineJob::SyncChoiceCheck { .. } => "SyncChoiceCheck",
             EngineJob::BulkEntityOperation(_) => "BulkEntityOperation",
             EngineJob::ApplyStagedImport(_) => "ApplyStagedImport",
             EngineJob::RewrapSecrets { .. } => "RewrapSecrets",
@@ -1583,6 +1596,7 @@ impl EngineJob {
             | Self::BuildAttributeIndex { .. }
             | Self::BuildBusinessKeyIndex { .. }
             | Self::ValidateLookupForeignKey { .. }
+            | Self::SyncChoiceCheck { .. }
             | Self::FleetPoll => JobPriority::Low,
 
             // Normal — background work that is neither urgent nor idle
@@ -1773,6 +1787,7 @@ impl EngineJob {
             | Self::BuildAttributeIndex { .. }
             | Self::BuildBusinessKeyIndex { .. }
             | Self::ValidateLookupForeignKey { .. }
+            | Self::SyncChoiceCheck { .. }
             | Self::DataMatchScan { .. }
             | Self::BulkEntityOperation(_)
             | Self::ApplyStagedImport(_)
@@ -2053,6 +2068,10 @@ mod tests {
         assert_round_trips(EngineJob::ValidateLookupForeignKey {
             entity_logicalname: "deal".to_string(),
             field_logicalname: "account_ref".to_string(),
+        });
+        assert_round_trips(EngineJob::SyncChoiceCheck {
+            entity_logicalname: "deal".to_string(),
+            field_logicalname: "stage".to_string(),
         });
     }
 

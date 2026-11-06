@@ -24,6 +24,8 @@ mod bundle_walk;
 /// reference hook.
 pub mod business_key;
 mod category_backfill;
+/// Y2-T6 — a single-value choice field's values held by a database CHECK.
+pub mod choice_check;
 /// Y12-T3 — how a proposed structure change will run, with an estimate.
 pub mod change_plan;
 /// Solution 7 Phase 1 (D-785) — owner-layer stamping and changeset recording

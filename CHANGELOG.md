@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A single-value choice field's values are a database CHECK too (`ck_<entity>_<field>_chc`, Y2-T6), rebuilt on
+  every choice change: inline up to 10,000 rows, else by the `SyncChoiceCheck` job. Values records still
+  hold after a choice is removed stay admitted.
 - The install guide (English and Arabic) says how to check a download's signature and provenance, online or
   air-gapped (AC7-T12); the release page carries `cosign.pub`, each file's `.sig` and its SLSA attestation.
 - `attome verify file|dir` checks a release file's signature offline, and `attome upgrade apply` refuses an

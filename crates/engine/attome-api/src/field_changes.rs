@@ -967,6 +967,7 @@ pub async fn change_field_type(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
+    rebuild_choice_check(state, &row.entity, &row.field).await;
     result.nulled = nulled;
     result.archived = nulled;
     if nulled > 0 {
@@ -1099,7 +1100,16 @@ pub async fn add_choice(
         }
     }
     record(&mut tx, ctx, Op::AddChoiceValue, &row, &row.field, snapshot).await?;
+    // Y2-T6: the old check would refuse the new value; dropped with the
+    // change, rebuilt from the committed choices after it.
+    if changed {
+        fc::set_ddl_bounds_in_tx(&mut tx).await?;
+        provision::choice_check::drop_choice_check_in_tx(&mut tx, &row.entity, &row.field).await?;
+    }
     attome_db::tx::commit(tx).await?;
+    if changed {
+        rebuild_choice_check(state, &row.entity, &row.field).await;
+    }
     let caches = if label_changed {
         vec![CacheTouch::Labels]
     } else {
@@ -1190,7 +1200,10 @@ pub async fn remove_choice(
         json!({ "value": value }),
     )
     .await?;
+    fc::set_ddl_bounds_in_tx(&mut tx).await?;
+    provision::choice_check::drop_choice_check_in_tx(&mut tx, &row.entity, &row.field).await?;
     attome_db::tx::commit(tx).await?;
+    rebuild_choice_check(state, &row.entity, &row.field).await;
     if in_use > 0 {
         result.report.push(ReportItemDraft {
             kind: "choice_removed_in_use",
@@ -1216,6 +1229,27 @@ pub async fn remove_choice(
     )
     .await;
     Ok(result)
+}
+
+/// Y2-T6: rebuilds the field's database choice check from its committed
+/// choices (inline at or under the size gate, else the `SyncChoiceCheck`
+/// job). The change is already committed and the engine checks every write,
+/// so a failed rebuild is logged, not returned: the field keeps no database
+/// check until the next change or job.
+async fn rebuild_choice_check(state: &EngineState, entity: &str, field: &str) {
+    if let Err(e) = provision::choice_check::request_choice_check(
+        &state.base.db_migrator,
+        entity,
+        field,
+        provision::choice_check::CHOICE_CHECK_INLINE_ROW_LIMIT,
+    )
+    .await
+    {
+        tracing::warn!(
+            entity = %entity, field = %field, error = %e,
+            "choice check not rebuilt; the field keeps no database check until the next change"
+        );
+    }
 }
 
 // ── Batched runs (large tables) ─────────────────────────────────────────────
@@ -1499,6 +1533,7 @@ async fn continue_retype(state: &EngineState, run: &fc::RunRow) -> Result<(), Ap
     .await?;
     fc::finish_run(&mut tx, run.id, None).await?;
     attome_db::tx::commit(tx).await?;
+    rebuild_choice_check(state, &row.entity, &row.field).await;
     if row.is_sortable || row.is_filterable {
         provision::sync_attribute_index(state.base.config.as_ref(), &row.entity, &row.field, true)
             .await?;

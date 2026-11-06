@@ -691,6 +691,19 @@ async fn dispatch_platform_job(
             )
             .await?;
         }
+        // Y2-T6: a choice field's database check rebuilt above the size
+        // gate. DDL, so the migrator pool.
+        EngineJob::SyncChoiceCheck {
+            entity_logicalname,
+            field_logicalname,
+        } => {
+            attome_metadata::provision::choice_check::sync_choice_check(
+                &db_migrator.0,
+                &entity_logicalname,
+                &field_logicalname,
+            )
+            .await?;
+        }
         // P-environment-promotion §5 step 12: the bundle apply job. Same
         // identity note as `ApplySchemaChangePlan` above — entity/attribute
         // objects reach the database through attome-metadata's provisioning

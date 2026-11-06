@@ -135,6 +135,18 @@ that (202). A value that points at no record refuses the validation (409) and th
 `GET …/foreign-key` answers the key's state (`none`, `not_valid`, `valid`). An `orphan` lookup keeps
 no key: a hard-deleted target leaves its value, and the orphan scan is its check.
 
+## Choice checks
+
+A single-value choice field with its own list of choices is also a database CHECK,
+`ck_<entity>_<field>_chc` (`<field> IN (...)`), so a value that was never a choice is refused by
+the database as well as by the engine (Y2-T6). Removing a choice keeps the values records hold, so
+the check admits the current choices plus every value the column still holds; once no record holds
+a removed value, the next rebuild leaves it out. Any change to the choices (add, remove, a field
+update that changes `options`, a type conversion) drops the check in the change's own transaction
+and rebuilds it after commit: added `NOT VALID`, then validated, inline on a table of up to 10,000
+rows and by the durable `SyncChoiceCheck` job above that. Multi-valued choices, fields that name an
+option set, and a column holding more than 1,000 values outside its choices keep no check.
+
 ## Many-to-many links (multi-lookup)
 
 A many-to-many relationship's links are read with `GET /api/v1/{entity}/{id}/related/{relationship}`
