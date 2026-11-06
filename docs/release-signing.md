@@ -91,3 +91,18 @@ binary also with the Rust SBOM (`--type cyclonedx`, into `<file>.sbom.intoto.jso
 `cosign verify-blob-attestation --insecure-ignore-tlog=true --key cosign.pub --type slsaprovenance1
 --signature <file>.slsa.intoto.jsonl <file>`.
 
+## Checking a file before installing it (AC7-T8)
+
+`attome verify file <path>` checks `<path>.sig` against the release public key offline, and on
+Windows an `.msi`'s Authenticode signature too; `attome verify dir <path>` checks every signed file
+in a folder copied to an air-gapped machine. It exits 0 when verified and 5 when a file is unsigned,
+altered or cannot be checked. `attome upgrade apply` runs the same check on `--new-binary` before
+anything runs it. To go ahead with a file that cannot be verified (a binary built locally from the
+tag, say), pass `--allow-unsigned --reason "<at least 20 characters>"`: the run goes on, and the
+time, the user, the file and the reason are appended to `attome-overrides.log` beside the installed
+binary.
+
+The public key is `--key <path>`, else `cosign.pub` beside the installed binary, else the
+repository's `deploy/cosign.pub`. It will be built into `attome` once the release key pair exists;
+until then a build never carries a placeholder key.
+

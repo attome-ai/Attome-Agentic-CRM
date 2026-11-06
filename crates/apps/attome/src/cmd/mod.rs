@@ -67,3 +67,5 @@ pub mod verify_audit_chain;
 pub mod worker;
 /// T4-T3: `attome workspace list|create|switch|preview|publish|refresh|rollback`.
 pub mod workspace;
+/// AC7-T8: offline verification of a release file before install or upgrade.
+pub mod verify;

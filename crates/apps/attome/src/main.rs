@@ -122,6 +122,8 @@ Usage:
                                 maintenance (--maintenance <windows.json>)
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
+  attome verify file|dir <path> [--key <cosign.pub>] [--allow-unsigned --reason <text>]
+                                Verify a release file's signature offline
   attome changeset-replay       Replay changesets against a database
   attome release --check [--web] [--web-vitals] [--slo-evidence] [--perf] [--customer-tests <dir>]
                 [--override <step>=<reason> --by <name>]
@@ -327,6 +329,10 @@ fn main() -> ExitCode {
             attome::cmd::status::run(&rest)
         }
         ["changeset-replay", ..] => attome::cmd::changeset_replay::run(),
+        ["verify", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::verify::run(&rest)
+        }
         ["verify-audit-chain", ..] => {
             attome::cmd::verify_audit_chain::run();
             ExitCode::SUCCESS

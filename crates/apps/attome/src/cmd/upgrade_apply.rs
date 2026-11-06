@@ -5,7 +5,7 @@
 //!                      --ready-url <url> --base-url <url> --admin-key-file <path>
 //!                      --no-role-key-file <path> [--evidence-dir <dir>]
 //!                      [--pgbackrest-stanza <name>] [--config <path>]
-//!                      [--free-bytes <n>] --yes
+//!                      [--free-bytes <n>] [--key <cosign.pub>] [--allow-unsigned --reason <text>] --yes
 //! attome upgrade rollback --to <version> --restart <command> [--config <path>] --yes
 //! attome upgrade contract --manifest <file> --dir <dir> [--config <path>] --yes
 //! ```
@@ -332,8 +332,26 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
     let free_bytes = take_value(&mut args, "--free-bytes")?
         .map(|n| n.parse().map_err(|_| format!("--free-bytes: `{n}`")))
         .transpose()?;
+    let verify_key = take_value(&mut args, "--key")?;
+    let unsigned_reason = crate::cmd::verify::take_override(&mut args)?;
     if !args.is_empty() || !yes {
         return Err(USAGE.to_owned());
+    }
+    // AC7-T8: the new binary is the release's own, signed with the release
+    // key, before anything runs it; an override is logged with its reason.
+    let verified = crate::cmd::verify::check_file(
+        &crate::cmd::verify::System,
+        std::path::Path::new(&new_binary),
+        crate::cmd::verify::key_path(verify_key.as_deref()).as_deref(),
+    );
+    if crate::cmd::verify::decide(
+        &verified,
+        &new_binary,
+        unsigned_reason.as_deref(),
+        &crate::cmd::verify::install_dir(),
+    )? != 0
+    {
+        return Ok(ExitCode::from(REFUSED));
     }
     let bytes = std::fs::read(&manifest).map_err(|error| format!("read {manifest}: {error}"))?;
     let migrations = verify_manifest(&bytes, crate::release_keys::RELEASE_PUBLIC_KEYS)
