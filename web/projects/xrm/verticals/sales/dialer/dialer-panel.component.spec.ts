@@ -2,7 +2,8 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LangService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
-import { of } from 'rxjs';
+import { NativeService } from '@attome/base/native';
+import { Subject, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DialerPanelComponent, previewLines } from './dialer-panel.component';
@@ -74,6 +75,32 @@ describe('DialerPanelComponent (D21-T11)', () => {
     fixture.detectChanges();
     expect(dialer.outcome).toHaveBeenCalledWith('m1', expect.objectContaining({ outcome: 'connected', activity_id: 'a1' }));
     expect(el.querySelector('[data-testid="dp-member"]')?.textContent).toContain('Omar Saleh');
+  });
+
+  it('mobile shell opens tel link and asks outcome', () => {
+    // D21-T12: inside the phone app the phone's own dialer places the call.
+    const resumed = new Subject<void>();
+    const native = { isNative: () => true, openTel: vi.fn(), onResume: () => resumed.asObservable() };
+    TestBed.overrideProvider(NativeService, { useValue: native });
+    const fixture = render();
+    const el: HTMLElement = fixture.nativeElement;
+    (el.querySelector('[data-testid="dp-start"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    vi.advanceTimersByTime(3000);
+    fixture.detectChanges();
+    expect(native.openTel).toHaveBeenCalledWith('+966500000001');
+    expect(dialer.dial).not.toHaveBeenCalled();
+    expect(el.querySelector('[data-testid="dp-ask-outcome"]')).toBeNull();
+    vi.advanceTimersByTime(45_000);
+    resumed.next();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="dp-ask-outcome"]')?.textContent).toContain('salesDialer.howDidItGo');
+    (el.querySelector('[data-outcome="no_answer"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(dialer.outcome).toHaveBeenCalledWith('m1', expect.objectContaining({
+      outcome: 'no_answer', activity_id: null, duration_seconds: 45,
+    }));
+    expect(el.querySelector('[data-testid="dp-ask-outcome"]')).toBeNull();
   });
 
   it('renders right to left in Arabic', () => {

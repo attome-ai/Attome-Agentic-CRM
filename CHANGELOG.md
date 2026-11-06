@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- In the phone app the power dialer calls through the phone's own dialer and asks for the outcome when
+  the app comes back, timing the call by the time away (D21-T12); in a browser it rings through telephony
+  as before.
 - A customer test can name the customisation it guards (Y11-T13): `target` `{kind, key}` on create,
   import, export and PATCH, and `GET /api/v1/admin/customer-tests?target_kind=&target_key=` lists one
   object's tests. Migration `0402_customer_test_target.sql`.

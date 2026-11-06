@@ -36,6 +36,10 @@ interface CapacitorBridge {
         event: 'appUrlOpen',
         handler: (data: { url: string }) => void,
       ): Promise<{ remove(): Promise<void> }> | { remove(): Promise<void> };
+      addListener(
+        event: 'appStateChange',
+        handler: (state: { isActive: boolean }) => void,
+      ): Promise<{ remove(): Promise<void> }> | { remove(): Promise<void> };
     };
   };
 }
@@ -134,6 +138,31 @@ export class NativeService {
       let handle: { remove(): Promise<void> } | undefined;
       let closed = false;
       void Promise.resolve(app.addListener('appUrlOpen', data => subscriber.next({ url: data.url }))).then(h => {
+        handle = h;
+        if (closed) void h.remove();
+      });
+      return () => {
+        closed = true;
+        void handle?.remove();
+      };
+    });
+  }
+
+  /**
+   * D21-T12: each time the app comes back to the foreground (after a call
+   * in the phone's own dialer, say); in a browser, nothing.
+   */
+  onResume(): Observable<void> {
+    const app = this.isNative() ? this.bridge()?.Plugins?.App : undefined;
+    if (!app) return EMPTY;
+    return new Observable<void>(subscriber => {
+      let handle: { remove(): Promise<void> } | undefined;
+      let closed = false;
+      void Promise.resolve(
+        app.addListener('appStateChange', state => {
+          if (state.isActive) subscriber.next();
+        }),
+      ).then(h => {
         handle = h;
         if (closed) void h.remove();
       });

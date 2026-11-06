@@ -3892,6 +3892,7 @@ export const xrmEn = {
     start: 'Start dialer',
     done: 'Nobody is left to call on this list.',
     callingIn: 'Calling in',
+    howDidItGo: 'How did the call go?',
     pause: 'Pause',
     resume: 'Resume',
     callNow: 'Call now',

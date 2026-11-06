@@ -3813,6 +3813,7 @@ export const xrmAr = {
     start: 'بدء الاتصال',
     done: 'لم يبقَ أحد للاتصال به في هذه القائمة.',
     callingIn: 'الاتصال خلال',
+    howDidItGo: 'كيف كانت المكالمة؟',
     pause: 'إيقاف مؤقت',
     resume: 'متابعة',
     callNow: 'اتصل الآن',

@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked,
 } from '@angular/core';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
+import { NativeService } from '@attome/base/native';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EntityService } from '@attome/xrm/core/entity';
 import { catchError, of } from 'rxjs';
 
@@ -40,6 +42,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * script, when it names a playbook, shows its steps. Nothing dials without
  * the agent having started the list. Phone numbers stay left to right in
  * Arabic.
+ *
+ * D21-T12: in the phone app (the B17 shell) the call goes through the
+ * phone's own dialer (a `tel:` link) instead of ringing through the
+ * deployment's telephony, and when the app comes back to the foreground it
+ * asks for the call's outcome; the duration is the time away.
  */
 @Component({
   selector: 'xrm-sales-dialer-panel',
@@ -74,7 +81,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
               {{ (paused() ? 'salesDialer.resume' : 'salesDialer.pause') | translate }}</button>
             <button type="button" (click)="dialNow()">{{ 'salesDialer.callNow' | translate }}</button>
           }
-          @if (phase() === 'calling') {
+          @if (phase() === 'calling' && askOutcome()) {
+            <p class="dp-ask" role="status" data-testid="dp-ask-outcome">{{ 'salesDialer.howDidItGo' | translate }}</p>
+          } @else if (phase() === 'calling') {
             <p class="dp-muted" role="status">{{ 'salesDialer.calling' | translate }}</p>
             @if (voicemailEnabled() && call()) {
               <div class="dp-vm">
@@ -125,11 +134,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     .dp-script ol { margin: 0; padding-inline-start: var(--space-4, 16px); }
     .dp-muted { color: var(--color-text-secondary); margin: 0; }
     .dp-error { color: var(--color-danger); margin: 0; }
+    .dp-ask { font-weight: 600; margin: 0; }
   `],
 })
 export class DialerPanelComponent {
   private readonly dialer = inject(DialerService);
   private readonly entities = inject(EntityService);
+  private readonly native = inject(NativeService);
   protected readonly lang = inject(LangService);
 
   /** The call list (route parameter). */
@@ -152,12 +163,22 @@ export class DialerPanelComponent {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly preview = computed(() => previewLines(this.memberData()));
+  /** D21-T12: back from the phone's dialer, waiting for the outcome. */
+  readonly askOutcome = signal(false);
+  /** D21-T12: a call is out in the phone's dialer. */
+  private dialedOnPhone = false;
 
   private timer: ReturnType<typeof setInterval> | null = null;
   private startedAt = 0;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stopTimer());
+    // D21-T12: back from the phone's dialer: ask how the call went.
+    this.native.onResume().pipe(takeUntilDestroyed()).subscribe(() => {
+      if (!this.dialedOnPhone || this.phase() !== 'calling') return;
+      this.dialedOnPhone = false;
+      this.askOutcome.set(true);
+    });
     effect(() => {
       const id = this.id();
       untracked(() => this.loadList(id));
@@ -172,6 +193,8 @@ export class DialerPanelComponent {
   next(): void {
     this.stopTimer();
     this.call.set(null);
+    this.askOutcome.set(false);
+    this.dialedOnPhone = false;
     this.voicemailDropped.set(false);
     this.skipReason.set('');
     this.error.set(null);
@@ -271,6 +294,12 @@ export class DialerPanelComponent {
     this.phase.set('calling');
     if (!m.phone) return;
     this.startedAt = Date.now();
+    if (this.native.isNative()) {
+      // D21-T12: the phone places the call; no telephony call is started.
+      this.dialedOnPhone = true;
+      this.native.openTel(m.phone);
+      return;
+    }
     this.dialer.dial(this.id(), { to: m.phone, entity_name: m.entity_name, record_id: m.record_id }).subscribe({
       next: handle => this.call.set(handle),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
