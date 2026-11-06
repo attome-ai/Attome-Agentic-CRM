@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 /** The parts of the native bridge's plugins this service uses. */
@@ -7,6 +7,13 @@ interface SecurityPlugins {
   BiometricAuth?: { authenticate(options: Record<string, unknown>): Promise<void> };
   PrivacyScreen?: { enable(): Promise<void>; disable(): Promise<void> };
   Preferences?: { clear(): Promise<void> };
+  App?: {
+    addListener(
+      event: 'appStateChange',
+      handler: (state: { isActive: boolean }) => void,
+    ): Promise<{ remove(): Promise<void> }> | { remove(): Promise<void> };
+    getInfo?(): Promise<{ version?: string }>;
+  };
 }
 
 /** Where the device id is kept. */
@@ -39,6 +46,63 @@ export function needsPrivacy(attributes: readonly { is_sensitive?: boolean }[]):
 export class DeviceSecurityService {
   private readonly http = inject(HttpClient);
   private backgroundAt: number | null = null;
+  private lockMs = DEFAULT_LOCK_MS;
+  private listening = false;
+
+  /** Whether the app's content is covered until the person unlocks. */
+  readonly locked = signal(false);
+
+  /**
+   * Starts following the shell's pause and resume (the `App` plugin's
+   * `appStateChange`) with `lockMs` as the lock timeout (an MDM's
+   * `lock_timeout_minutes`, or the default). Once per app run; nothing in a
+   * browser. While locked, every resume asks to unlock again, however short
+   * the time away.
+   */
+  start(lockMs = DEFAULT_LOCK_MS): void {
+    this.lockMs = lockMs > 0 ? lockMs : DEFAULT_LOCK_MS;
+    const app = this.plugins()?.App;
+    if (!app || this.listening) return;
+    this.listening = true;
+    void app.addListener('appStateChange', state => {
+      if (!state.isActive) {
+        this.onPause();
+        return;
+      }
+      if (this.locked()) {
+        void this.unlock();
+        return;
+      }
+      void this.onResume(Date.now(), this.lockMs).then(shown => this.locked.set(!shown));
+    });
+  }
+
+  /** The shell's own version, for registration; `unknown` without one. */
+  async appVersion(): Promise<string> {
+    try {
+      return (await this.plugins()?.App?.getInfo?.())?.version || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
+  /**
+   * Asks for the fingerprint, face or device PIN again after a refused
+   * unlock; the wipe check follows a good one.
+   */
+  async unlock(): Promise<void> {
+    const biometric = this.plugins()?.BiometricAuth;
+    if (biometric) {
+      try {
+        await biometric.authenticate({ reason: 'Unlock Attome', allowDeviceCredential: true });
+      } catch {
+        this.locked.set(true);
+        return;
+      }
+    }
+    this.locked.set(false);
+    await this.checkWipe();
+  }
 
   /** The bridge's plugins, inside the shell. */
   protected plugins(): SecurityPlugins | undefined {

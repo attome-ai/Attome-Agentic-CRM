@@ -8,6 +8,11 @@ export const hostEn = {
     reload: 'Reload',
     later:  'Later',
   },
+  // B17-T5: the phone app is locked until the person unlocks it.
+  deviceLock: {
+    title:  'Attome is locked.',
+    unlock: 'Unlock',
+  },
   authModal: {
     googleError: 'Google sign-in failed.',
     dialogAriaLabel: 'Sign in to Attome',

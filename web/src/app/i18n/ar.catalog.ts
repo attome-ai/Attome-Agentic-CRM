@@ -7,6 +7,10 @@ export const hostAr = {
     reload: 'إعادة التحميل',
     later:  'لاحقًا',
   },
+  deviceLock: {
+    title:  'أتوم مقفل.',
+    unlock: 'فتح القفل',
+  },
   authModal: {
     googleError: 'فشل تسجيل الدخول باستخدام جوجل.',
     dialogAriaLabel: 'تسجيل الدخول إلى أتوم',

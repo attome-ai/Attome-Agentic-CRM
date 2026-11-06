@@ -7,6 +7,8 @@
 - [Builder](content/builder.md): entities and fields, model objects, rules and flows, packs.
 - [Developer](content/developer.md): the API, and building from source.
 - [Extension](content/extension.md): packs, agents, integrations, web forms, branding.
+- [The phone app, for administrators](mobile-app.md): connecting phones, devices and remote wipe,
+  managed phones, branded apps.
 - [Extension developer guide](content/extensions/README.md): code that runs in the server: record hooks,
   jobs and webhook handlers in Rust, with testing, publishing and the compatibility promise.
 - [Partners](content/partners/README.md): the partner programme, its tiers and the implementation methodology.

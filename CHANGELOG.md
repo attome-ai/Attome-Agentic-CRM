@@ -22,6 +22,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The phone app now runs its device security (B17-T5): it registers after sign-in, asks for the
+  fingerprint, face or PIN after the lock timeout (an MDM's `lock_timeout_minutes`, else five minutes),
+  covers the app until an unlock succeeds, and checks for a remote wipe at sign-in and on every resume.
+  Administrator guide: `docs/mobile-app.md`; release checklist in `mobile/README.md` (B17-T13).
 - Salla and Zid shop adapters (F8-T3): orders with their lines, VAT, totals, cash on delivery and the
   customer's phone, paged by `updated_at`, through the guarded HTTP client; Salla customers and
   products too, and Salla webhook signatures checked. Built from the platforms' published API

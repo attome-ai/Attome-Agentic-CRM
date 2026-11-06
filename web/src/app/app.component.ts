@@ -4,12 +4,13 @@ import { DialogHostComponent } from '@attome/base/dialog';
 import { StepUpPromptComponent } from '@attome/base/step-up';
 import { AuthModalComponent } from './components/auth-modal/auth-modal.component';
 import { UpdateReadyComponent } from './components/update-ready/update-ready.component';
+import { DeviceLockComponent } from './components/device-lock/device-lock.component';
 
 @Component({
   selector:   'app-root',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [RouterOutlet, AuthModalComponent, DialogHostComponent, StepUpPromptComponent, UpdateReadyComponent],
-  template:   `<router-outlet /><app-auth-modal /><base-dialog-host /><base-step-up-prompt /><app-update-ready />`,
+  imports:    [RouterOutlet, AuthModalComponent, DialogHostComponent, StepUpPromptComponent, UpdateReadyComponent, DeviceLockComponent],
+  template:   `<router-outlet /><app-auth-modal /><base-dialog-host /><base-step-up-prompt /><app-update-ready /><app-device-lock />`,
 })
 export class AppComponent {}
