@@ -1,0 +1,838 @@
+{
+  "author": "packs",
+  "checksum": "sha256:3462f452356256b61750129dd995a1ea965490c12aa15b0f8a26978fa99dc22b",
+  "closed_at": "2026-11-06T00:00:00Z",
+  "description": "PDPL content (AG5-T2): Saudi PDPL's legal bases beside the GDPR ones, the law an activity follows, the legitimate-interest assessment, how a transfer abroad is allowed (adequacy, standard contractual clauses, binding common rules, a certificate of accreditation, the Transfer Regulation's exempt cases, a derogation) and when its risk was assessed, with business rules that refuse a PDPL activity breaking those conditions.",
+  "format": "attome-changeset/v1",
+  "id": "019a5a40-0000-7000-8000-00000000a502",
+  "layer": "product",
+  "name": "privacy-pdpl",
+  "opened_at": "2026-11-06T00:00:00Z",
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "privacy",
+  "seq": 2,
+  "title": "Pack: privacy, PDPL content",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lawful Basis",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lawful_basis",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "consent",
+              "contract",
+              "legal_obligation",
+              "vital_interest",
+              "public_task",
+              "legitimate_interest",
+              "data_subject_interest",
+              "public_security_judicial"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "processing_activity",
+        "field": "lawful_basis"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Law",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "jurisdiction",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "pdpl",
+              "gdpr",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "processing_activity",
+        "field": "jurisdiction"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Legitimate Interest Assessed",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "legitimate_interest_assessed",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "processing_activity",
+        "field": "legitimate_interest_assessed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Transfer Mechanism",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "transfer_mechanism",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "adequacy",
+              "standard_contractual_clauses",
+              "binding_common_rules",
+              "accreditation_certificate",
+              "central_operations",
+              "service_to_subject",
+              "scientific_research",
+              "derogation"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "processing_activity",
+        "field": "transfer_mechanism"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Transfer Risk Assessed On",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "transfer_risk_assessed_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "processing_activity",
+        "field": "transfer_risk_assessed_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": [
+              {
+                "field": "jurisdiction",
+                "op": "eq",
+                "value": "pdpl"
+              },
+              {
+                "field": "lawful_basis",
+                "op": "eq",
+                "value": "legitimate_interest"
+              },
+              {
+                "field": "special_categories",
+                "op": "eq",
+                "value": true
+              }
+            ]
+          },
+          "description": "Under the PDPL, legitimate interest cannot be the basis for processing sensitive data.",
+          "display_name": "PDPL: no legitimate interest for sensitive data",
+          "display_order": 0,
+          "entity_logicalname": "processing_activity",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "pdpl_no_legitimate_interest_for_sensitive_data",
+          "policies": [
+            {
+              "field": "lawful_basis",
+              "message": "Under the PDPL, sensitive data cannot rest on legitimate interest.",
+              "type": "error"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "processing_activity",
+        "rule": "pdpl_no_legitimate_interest_for_sensitive_data"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": [
+              {
+                "field": "jurisdiction",
+                "op": "eq",
+                "value": "pdpl"
+              },
+              {
+                "field": "lawful_basis",
+                "op": "eq",
+                "value": "legitimate_interest"
+              },
+              {
+                "field": "legitimate_interest_assessed",
+                "op": "ne",
+                "value": true
+              }
+            ]
+          },
+          "description": "Under the PDPL Implementing Regulation, a controller assesses a legitimate interest (a balancing test) before relying on it.",
+          "display_name": "PDPL: legitimate interest is assessed first",
+          "display_order": 0,
+          "entity_logicalname": "processing_activity",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "pdpl_legitimate_interest_assessed",
+          "policies": [
+            {
+              "field": "legitimate_interest_assessed",
+              "message": "Assess the legitimate interest before relying on it.",
+              "type": "error"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "processing_activity",
+        "rule": "pdpl_legitimate_interest_assessed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": [
+              {
+                "field": "jurisdiction",
+                "op": "eq",
+                "value": "pdpl"
+              },
+              {
+                "field": "transferred_abroad",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "transfer_mechanism",
+                "op": "is_empty"
+              }
+            ]
+          },
+          "description": "A transfer outside the Kingdom rests on adequacy, a safeguard (standard contractual clauses, binding common rules, a certificate of accreditation), an exempt case or a derogation.",
+          "display_name": "PDPL: a transfer abroad names how it is allowed",
+          "display_order": 0,
+          "entity_logicalname": "processing_activity",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "pdpl_transfer_has_a_mechanism",
+          "policies": [
+            {
+              "field": "transfer_mechanism",
+              "message": "Name how this transfer abroad is allowed.",
+              "type": "error"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "processing_activity",
+        "rule": "pdpl_transfer_has_a_mechanism"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": [
+              {
+                "field": "jurisdiction",
+                "op": "eq",
+                "value": "pdpl"
+              },
+              {
+                "field": "special_categories",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "transfer_mechanism",
+                "op": "in",
+                "value": [
+                  "service_to_subject",
+                  "scientific_research"
+                ]
+              }
+            ]
+          },
+          "description": "The Transfer Regulation's exempt cases for a service to the data subject and for scientific research exclude sensitive data.",
+          "display_name": "PDPL: no sensitive data in a service or research transfer",
+          "display_order": 0,
+          "entity_logicalname": "processing_activity",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "pdpl_exempt_transfer_no_sensitive_data",
+          "policies": [
+            {
+              "field": "transfer_mechanism",
+              "message": "Sensitive data cannot be transferred under this exempt case.",
+              "type": "error"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "processing_activity",
+        "rule": "pdpl_exempt_transfer_no_sensitive_data"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": [
+              {
+                "field": "jurisdiction",
+                "op": "eq",
+                "value": "pdpl"
+              },
+              {
+                "field": "transferred_abroad",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "transfer_mechanism",
+                "op": "in",
+                "value": [
+                  "standard_contractual_clauses",
+                  "binding_common_rules",
+                  "accreditation_certificate",
+                  "central_operations",
+                  "service_to_subject",
+                  "scientific_research",
+                  "derogation"
+                ]
+              },
+              {
+                "field": "transfer_risk_assessed_on",
+                "op": "is_empty"
+              }
+            ]
+          },
+          "description": "A transfer resting on a safeguard, an exempt case or a derogation needs a risk assessment before it starts.",
+          "display_name": "PDPL: a safeguarded transfer is risk-assessed",
+          "display_order": 0,
+          "entity_logicalname": "processing_activity",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "pdpl_transfer_risk_assessed",
+          "policies": [
+            {
+              "field": "transfer_risk_assessed_on",
+              "message": "Record when the transfer risk assessment was done.",
+              "type": "error"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "processing_activity",
+        "rule": "pdpl_transfer_risk_assessed"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القانون"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.jurisdiction",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تم تقييم المصلحة المشروعة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.legitimate_interest_assessed",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آلية النقل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ تقييم مخاطر النقل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_risk_assessed_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Data subject's actual interest"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.lawful_basis.data_subject_interest",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مصلحة فعلية لصاحب البيانات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.lawful_basis.data_subject_interest",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Public entity: security or judicial"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.lawful_basis.public_security_judicial",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جهة عامة: لأغراض أمنية أو قضائية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.lawful_basis.public_security_judicial",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "PDPL (Saudi Arabia)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.jurisdiction.pdpl",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نظام حماية البيانات الشخصية (السعودية)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.jurisdiction.pdpl",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "GDPR"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.jurisdiction.gdpr",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اللائحة الأوروبية العامة لحماية البيانات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.jurisdiction.gdpr",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Other"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.jurisdiction.other",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أخرى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.jurisdiction.other",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Adequate country"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.adequacy",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "دولة ذات مستوى حماية ملائم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.adequacy",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Standard contractual clauses"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.standard_contractual_clauses",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البنود التعاقدية القياسية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.standard_contractual_clauses",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Binding common rules"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.binding_common_rules",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القواعد المشتركة الملزمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.binding_common_rules",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Certificate of accreditation"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.accreditation_certificate",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "شهادة اعتماد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.accreditation_certificate",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Central operations of a group"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.central_operations",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العمليات المركزية للمجموعة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.central_operations",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Service to the data subject"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.service_to_subject",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خدمة لصاحب البيانات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.service_to_subject",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Scientific research"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.scientific_research",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البحث العلمي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.scientific_research",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "Derogation"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "locale": "en",
+        "object_key": "processing_activity.transfer_mechanism.derogation",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "استثناء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "locale": "ar",
+        "object_key": "processing_activity.transfer_mechanism.derogation",
+        "object_kind": "choice_option"
+      }
+    }
+  ]
+}

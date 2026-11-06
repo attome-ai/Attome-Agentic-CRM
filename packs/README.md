@@ -143,6 +143,26 @@ is on the deal.
 Privacy programme (R5): a record of processing activities, impact assessments (DPIA) and personal
 data breaches with when they were found and the deadline to notify the regulator.
 
+`0002` (AG5-T2) adds Saudi PDPL content to the record of processing. A processing activity names the
+law it follows (`jurisdiction`: PDPL, GDPR or other). Lawful bases gain PDPL's cases: the data subject's
+actual interest when they cannot be contacted, and a public entity's security or judicial need. Also new:
+whether a legitimate interest was assessed, how a transfer abroad is allowed (an adequate country,
+standard contractual clauses, binding common rules, a certificate of accreditation, the Transfer
+Regulation's exempt cases for a group's central operations, a service to the data subject or
+scientific research, or a derogation), and when its risk was assessed. For a PDPL activity, five
+business rules refuse a record that:
+
+- rests sensitive data on legitimate interest;
+- relies on legitimate interest without assessing it;
+- transfers data abroad without naming how;
+- sends sensitive data under the service or research exemption;
+- uses a safeguard, an exempt case or a derogation without a risk assessment date.
+
+The texts are the PDPL (Royal Decree M/19, amended by M/148 in 2023), its Implementing Regulation
+and the Regulation on Personal Data Transfer outside the Kingdom (2024). SDAIA has not published an
+adequacy list, so `adequacy` is the controller's own call until it does. Request deadlines (30 days)
+and breach notification (72 hours) are already the platform's when `core.country` is `SA`.
+
 ## internal-audit
 
 Internal audit (R13): engagements, workpapers with evidence files, findings with rating, owner and

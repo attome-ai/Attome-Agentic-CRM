@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- PDPL content in the privacy pack (1.2.0, AG5-T2): PDPL legal bases, the law an activity follows, the
+  legitimate-interest assessment, transfer mechanisms and their risk assessment, with business rules that
+  refuse a PDPL processing activity breaking those conditions.
 - `extension.hook.draft` (AD9-T1): the building agent writes a record hook extension with its unit
   tests from a description, as files for `attome dev`, asking only for the grants the code uses.
 - A form section can be shown only when filled: `visible_when: any_filled` on a section of a `form`
