@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `attome drill restore` (AB4-T4): restores the newest backup into a throwaway database, boots the given server
+  binary against it with no jobs, email or shared cache, checks readiness, the audit chain and five entity reads,
+  measures RPO and RTO, drops the copy and writes signed `Restore` evidence.
 - An Upgrades page under `/xrm/ops/upgrades` (AB8-T8): the upgrade history, each upgrade's checks, verification
   evidence, rehearsal result when one was recorded, rollback status, and what changes for the modules switched on,
   in English or Arabic. `attome upgrade apply` now keeps the release manifest's impact items in the upgrade's

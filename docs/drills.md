@@ -12,7 +12,7 @@ and runs the drills:
 
 | Drill | Command |
 |---|---|
-| Restore | `attome drill restore` writes signed restore evidence, and is not in this build yet (roadmap AB4-T4). `attome backup drill` restores the newest backup into a throwaway database and records an unsigned result in the backup folder's `drills.jsonl` (see [backup](backup.md)) |
+| Restore | `attome drill restore --server-binary <path> --expected-digest <sha256> --api-key-file <file> --key <file> --out <dir> [--archive latest\|<name>] [--port 7999]` (see below). `attome backup drill` is the lighter monthly check: it restores the newest backup into a throwaway database and records an unsigned result in the backup folder's `drills.jsonl` (see [backup](backup.md)) |
 | Failover | `attome drill failover --scenario <leader\|router\|redis> --confirm <scenario> --key <file> --out <dir> ...` |
 | Chaos | `attome drill chaos run --fault <name> ...` for one fault, `attome drill chaos suite --key <file> --out <dir> ...` for every fault in turn, one report each |
 | Readiness | `attome drill readiness` (the preflight checks, the signing key is readable, room for a restore) |
@@ -20,6 +20,29 @@ and runs the drills:
 A chaos run refuses a production deployment unless it is an approved game day
 (`ops.chaos.production_game_days`, a second person's approval of `POST /api/v1/ops/chaos/requests`);
 the suite never runs against production.
+
+## The restore drill
+
+`attome drill restore` runs on the deployment's own machine (it needs the backup folder and the
+database server's credentials from the configuration) and leaves nothing behind:
+
+1. It restores the backup (`--archive`, the newest by default) into a throwaway database
+   `attome_drill_<time>` on the same PostgreSQL server. The time this takes is the database's
+   recovery time.
+2. The recovery point is how far the copy's newest audit row is behind the live deployment's.
+3. The SHA-256 of `--server-binary` must be `--expected-digest` (the release's published digest).
+4. It starts that binary against the copy on `--port` with a throwaway configuration made from the
+   deployment's own file: the copy's database, the cache in process memory (the live Redis is never
+   touched), no job worker or scheduler, no email and no backup, so the copy sends nothing. The time
+   to `/health/ready` (up to 300 s) is the application's recovery time.
+5. It runs `verify-audit-chain` against the copy and, with the key in `--api-key-file` (a read-only
+   key of the live deployment, which the copy holds too), reads a first page of five entities.
+6. It stops the server, drops the database and deletes the configuration (`scratch_destroyed`), and
+   writes `restore-drill-evidence-<date>.json`, signed with `--key`, into `--out`. The evidence
+   holds checks, counts and times, never record contents.
+
+Exit 0 when every check passed, 3 when one failed. pgBackRest restores are not part of it (v2 backs
+up with `pg_dump`).
 
 ## The chaos faults
 

@@ -77,7 +77,8 @@ const USAGE: &str = "usage:
   attome drill failover --scenario <leader|router|redis> --confirm <scenario> --key <file> ...
   attome drill chaos run --fault <name> [--duration <s>] [--fake-endpoints] ...
   attome drill chaos suite --key <file> --out <dir> [--allow-net-admin] [run flags] ...
-  attome drill <restore|upgrade-check> ...";
+  attome drill restore --server-binary <path> --expected-digest <sha256> --api-key-file <path> --key <file> --out <dir> [--archive latest|<name>] [--port 7999] [--config <path>]
+  attome drill upgrade-check ...";
 
 /// One parsed `attome drill` command.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -170,6 +171,9 @@ pub fn run(args: &[String]) -> ExitCode {
         Command::StandbyPromote { cluster } => standby_promote(&cluster),
         Command::Scenario { name, args } if name == "failover" => failover(&args),
         Command::Scenario { name, args } if name == "chaos" => super::chaos::run_cli(&args),
+        Command::Scenario { name, args } if name == "restore" => {
+            super::drill_restore::run_cli(&args)
+        }
         Command::Scenario { name, .. } => {
             eprintln!("attome drill: the `{name}` scenario is not in this build");
             EXIT_USAGE
