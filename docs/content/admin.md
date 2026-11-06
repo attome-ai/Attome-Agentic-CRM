@@ -91,6 +91,15 @@ every key.
   signed release manifest and reports the version path, the dependencies, free disk against twice
   the largest table, the last proven restore and the deprecated features in use. It reads the
   database directly and writes nothing; any fail exits 5.
+- **Rehearsing an upgrade**: `attome upgrade rehearse --manifest <file> --old-binary <path>
+  --new-binary <path> --admin-key-file <path> --key <drill signing key> --out <dir>` restores the
+  newest backup into a throwaway database, runs the new migrations on it (the column changes become
+  the report's schema changes), boots the new binary on port 7998 (five entity reads and every
+  customer test) and the old binary on port 7997 against the new schema without migrating, as an old
+  node runs during a rolling upgrade, then drops the copy. It writes `rehearsal-<version>.json` and
+  signed Upgrade evidence (with `--base-url` it also stores the evidence on the deployment). Pass the
+  report to `attome upgrade apply --rehearsal <file>` and the Upgrades page (`/xrm/ops/upgrades`)
+  shows it with the upgrade.
 
 ## Email
 
