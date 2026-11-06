@@ -31,6 +31,12 @@ export const OPS_ROUTES: Routes = [
     path: 'maintenance',
     loadComponent: () => import('./incidents/maintenance.component').then(m => m.MaintenanceComponent),
   },
+  // AB8-T8: the upgrade history, each upgrade's checks, rehearsal and
+  // what changes for this deployment.
+  {
+    path: 'upgrades',
+    loadComponent: () => import('./upgrades/upgrades.component').then(m => m.UpgradesComponent),
+  },
   {
     path: 'drills/:id',
     loadComponent: () => import('./drills/drill-detail.component').then(m => m.DrillDetailComponent),

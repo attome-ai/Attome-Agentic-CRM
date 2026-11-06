@@ -354,8 +354,9 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
         return Ok(ExitCode::from(REFUSED));
     }
     let bytes = std::fs::read(&manifest).map_err(|error| format!("read {manifest}: {error}"))?;
-    let migrations = verify_manifest(&bytes, crate::release_keys::RELEASE_PUBLIC_KEYS)
-        .map_err(|error| format!("{manifest}: {error}"))?
+    let release = verify_manifest(&bytes, crate::release_keys::RELEASE_PUBLIC_KEYS)
+        .map_err(|error| format!("{manifest}: {error}"))?;
+    let migrations = release
         .migration_count
         .ok_or("the manifest names no migration_count, so the upgrade could not be verified")?;
     let report = upgrade_check::build_report(&CheckArgs {
@@ -375,6 +376,10 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
         .to_string();
     let mut record = serde_json::to_value(&report).map_err(|error| error.to_string())?;
     record["previous_binary"] = json!(previous);
+    // AB8-T8: what the release changes per module, in both languages, kept
+    // with the upgrade so the upgrade page can show it without the manifest
+    // file (the page filters it to the modules switched on).
+    record["impact"] = json!(release.impact);
     let name = restore_point_name(
         &report.to_version,
         &chrono::Utc::now().format("%Y%m%d%H%M%S").to_string(),

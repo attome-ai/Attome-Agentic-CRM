@@ -22,6 +22,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- An Upgrades page under `/xrm/ops/upgrades` (AB8-T8): the upgrade history, each upgrade's checks, verification
+  evidence, rehearsal result when one was recorded, rollback status, and what changes for the modules switched on,
+  in English or Arabic. `attome upgrade apply` now keeps the release manifest's impact items in the upgrade's
+  `check_report` (`impact`) so the page needs no manifest file.
 - A single-value choice field's values are a database CHECK too (`ck_<entity>_<field>_chc`, Y2-T6), rebuilt on
   every choice change: inline up to 10,000 rows, else by the `SyncChoiceCheck` job. Values records still
   hold after a choice is removed stay admitted.
