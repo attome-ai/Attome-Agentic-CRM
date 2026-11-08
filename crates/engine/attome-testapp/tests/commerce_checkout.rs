@@ -103,6 +103,27 @@ async fn shop(app: &TestApp) -> (Uuid, Uuid, Uuid) {
     (account, products[0], products[1])
 }
 
+// feature: F8
+#[test]
+fn the_shop_is_off_until_commerce_enabled_is_set() {
+    // F8-T12: every portal shop route answers 404 unless this is on
+    // (`attome_portal::router::commerce::shopper`), and it defaults to off.
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        assert!(
+            !attome_sales::commerce::enabled(&app.state),
+            "off by default"
+        );
+        set(&app, "commerce.enabled", json!(true)).await;
+        assert!(attome_sales::commerce::enabled(&app.state));
+        set(&app, "commerce.enabled", json!(false)).await;
+        assert!(!attome_sales::commerce::enabled(&app.state), "off again");
+    });
+}
+
 // feature: F7
 #[test]
 fn only_products_on_sale_reach_the_cart() {
