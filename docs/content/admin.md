@@ -100,6 +100,11 @@ every key.
   signed Upgrade evidence (with `--base-url` it also stores the evidence on the deployment). Pass the
   report to `attome upgrade apply --rehearsal <file>` and the Upgrades page (`/xrm/ops/upgrades`)
   shows it with the upgrade.
+  The report also lists the customer-layer conflicts (the open conflict items of the release report
+  the new binary's boot wrote on the copy: the customer's value against the release's, names only for
+  a record or a field you may not read), and `--customer-test-command <command>` runs your own test
+  command with `ATTOME_URL` pointing at the upgraded copy, keeping its exit code and last 50 lines.
+  Nothing is decided or applied on the live deployment.
 
 ## Email
 

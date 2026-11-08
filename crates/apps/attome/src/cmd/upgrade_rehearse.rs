@@ -49,7 +49,7 @@ use uuid::Uuid;
 use crate::cmd::drill_restore::{drill_config, sample_reads, sample_reads_check, wait_ready};
 use crate::cmd::output::take_value;
 
-const USAGE: &str = "usage: attome upgrade rehearse --manifest <file> --old-binary <path> --new-binary <path> --admin-key-file <path> --key <signing key> --out <dir> [--archive latest|<name>] [--base-url <live url>] [--config <path>]";
+const USAGE: &str = "usage: attome upgrade rehearse --manifest <file> --old-binary <path> --new-binary <path> --admin-key-file <path> --key <signing key> --out <dir> [--archive latest|<name>] [--base-url <live url>] [--config <path>] [--customer-test-command <command>]";
 
 /// The new binary's port during the rehearsal.
 pub const NEW_PORT: u16 = 7998;
@@ -68,6 +68,8 @@ pub struct RehearseArgs {
     pub archive: String,
     pub base_url: Option<String>,
     pub config: Option<String>,
+    /// AB8-T5: run with `ATTOME_URL` set to the upgraded copy.
+    pub customer_test_command: Option<String>,
 }
 
 /// Parses the arguments after `upgrade rehearse`. Pure.
@@ -86,6 +88,7 @@ pub fn parse_args(args: &[String]) -> Result<RehearseArgs, String> {
     let archive = take_value(&mut args, "--archive")?.unwrap_or_else(|| "latest".to_owned());
     let base_url = take_value(&mut args, "--base-url")?;
     let config = take_value(&mut args, "--config")?;
+    let customer_test_command = take_value(&mut args, "--customer-test-command")?;
     if !args.is_empty() {
         return Err(format!("unexpected arguments: {}", args.join(" ")));
     }
@@ -102,6 +105,7 @@ pub fn parse_args(args: &[String]) -> Result<RehearseArgs, String> {
         archive,
         base_url: base_url.map(|u| u.trim_end_matches('/').to_owned()),
         config,
+        customer_test_command,
     })
 }
 
@@ -260,6 +264,151 @@ async fn run_customer_tests(base: &str, key: &str) -> Result<CustomerTests, Stri
     Ok(customer_tests_from(&body))
 }
 
+/// How many lines of a customer test command's output the report keeps.
+pub const TAIL_LINES: usize = 50;
+/// How many conflicts the report lists.
+const MAX_CONFLICTS: usize = 100;
+/// The longest value of a conflict the report shows.
+const VALUE_CHARS: usize = 200;
+
+/// What a customer's test command did.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct CommandRun {
+    pub exit_code: Option<i32>,
+    /// The last [`TAIL_LINES`] lines of its output.
+    pub tail: Vec<String>,
+}
+
+/// The last `n` lines of `text`. Pure.
+pub fn last_lines(text: &str, n: usize) -> Vec<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    lines[lines.len().saturating_sub(n)..]
+        .iter()
+        .map(|l| (*l).to_owned())
+        .collect()
+}
+
+/// The program and flag that run a command line through the platform's
+/// shell. Pure.
+pub fn shell_program() -> (&'static str, &'static str) {
+    if cfg!(windows) {
+        ("cmd", "/C")
+    } else {
+        ("sh", "-c")
+    }
+}
+
+async fn run_customer_command(command: &str, base: &str) -> Result<CommandRun, String> {
+    let (program, flag) = shell_program();
+    let output = tokio::time::timeout(
+        Duration::from_secs(1800),
+        tokio::process::Command::new(program)
+            .arg(flag)
+            .arg(command)
+            .env("ATTOME_URL", base)
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await
+    .map_err(|_| "the customer test command ran over 30 minutes".to_owned())?
+    .map_err(|e| format!("run the customer test command: {e}"))?;
+    let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
+    text.push('\n');
+    text.push_str(&String::from_utf8_lossy(&output.stderr));
+    Ok(CommandRun {
+        exit_code: output.status.code(),
+        tail: last_lines(&text, TAIL_LINES),
+    })
+}
+
+fn clip(v: &Value) -> Value {
+    match v {
+        Value::String(s) if s.chars().count() > VALUE_CHARS => {
+            Value::String(s.chars().take(VALUE_CHARS).collect::<String>() + "...")
+        }
+        other => other.clone(),
+    }
+}
+
+/// The conflicts of a release report's items (`GET
+/// /api/v1/admin/metadata/release-reports/{id}/items?kind=conflict`): each
+/// item the customer changed, with the customer's value and the release's.
+/// A record conflict's values are customer data and a hidden one may not be
+/// read, so neither is listed (names only). Pure.
+pub fn conflicts_from_items(body: &Value) -> Vec<Value> {
+    body["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|item| item["kind"].as_str() == Some("conflict"))
+        .take(MAX_CONFLICTS)
+        .map(|item| {
+            let record = !item["record_id"].is_null();
+            let hidden = item["values_hidden"].as_bool().unwrap_or(false);
+            let entity = item["entity_logicalname"].as_str().unwrap_or("");
+            let name = match item["field_logicalname"].as_str() {
+                Some(field) => format!("{entity}.{field}"),
+                None => entity.to_owned(),
+            };
+            let mut out = json!({
+                "item": name,
+                "object_kind": item["object_kind"],
+                "status": item["status"],
+                "record": record,
+            });
+            if !record && !hidden {
+                out["customer_value"] = clip(&item["values"]["theirs"]);
+                out["release_value"] = clip(&item["values"]["ours"]);
+            }
+            out
+        })
+        .collect()
+}
+
+/// The newest release report's open conflicts, read from the upgraded copy's
+/// own API (the new binary's boot applied the release's platform changesets
+/// and wrote the report). Only reads; nothing is decided.
+async fn read_conflicts(base: &str, key: &str) -> Result<Vec<Value>, String> {
+    let client = attome_outbound::http::client(
+        attome_outbound::http::Purpose::public("upgrade_rehearse_conflicts")
+            .with_private_urls([base]),
+        |builder| builder.timeout(Duration::from_secs(60)),
+    )
+    .map_err(|e| e.to_string())?;
+    let auth = format!("ApiKey {key}");
+    let list = client
+        .get(format!(
+            "{base}/api/v1/admin/metadata/release-reports?page=1&page_size=1"
+        ))
+        .header("authorization", &auth)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let status = list.status().as_u16();
+    if status != 200 {
+        return Err(format!("the release reports answered {status}"));
+    }
+    let list: Value = list.json().await.map_err(|e| e.to_string())?;
+    let Some(report) = list["items"][0]["id"].as_str() else {
+        // No report: the release changed nothing the customer had touched.
+        return Ok(Vec::new());
+    };
+    let items = client
+        .get(format!(
+            "{base}/api/v1/admin/metadata/release-reports/{report}/items?kind=conflict&status=open&page=1&page_size={MAX_CONFLICTS}"
+        ))
+        .header("authorization", &auth)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let status = items.status().as_u16();
+    if status != 200 {
+        return Err(format!("the report's items answered {status}"));
+    }
+    let body: Value = items.json().await.map_err(|e| e.to_string())?;
+    Ok(conflicts_from_items(&body))
+}
+
 /// A server booted for the rehearsal: killed when dropped.
 async fn boot(binary: &Path, config: &Path) -> Result<tokio::process::Child, String> {
     tokio::process::Command::new(binary)
@@ -285,6 +434,8 @@ pub struct Rehearsal {
     pub schema_changes: Vec<String>,
     pub conflicts: Vec<Value>,
     pub customer_tests: Option<CustomerTests>,
+    /// AB8-T5: the customer's own test command, when one was given.
+    pub customer_command: Option<CommandRun>,
     pub old_binary: Option<Value>,
     pub failing_reads: Vec<String>,
     /// Seconds per step: restore, migrate, new_boot, old_boot.
@@ -424,6 +575,32 @@ async fn rehearse(
                     }
                     Err(e) => checks.push(check("customer_tests", false, e)),
                 }
+                // AB8-T5: what the customer changed that the release also changed,
+                // and the customer's own test command, both on the upgraded copy.
+                match read_conflicts(&new_base, api_key).await {
+                    Ok(conflicts) => {
+                        checks.push(check(
+                            "customer_layer_conflicts",
+                            true,
+                            format!("{} open conflicts listed", conflicts.len()),
+                        ));
+                        report.conflicts = conflicts;
+                    }
+                    Err(e) => checks.push(check("customer_layer_conflicts", false, e)),
+                }
+                if let Some(command) = &args.customer_test_command {
+                    match run_customer_command(command, &new_base).await {
+                        Ok(run) => {
+                            checks.push(check(
+                                "customer_test_command",
+                                run.exit_code == Some(0),
+                                format!("exit code {:?}", run.exit_code),
+                            ));
+                            report.customer_command = Some(run);
+                        }
+                        Err(e) => checks.push(check("customer_test_command", false, e)),
+                    }
+                }
             } else {
                 checks.push(skipped(
                     "new_binary_reads",
@@ -431,6 +608,10 @@ async fn rehearse(
                 ));
                 checks.push(skipped(
                     "customer_tests",
+                    "the new binary never answered ready",
+                ));
+                checks.push(skipped(
+                    "customer_layer_conflicts",
                     "the new binary never answered ready",
                 ));
             }
@@ -441,6 +622,10 @@ async fn rehearse(
             checks.push(check("new_binary_ready", false, e));
             checks.push(skipped("new_binary_reads", "the new binary did not start"));
             checks.push(skipped("customer_tests", "the new binary did not start"));
+            checks.push(skipped(
+                "customer_layer_conflicts",
+                "the new binary did not start",
+            ));
         }
     }
 
@@ -670,6 +855,46 @@ mod tests {
             data_type: ty.into(),
             is_nullable: null.into(),
         }
+    }
+
+    #[test]
+    fn conflicts_are_collected_from_plan_items() {
+        // V2-D1936: the items of the release report the new binary's boot wrote.
+        let body = json!({ "items": [
+            { "kind": "conflict", "entity_logicalname": "account", "field_logicalname": "stage",
+              "object_kind": "attribute", "status": "open", "record_id": null,
+              "values": { "theirs": "Won", "ours": "Closed won" }, "values_hidden": false },
+            { "kind": "conflict", "entity_logicalname": "account", "field_logicalname": null,
+              "object_kind": "rule", "status": "open", "record_id": null,
+              "values": { "theirs": "x".repeat(300), "ours": "y" }, "values_hidden": false },
+            { "kind": "conflict", "entity_logicalname": "contact", "field_logicalname": "email",
+              "object_kind": null, "status": "open", "record_id": "0194f5a0-0000-7000-8000-000000000001",
+              "values": { "theirs": "a@b.c", "ours": "d@e.f" }, "values_hidden": false },
+            { "kind": "conflict", "entity_logicalname": "deal", "field_logicalname": "amount",
+              "object_kind": "attribute", "status": "open", "record_id": null,
+              "values": null, "values_hidden": true },
+            { "kind": "field_deleted", "entity_logicalname": "deal", "field_logicalname": "fax" }
+        ] });
+        let conflicts = conflicts_from_items(&body);
+        assert_eq!(conflicts.len(), 4, "only conflict items");
+        assert_eq!(conflicts[0]["item"], "account.stage");
+        assert_eq!(conflicts[0]["customer_value"], "Won");
+        assert_eq!(conflicts[0]["release_value"], "Closed won");
+        assert_eq!(conflicts[1]["item"], "account");
+        assert!(conflicts[1]["customer_value"].as_str().unwrap().len() <= VALUE_CHARS + 3);
+        assert_eq!(conflicts[2]["record"], true);
+        assert!(
+            conflicts[2].get("customer_value").is_none(),
+            "record values are customer data"
+        );
+        assert!(
+            conflicts[3].get("customer_value").is_none(),
+            "hidden values stay hidden"
+        );
+        assert_eq!(
+            last_lines("a\nb\nc\nd", 2),
+            vec!["c".to_owned(), "d".to_owned()]
+        );
     }
 
     #[test]

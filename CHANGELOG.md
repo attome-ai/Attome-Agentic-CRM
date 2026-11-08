@@ -35,6 +35,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - `attome upgrade rehearse` (AB8-T4): an upgrade tried on a restored copy, with the schema change, the new
   binary's reads and customer tests, the old binary's reads against the new schema, step timings, an impact
   report and signed Upgrade evidence; `attome upgrade apply --rehearsal <file>` keeps the report with the upgrade.
+- `attome upgrade rehearse` lists customer-layer conflicts and runs your test command (AB8-T5): the open conflicts of the release report the new binary wrote on the copy, and `--customer-test-command <command>` with `ATTOME_URL` set to the upgraded copy, before anyone applies.
 - `attome drill restore` (AB4-T4): restores the newest backup into a throwaway database, boots the given server
   binary against it with no jobs, email or shared cache, checks readiness, the audit chain and five entity reads,
   measures RPO and RTO, drops the copy and writes signed `Restore` evidence.
