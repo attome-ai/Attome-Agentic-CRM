@@ -1672,6 +1672,7 @@ async fn default_form_plan(
         sections: vec![FormPlanSection {
             label,
             columns: 1,
+            visible_when: None,
             fields: rows
                 .iter()
                 .map(|row| FormPlanField {
