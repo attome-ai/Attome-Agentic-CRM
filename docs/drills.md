@@ -97,6 +97,15 @@ refused rather than overwritten; a record live lacks is created again with a new
 cannot create with a given id). The side copy is read with SQL, live only through the API. Fields of
 system columns are not sent, and a sealed attribute is not copied back.
 
+## The drill agent
+
+On a drill host, `attome drill agent --deployment-url <url> --api-key-file <file> --config
+<drill-agent.json> [--once]` asks which drills are due, runs `drill readiness`, runs each due restore
+drill and uploads the signed evidence, so no one runs the drills by hand. A failed readiness is
+uploaded as evidence too (`readiness` failed, `overall_ok` false), so the failure is visible. See
+`deploy/drill-host/README.md` for the configuration file and installing it as a Windows service or a
+systemd unit.
+
 ## The chaos faults
 
 Each fault of the catalogue (`attome_release::chaos::CATALOGUE`), what a correct deployment does

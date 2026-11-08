@@ -64,6 +64,7 @@ pub const PUBLIC_FILE: &str = "drill-signing.pub";
 pub const SCENARIOS: &[&str] = &[
     "restore",
     "recover",
+    "agent",
     "failover",
     "standby-promote",
     "chaos",
@@ -82,6 +83,7 @@ const USAGE: &str = "usage:
   attome drill recover --server-binary <path> --expected-digest <sha256> --out <dir> (--approval-id <uuid> --base-url <url> --api-key-file <path> | --offline-two-person <a>,<b>) [--archive <name>] [--side-copy <database>]
   attome drill recover compare|copy-back --side-copy <database> --entity <name> --live-url <url> --api-key-file <path> (--out <csv> | --ids <file>)
   attome drill recover --continue <out dir> --key <file> [--api-key-file <path>] [--port 7999] [--config <path>]
+  attome drill agent --deployment-url <url> --api-key-file <file> --config <drill-agent.json> [--once]
   attome drill upgrade-check ...";
 
 /// One parsed `attome drill` command.
@@ -178,6 +180,7 @@ pub fn run(args: &[String]) -> ExitCode {
         Command::Scenario { name, args } if name == "recover" => {
             super::drill_recover::run_cli(&args)
         }
+        Command::Scenario { name, args } if name == "agent" => super::drill_agent::run(&args),
         Command::Scenario { name, args } if name == "restore" => {
             super::drill_restore::run_cli(&args)
         }
