@@ -28,6 +28,8 @@ pub mod dev_component;
 pub mod drill;
 /// AB3-T3: `attome drill recover`, part 1 of a disaster recovery.
 pub mod drill_recover;
+/// AB3-T9: side-copy compare and copy-back through the API.
+pub mod drill_copy_back;
 /// AB3-T5: the recovery credential guard of `--immutable-only`.
 pub mod drill_immutable;
 /// AB3-T4: `attome drill recover --continue`, part 2 of a disaster recovery.

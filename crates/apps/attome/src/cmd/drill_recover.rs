@@ -265,6 +265,13 @@ async fn database_exists(admin: &mut sqlx::PgConnection, name: &str) -> Result<b
 #[tokio::main]
 pub async fn run_cli(args: &[String]) -> u8 {
     use sqlx::Connection;
+    // AB3-T9: what a side copy is for.
+    if matches!(
+        args.first().map(String::as_str),
+        Some("compare" | "copy-back")
+    ) {
+        return crate::cmd::drill_copy_back::run(args);
+    }
     // AB3-T4: part 2 continues from the state part 1 wrote.
     if args.iter().any(|a| a == "--continue") {
         return crate::cmd::drill_recover_finish::run(args).await;

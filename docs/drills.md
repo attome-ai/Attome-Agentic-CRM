@@ -88,6 +88,15 @@ Erasure survives recovery: part 2 leaves the restore marker in the backup folder
 server, so the boot applies the erasure ledger again before it serves (a ledger it cannot read stops
 the boot), and the `erasure_replayed` check passes only when the server is ready and the marker is gone.
 
+After a side-copy recovery (`--side-copy <database>`), `attome drill recover compare --side-copy <database>
+--entity <name> --live-url <url> --api-key-file <file> --out <csv>` lists the records that differ
+(`changed`: another `row_version`; `missing_in_live`; `new_in_live`, which is never touched), and
+`copy-back --ids <file>` (one id per line, or the compare CSV) restores exactly those ids to live through
+the entity bulk API. A changed record is an `update` carrying live's row version, so a newer edit is
+refused rather than overwritten; a record live lacks is created again with a new id (the bulk route
+cannot create with a given id). The side copy is read with SQL, live only through the API. Fields of
+system columns are not sent, and a sealed attribute is not copied back.
+
 ## The chaos faults
 
 Each fault of the catalogue (`attome_release::chaos::CATALOGUE`), what a correct deployment does

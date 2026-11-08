@@ -80,6 +80,7 @@ const USAGE: &str = "usage:
   attome drill chaos suite --key <file> --out <dir> [--allow-net-admin] [run flags] ...
   attome drill restore --server-binary <path> --expected-digest <sha256> --api-key-file <path> --key <file> --out <dir> [--archive latest|<name>] [--port 7999] [--config <path>]
   attome drill recover --server-binary <path> --expected-digest <sha256> --out <dir> (--approval-id <uuid> --base-url <url> --api-key-file <path> | --offline-two-person <a>,<b>) [--archive <name>] [--side-copy <database>]
+  attome drill recover compare|copy-back --side-copy <database> --entity <name> --live-url <url> --api-key-file <path> (--out <csv> | --ids <file>)
   attome drill recover --continue <out dir> --key <file> [--api-key-file <path>] [--port 7999] [--config <path>]
   attome drill upgrade-check ...";
 
