@@ -3437,6 +3437,8 @@ const DEDUP_KEY_CALENDAR_FEED_FETCH: &str = "calendar-feed-fetch";
 const DEDUP_KEY_IMPORT_SCHEDULE_TICK: &str = "import-schedule-tick";
 /// P13-T1: the warehouse export (a registered job type).
 const DEDUP_KEY_WAREHOUSE_EXPORT: &str = "warehouse-export";
+/// F8-T5: the 15-minute shop sync tick.
+const DEDUP_KEY_SHOP_SYNC_TICK: &str = "shop-sync-tick";
 /// E13-T10: the daily search-console pull (a registered job type).
 const DEDUP_KEY_CONTENT_SEARCH_CONSOLE: &str = "content-search-console";
 /// R11-T1: evidence collectors (a registered job type).
@@ -4050,6 +4052,16 @@ pub const BASE_REINDEX: attome_jobs::JobType =
 /// P13-T1: the warehouse export, every five minutes when entities are named.
 pub const WAREHOUSE_EXPORT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_integration::warehouse_export::JOB, 1);
+
+/// F8-T5: one shop connection's sync (payload
+/// `attome_sales::shop_run::ShopSyncJob`), queued by a shop webhook's inbound
+/// hook and by the tick below.
+pub const SHOP_SYNC: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_sales::shop_run::JOB, 1);
+
+/// F8-T5: every 15 minutes, a sync queued for each active shop connection.
+pub const SHOP_SYNC_TICK: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_sales::shop_run::TICK_JOB, 1);
 
 /// A23-T7: recurring imports that are due, every minute.
 pub const IMPORT_SCHEDULE_TICK: attome_jobs::JobType =
@@ -6180,6 +6192,32 @@ pub fn register_job_types() {
         ) {
             tracing::error!(%error, "job type registration failed");
         }
+        // F8-T5: one shop connection's sync, and the tick that queues them.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SHOP_SYNC,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_sales::shop_run::ShopSyncJob = job.payload()?;
+                attome_sales::shop_run::run(&state, payload)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SHOP_SYNC_TICK,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let queued = attome_sales::shop_run::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if queued > 0 {
+                    tracing::info!(queued, "shop syncs queued");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         // Z12-T7: the yearly Hijri holiday review reminder.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CALENDAR_YEARLY_REVIEW,
@@ -7224,6 +7262,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == WAREHOUSE_EXPORT.name => {
             DEDUP_KEY_WAREHOUSE_EXPORT
         }
+        EngineJob::Registered(job) if job.name == SHOP_SYNC_TICK.name => DEDUP_KEY_SHOP_SYNC_TICK,
         EngineJob::Registered(job) if job.name == CONTENT_SEARCH_CONSOLE.name => {
             DEDUP_KEY_CONTENT_SEARCH_CONSOLE
         }
@@ -9327,6 +9366,22 @@ pub fn spawn_warehouse_export_scheduler(db: DbPool, interval: std::time::Duratio
             "warehouse export",
         ),
         Err(error) => tracing::error!(%error, "warehouse export: not scheduled"),
+    }
+}
+
+/// F8-T5: every 15 minutes, a sync queued for each active shop connection
+/// (a no-op while there are none).
+pub fn spawn_shop_sync_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(SHOP_SYNC_TICK.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_SHOP_SYNC_TICK,
+            "shop sync",
+        ),
+        Err(error) => tracing::error!(%error, "shop sync: not scheduled"),
     }
 }
 

@@ -88,6 +88,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   address, customers and products, through the guarded HTTP client; webhook signatures checked in constant
   time; a WooCommerce store URL that is not `https` is refused. Built from the platforms' published API
   references; not yet run against a live store (`docs/shop-sync.md`).
+- Shop sync runs as a job (F8-T5): `shop_sync` per connection, queued by a signed shop webhook (an inbound hook with the new handler type `shop_sync`) and by a 15-minute tick for active connections; per-kind cursors in `shop_sync_cursor` (migration 0403) that move only after a page is written; a refused record sets the connection to `error`. Not yet run (`docs/shop-sync.md`).
 - The extension developer guide (M17-T5, `docs/content/extensions/`): when to write code, one page per
   kind (record hook, job, webhook handler) with Rust and TypeScript examples, the host API, limits,
   testing, publishing and the compatibility promise.

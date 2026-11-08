@@ -90,3 +90,31 @@ GraphQL and the platform trait is REST-shaped. Shapes come from the platforms' r
 2026-11-08) and the two fixtures are built from them, not recorded: replace them with recorded
 payloads once there is a development store. A full page of Shopify orders that share one
 `updated_at` ends the run (logged) rather than loop.
+
+## The sync job and the shop webhook (F8-T5)
+
+A connection's sync runs as the registered job `shop_sync`, never on a request. It is queued by:
+
+- **A shop webhook.** Make an inbound hook (Admin, Inbound hooks) whose handler is
+  `{"type": "shop_sync", "connection": "<shop connection id>"}`, with the shop's signature as its
+  authentication: the `shopify` preset (`X-Shopify-Hmac-Sha256`), the `salla` preset
+  (`X-Salla-Signature`), or a custom `hmac` auth for WooCommerce (`X-WC-Webhook-Signature`, base64). The
+  hook checks the signature, the address rules and replay of the event id before anything is queued,
+  answers 202, and queues one sync per connection (one already waiting is not queued twice). An
+  unsigned or wrongly signed call is refused with 401 and queues nothing.
+- **The 15-minute tick**, for every connection whose `status` is `active`.
+
+A run syncs orders (`sync_orders`), customers (`sync_customers`) and products (`product_direction` =
+`shop_to_attome`), each from its stored cursor (`shop_sync_cursor`, migration 0403), as the user who
+created the connection. A page's records are written first (a record already synced is updated, never
+made twice, so a replayed webhook creates nothing new); only then does the cursor move. At most 20
+pages of a kind per run, so a large backfill continues on the next run. A refused page or record sets
+the connection's `status` to `error` (an administrator resumes it by setting it back to `active`); a
+platform that is down does not. A good run sets `last_sync_at`.
+
+The connection's credential is an integration credential (`integration_credential_ref`) holding a
+JSON object: Salla `{"access_token"}`, Zid `{"partner_token", "manager_token"}`, Shopify
+`{"shop_domain", "access_token"}`, WooCommerce `{"store_url", "consumer_key", "consumer_secret"}`.
+Creating, pausing and resuming a connection is the generic `shop_connection` entity API (`status` =
+`active` or `paused`, with `If-Match`), which audits each change.
+

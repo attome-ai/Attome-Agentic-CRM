@@ -375,6 +375,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_catalog_asset_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // P13-T1: the warehouse export, every five minutes.
     crate::jobs::spawn_warehouse_export_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    // F8-T5: shop connections synced, every 15 minutes.
+    crate::jobs::spawn_shop_sync_scheduler(db.clone(), std::time::Duration::from_secs(900));
     // A23-T7: recurring imports that are due, every minute.
     crate::jobs::spawn_import_schedule_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // Z12-T8: holidays from calendar iCal feeds, daily.

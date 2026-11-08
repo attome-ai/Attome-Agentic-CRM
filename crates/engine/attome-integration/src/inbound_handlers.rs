@@ -8,6 +8,10 @@
 //!   Without it every event creates a record.
 //! - `{"type": "flow", "definition_id": "..."}`: starts the flow's
 //!   published version with the body as context.
+//! - `{"type": "shop_sync", "connection": "<shop_connection id>"}` (F8-T5):
+//!   queues that shop connection's sync (a signed shop webhook: `salla`,
+//!   `shopify` or a custom `hmac` auth on the hook). The event's body is not
+//!   used; the sync reads the shop itself, from its cursor.
 //! - `{"type": "extension", "name": "..."}` (M17-T1): runs the published
 //!   extension's `on_webhook` export with the event; it answers the records
 //!   to write.
@@ -61,7 +65,12 @@ fn check_leaf(handler: &Value) -> Result<(), String> {
             .filter(|n| !n.is_empty() && n.len() <= 63)
             .map(|_| ())
             .ok_or_else(|| "an extension handler names the extension".into()),
-        _ => Err("a routed handler's type is record, flow or extension".into()),
+        Some("shop_sync") => handler["connection"]
+            .as_str()
+            .and_then(|s| uuid::Uuid::parse_str(s).ok())
+            .map(|_| ())
+            .ok_or_else(|| "a shop_sync handler names its connection (an id)".into()),
+        _ => Err("a routed handler's type is record, flow, extension or shop_sync".into()),
     }
 }
 
@@ -69,8 +78,10 @@ fn check_leaf(handler: &Value) -> Result<(), String> {
 pub fn check_shape(handler: &Value) -> Result<(), String> {
     match handler["type"].as_str() {
         Some("events") => {}
-        Some("record" | "flow" | "extension") => return check_leaf(handler),
-        _ => return Err("handler.type is record, flow, extension or events".into()),
+        Some("record" | "flow" | "extension" | "shop_sync") => return check_leaf(handler),
+        _ => {
+            return Err("handler.type is record, flow, extension, shop_sync or events".into());
+        }
     }
     let event_pointer = handler["event_type"].as_str().unwrap_or_default();
     if !event_pointer.starts_with('/') || event_pointer.len() > 200 {
@@ -221,6 +232,17 @@ mod tests {
         );
         let unkeyed = json!({ "type": "record", "entity": "lead", "fields": { "title": "/t" } });
         assert_eq!(upsert_key(&unkeyed, &fields).unwrap(), None);
+    }
+
+    #[test]
+    fn a_shop_sync_handler_names_its_connection() {
+        let id = "0192f7a0-0000-7000-8000-000000000009";
+        assert!(check_shape(&json!({ "type": "shop_sync", "connection": id })).is_ok());
+        assert!(check_shape(&json!({ "type": "shop_sync" })).is_err());
+        assert!(check_shape(&json!({ "type": "shop_sync", "connection": "not-an-id" })).is_err());
+        let routed = json!({ "type": "events", "event_type": "/topic",
+                             "routes": { "orders/create": { "type": "shop_sync", "connection": id } } });
+        assert!(check_shape(&routed).is_ok());
     }
 
     #[test]

@@ -60,6 +60,8 @@ pub mod scoring;
 pub mod scoring_run;
 /// F8-T7 (part): shipping options for a cart and an address.
 pub mod shipping;
+/// F8-T5: one shop connection's sync as a background job.
+pub mod shop_run;
 /// F8-T2: shop orders, customers and products written once per source id.
 pub mod shop_sync;
 pub mod split_store;

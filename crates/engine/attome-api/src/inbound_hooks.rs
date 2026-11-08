@@ -245,6 +245,27 @@ async fn check_body(
 /// A record handler's entity and attributes exist, and a flow handler's
 /// flow does (the shape is checked already).
 async fn check_leaf_targets(state: &EngineState, leaf: &Value) -> Result<(), AppError> {
+    if leaf["type"].as_str() == Some("shop_sync") {
+        // F8-T5: the connection exists.
+        let id = leaf["connection"]
+            .as_str()
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .ok_or_else(|| {
+                AppError::Validation("a shop_sync handler names its connection".into())
+            })?;
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM shop_connection WHERE id = $1 AND (is_active IS NULL OR is_active = true))",
+        )
+        .bind(id)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        return if exists {
+            Ok(())
+        } else {
+            Err(AppError::Validation(format!("no shop connection {id}")))
+        };
+    }
     if leaf["type"].as_str() == Some("extension") {
         let name = leaf["name"].as_str().unwrap_or_default();
         return match crate::extension_admin::published(&state.base.db, name).await? {
@@ -796,6 +817,37 @@ async fn run_handler(
             Ok(HandlerOutcome {
                 record_id: None,
                 instance_id: Some(instance),
+                updated: false,
+                ignored: false,
+            })
+        }
+        Some("shop_sync") => {
+            // F8-T5: the hook's signature and replay checks ran before the event
+            // was queued; the sync is a job (never on this thread), once per
+            // connection while one waits, and reads the shop from its cursor.
+            let connection = handler["connection"]
+                .as_str()
+                .and_then(|s| Uuid::parse_str(s).ok())
+                .ok_or(AppError::NotFound)?;
+            let job = attome_core::jobs::JOB_TYPES
+                .job(
+                    attome_sales::shop_run::JOB,
+                    &attome_sales::shop_run::ShopSyncJob {
+                        connection_id: connection,
+                        reason: "webhook".into(),
+                    },
+                )
+                .map_err(AppError::internal)?;
+            attome_jobs::enqueue_dedup(
+                &state.base.db,
+                attome_core::jobs::EngineJob::Registered(job),
+                &format!("shop-sync:{connection}"),
+            )
+            .await
+            .map_err(AppError::internal)?;
+            Ok(HandlerOutcome {
+                record_id: None,
+                instance_id: None,
                 updated: false,
                 ignored: false,
             })
