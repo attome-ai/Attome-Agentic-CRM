@@ -5282,6 +5282,13 @@
                   ],
                   "format": "int64"
                 },
+                "fault": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "AB9-T8: the fault a chaos drill injected (its evidence's\n`extra.fault`); absent for other kinds."
+                },
                 "finished_at": {
                   "type": "string",
                   "format": "date-time"

@@ -7941,6 +7941,141 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/ai/read-text": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Whether text can be read from images",
+        "description": "B16-T14: `available` is false when the deployment has no vision model\nfor reading text; the scan dialog then hides its \"Read text\" button.",
+        "operationId": "get_ai_read_text_availability",
+        "responses": {
+          "200": {
+            "description": "Whether reading text from an image is available here",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadTextAvailability"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Read the text of an image",
+        "description": "N21 / B16-T14: the deployment's own vision model transcribes the image's\ntext in its own language and script. Nothing is stored or logged.",
+        "operationId": "post_ai_read_text",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadTextBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The image's text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadTextResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a PNG, JPEG or WebP image, not base64, or too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 10 reads in a minute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No vision model for reading text here, or it is down",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "reads the text of the image the caller sent and answers it; stores nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/ai/suggestions/{id}/outcome": {
       "post": {
         "tags": [
@@ -13963,6 +14098,60 @@
             ],
             "format": "uuid",
             "description": "The row in `ai_suggestion_outcome` this suggestion was logged as.\nThe caller reports the human's decision against it."
+          }
+        }
+      },
+      "ReadTextAvailability": {
+        "type": "object",
+        "description": "Whether reading text is available.",
+        "required": [
+          "available"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReadTextBody": {
+        "type": "object",
+        "description": "An image to read.",
+        "required": [
+          "image",
+          "media_type"
+        ],
+        "properties": {
+          "image": {
+            "type": "string",
+            "description": "The image, base64."
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A hint, `ar` or `en`, when the person knows the language."
+          },
+          "media_type": {
+            "type": "string",
+            "description": "`image/png`, `image/jpeg` or `image/webp`."
+          }
+        }
+      },
+      "ReadTextResponse": {
+        "type": "object",
+        "description": "What the model read.",
+        "required": [
+          "text",
+          "model"
+        ],
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "The model that read it, for provenance."
+          },
+          "text": {
+            "type": "string"
           }
         }
       },

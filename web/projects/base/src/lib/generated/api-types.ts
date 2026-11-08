@@ -3780,7 +3780,8 @@ export interface paths {
         };
         /**
          * List customer tests
-         * @description List customer tests. Administrators only.
+         * @description List customer tests, or only those guarding one customisation
+         *     (`target_kind` and `target_key`, Y11-T13). Administrators only.
          */
         get: operations["list_customer_tests"];
         put?: never;
@@ -9522,6 +9523,30 @@ export interface paths {
          * @description Lists an object's versions, newest first.
          */
         get: operations["get_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}/{id}/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An object's publish impact
+         * @description AD8-T1: what publishing the object's open draft would change, in one
+         *     report, without publishing anything: the diff against the published
+         *     version, the publish checks it fails, the objects that read it, what its
+         *     customer tests watch, the gates' refusals and warnings, and whether it
+         *     changes access.
+         */
+        get: operations["model_publish_impact"];
         put?: never;
         post?: never;
         delete?: never;
@@ -15448,6 +15473,32 @@ export interface paths {
          * @description Confirms the drafted notes, with their `If-Match` row version, through the confirm notes action.
          */
         post: operations["confirm_meeting_notes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/read-text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether text can be read from images
+         * @description B16-T14: `available` is false when the deployment has no vision model
+         *     for reading text; the scan dialog then hides its "Read text" button.
+         */
+        get: operations["get_ai_read_text_availability"];
+        put?: never;
+        /**
+         * Read the text of an image
+         * @description N21 / B16-T14: the deployment's own vision model transcribes the image's
+         *     text in its own language and script. Nothing is stored or logged.
+         */
+        post: operations["post_ai_read_text"];
         delete?: never;
         options?: never;
         head?: never;
@@ -24692,6 +24743,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/model/components/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a custom component to host
+         * @description T3-T2: a published component's tag, properties and events, and the URL
+         *     and Subresource Integrity value of its module in its installed package.
+         */
+        get: operations["get_model_component"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/model/entities/{entity}/default-form": {
         parameters: {
             query?: never;
@@ -26140,6 +26212,27 @@ export interface paths {
          *     version. Audited.
          */
         patch: operations["update_ops_upgrade"];
+        trace?: never;
+    };
+    "/api/v1/packages/{id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a file of an installed package
+         * @description T3-T2: a static file an installed package carried (a custom component's
+         *     module), from its newest applied install.
+         */
+        get: operations["get_package_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/partner/applications/{id}/agreement": {
@@ -32418,6 +32511,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/bulk/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a bulk operation from JSON lines
+         * @description The same durable bulk operation as `POST /api/v1/{entity}/bulk`, with the records sent as JSON lines (`application/x-ndjson`, one `{id?, expected_row_version?, data}` per line) and the options as query parameters. Follow it with `GET /api/v1/{entity}/bulk/{id}`, and fetch the per-row results from `GET /api/v1/{entity}/bulk/{id}/results`.
+         */
+        post: operations["enqueue_lines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/bulk/{id}": {
         parameters: {
             query?: never;
@@ -32430,6 +32543,26 @@ export interface paths {
          * @description The status and item counts of a bulk operation the caller started.
          */
         get: operations["get_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/bulk/{id}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A bulk operation's per-row results
+         * @description The result file of a bulk operation the caller started: one JSON line per record in request order, `{index, ok: {record_id, attempts}}` when it applied, `{index, problem: {code, message, detail?}}` when it did not, and `{index}` while it has not run.
+         */
+        get: operations["get_results"];
         put?: never;
         post?: never;
         delete?: never;
@@ -41172,6 +41305,25 @@ export interface components {
             /** @description `operational`, `degraded`, `down` or `unknown`. */
             state: string;
         };
+        /** @description A component as a page hosts it. */
+        ComponentView: {
+            events: Record<string, never>[];
+            /** Format: uuid */
+            id: string;
+            /** @description `sha256-<base64>`, the module's Subresource Integrity value. */
+            integrity?: string | null;
+            label_ar?: string | null;
+            label_en?: string | null;
+            /** @description `<package id>/<path>`, as the manifest names it. */
+            module: string;
+            /** @description Where the module is served, when its package is installed. */
+            module_url?: string | null;
+            name: string;
+            /** @description The manifest's properties and events, as published. */
+            properties: Record<string, never>[];
+            /** @description The custom element's tag. */
+            tag: string;
+        };
         ComposeRequest: {
             /**
              * @description J1-T2: the record's own files to send with an email, by file key (at
@@ -43273,6 +43425,10 @@ export interface components {
             name: string;
             /** Format: int64 */
             row_version: number;
+            /** @description Y11-T13: that customisation's key. */
+            target_key?: string | null;
+            /** @description Y11-T13: the kind of the customisation the test guards. */
+            target_kind?: string | null;
             /** Format: date-time */
             updated_at: string;
         };
@@ -43284,6 +43440,7 @@ export interface components {
             /** @description T7-T3: run every night against the live configuration. */
             live_safe?: boolean;
             name: string;
+            target?: null | components["schemas"]["TestTarget"];
         };
         /**
          * @description The portable form of a deployment's tests: `GET /export` answers it and
@@ -43308,6 +43465,7 @@ export interface components {
             is_active?: boolean | null;
             live_safe?: boolean | null;
             name?: string | null;
+            target?: null | components["schemas"]["TestTarget"];
         };
         /** @description One recorded run. */
         CustomerTestRun: {
@@ -45014,6 +45172,11 @@ export interface components {
             created_at: string;
             /** Format: int64 */
             data_size_bytes?: number | null;
+            /**
+             * @description AB9-T8: the fault a chaos drill injected (its evidence's
+             *     `extra.fault`); absent for other kinds.
+             */
+            fault?: string | null;
             /** Format: date-time */
             finished_at: string;
             /** Format: uuid */
@@ -47152,6 +47315,12 @@ export interface components {
             /** Format: uuid */
             id: string;
             is_required: boolean;
+            /**
+             * @description B17-T5: the attribute holds sensitive data (`is_sensitive`), so a
+             *     phone hides the record from screenshots and the app switcher while
+             *     it is shown. Additive.
+             */
+            is_sensitive: boolean;
             name: string;
             options: unknown;
             /** Format: int32 */
@@ -47464,6 +47633,11 @@ export interface components {
             columns: number;
             fields: components["schemas"]["FormPlanField"][];
             label: string;
+            /**
+             * @description D24-T11: `any_filled` when the section is shown only while one of its
+             *     fields has a value; absent when it is always shown.
+             */
+            visible_when?: string | null;
         };
         /** @description A12-T2: one tab of a form. */
         FormPlanTab: {
@@ -55895,6 +56069,10 @@ export interface components {
                 name: string;
                 /** Format: int64 */
                 row_version: number;
+                /** @description Y11-T13: that customisation's key. */
+                target_key?: string | null;
+                /** @description Y11-T13: the kind of the customisation the test guards. */
+                target_kind?: string | null;
                 /** Format: date-time */
                 updated_at: string;
             }[];
@@ -56754,6 +56932,11 @@ export interface components {
                 created_at: string;
                 /** Format: int64 */
                 data_size_bytes?: number | null;
+                /**
+                 * @description AB9-T8: the fault a chaos drill injected (its evidence's
+                 *     `extra.fault`); absent for other kinds.
+                 */
+                fault?: string | null;
                 /** Format: date-time */
                 finished_at: string;
                 /** Format: uuid */
@@ -65584,6 +65767,54 @@ export interface components {
             /** @description The object both sides changed, e.g. `{"entity": "deal", "field": "stage"}`. */
             target: Record<string, never>;
         };
+        /**
+         * @description AD8-T1: what publishing an object's open draft would change, in one
+         *     report: the changes against what is published, the publish checks it
+         *     fails now, the objects that read it, the entities and flows its customer
+         *     tests watch, the publish gates' refusals and warnings, and whether it
+         *     changes access.
+         */
+        PublishImpactReport: {
+            /** @description The entities and flows a customer test touching them would see change. */
+            affected_entities: string[];
+            affected_flows: string[];
+            /** @description Why a publish would be refused now (an eval suite, the quality gate). */
+            blocked: string[];
+            /**
+             * @description RFC 6902 operations from the published document to the draft's (on a
+             *     first publish, one `replace` of the whole document).
+             */
+            changes: Record<string, never>[];
+            /**
+             * @description Objects that read this one (the reference graph), at most
+             *     [`IMPACT_DEPENDENTS`].
+             */
+            dependents: Record<string, never>[];
+            /**
+             * Format: int64
+             * @description How many objects read it.
+             */
+            dependents_total: number;
+            /** @description Whether a draft is open; without one a publish answers 404. */
+            has_draft: boolean;
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description The publish checks the draft fails now, `{path, code, message}`;
+             *     empty when they pass.
+             */
+            issues: Record<string, never>[];
+            kind: string;
+            /** @description The object decides access: a sharing rule or an agent. */
+            security_change: boolean;
+            /**
+             * Format: int64
+             * @description The draft's version, or the newest version when nothing is open.
+             */
+            version_no: number;
+            /** @description What a publish would warn about. */
+            warnings: string[];
+        };
         /** @description What publishing would do. */
         PublishPreview: {
             /** @description Live changes to the same objects; publish is refused while any. */
@@ -66241,6 +66472,25 @@ export interface components {
         ReadRequest: {
             /** Format: uuid */
             id: string;
+        };
+        /** @description Whether reading text is available. */
+        ReadTextAvailability: {
+            available: boolean;
+        };
+        /** @description An image to read. */
+        ReadTextBody: {
+            /** @description The image, base64. */
+            image: string;
+            /** @description A hint, `ar` or `en`, when the person knows the language. */
+            language?: string | null;
+            /** @description `image/png`, `image/jpeg` or `image/webp`. */
+            media_type: string;
+        };
+        /** @description What the model read. */
+        ReadTextResponse: {
+            /** @description The model that read it, for provenance. */
+            model: string;
+            text: string;
         };
         /** @description A preview. */
         RealignPreview: {
@@ -72981,6 +73231,16 @@ export interface components {
             error?: string | null;
             /** Format: int64 */
             fuel_used: number;
+        };
+        /**
+         * @description Y11-T13: the customisation a test guards: a model object by kind and key
+         *     (`form` / `account.main`, `extension` / `erp_sync`, `entity` /
+         *     `account`). Kept as text: the test survives the object being renamed or
+         *     removed, and then reads as guarding something that is gone.
+         */
+        TestTarget: {
+            key: string;
+            kind: string;
         };
         /** @description `POST /api/v1/admin/themes`. */
         ThemeDraftBody: {
@@ -87468,6 +87728,10 @@ export interface operations {
                  *     `DEFAULT_PAGE_SIZE`.
                  */
                 page_size?: number;
+                /** @description The customisation's kind (`form`, `extension`, `entity`, ...). */
+                target_kind?: string;
+                /** @description The customisation's key. */
+                target_key?: string;
             };
             header?: never;
             path?: never;
@@ -104569,6 +104833,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedResponse_VersionSummaryView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind or object */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    model_publish_impact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+                /** @description Object id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The impact report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishImpactReport"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -123295,6 +123611,95 @@ export interface operations {
             };
             /** @description If-Match missing or malformed, or an item that does not exist */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ai_read_text_availability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether reading text from an image is available here */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadTextAvailability"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_ai_read_text: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadTextBody"];
+            };
+        };
+        responses: {
+            /** @description The image's text */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadTextResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a PNG, JPEG or WebP image, not base64, or too large */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description More than 10 reads in a minute */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No vision model for reading text here, or it is down */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -147283,6 +147688,47 @@ export interface operations {
             };
         };
     };
+    get_model_component: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The component (model object) id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The published component and where its module is */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComponentView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published component with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     default_form_plan: {
         parameters: {
             query?: never;
@@ -150936,6 +151382,55 @@ export interface operations {
             };
             /** @description A missing If-Match, or a status the upgrade cannot move to */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_package_file: {
+        parameters: {
+            query: {
+                /** @description The file's path in the package (`gauge.js`). */
+                path: string;
+            };
+            header?: never;
+            path: {
+                /** @description The package id (reverse DNS) */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file, as the package carried it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unchanged since the ETag the caller holds */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No installed package carries this file */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -168376,6 +168871,80 @@ export interface operations {
             };
         };
     };
+    enqueue_lines: {
+        parameters: {
+            query: {
+                /** @description `create`, `update`, `upsert` or `delete`, as the JSON body's `operation`. */
+                operation: string;
+                strict?: boolean;
+                /** @description `partial` (default) or `atomic`. */
+                batch_mode?: string;
+                /** @description `false` leaves empty fields empty on create. Default true. */
+                apply_defaults?: boolean;
+                /** @description `true` runs without automation; needs `records.bulk_quiet`. */
+                quiet?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        /** @description One bulk record per line */
+        requestBody: {
+            content: {
+                "application/x-ndjson": string;
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkOperationResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No batch worker is running */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_status: {
         parameters: {
             query?: {
@@ -168426,6 +168995,58 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_results: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The bulk operation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One result per line */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-ndjson": string;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such bulk operation of the caller's */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -3298,6 +3298,20 @@
             "type": "integer",
             "format": "int64"
           },
+          "target_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Y11-T13: that customisation's key."
+          },
+          "target_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Y11-T13: the kind of the customisation the test guards."
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time"

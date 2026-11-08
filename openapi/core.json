@@ -9650,7 +9650,7 @@
           "admin"
         ],
         "summary": "List customer tests",
-        "description": "List customer tests. Administrators only.",
+        "description": "List customer tests, or only those guarding one customisation\n(`target_kind` and `target_key`, Y11-T13). Administrators only.",
         "operationId": "list_customer_tests",
         "parameters": [
           {
@@ -9672,6 +9672,24 @@
             "schema": {
               "type": "integer",
               "format": "int64"
+            }
+          },
+          {
+            "name": "target_kind",
+            "in": "query",
+            "description": "The customisation's kind (`form`, `extension`, `entity`, ...).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target_key",
+            "in": "query",
+            "description": "The customisation's key.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -34716,6 +34734,93 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedResponse_VersionSummaryView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind or object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/model/{kind}/{id}/impact": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "An object's publish impact",
+        "description": "AD8-T1: what publishing the object's open draft would change, in one\nreport, without publishing anything: the diff against the published\nversion, the publish checks it fails, the objects that read it, what its\ncustomer tests watch, the gates' refusals and warnings, and whether it\nchanges access.",
+        "operationId": "model_publish_impact",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Object id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The impact report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishImpactReport"
                 }
               }
             }
@@ -73612,6 +73717,74 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/model/components/{id}": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "Get a custom component to host",
+        "description": "T3-T2: a published component's tag, properties and events, and the URL\nand Subresource Integrity value of its module in its installed package.",
+        "operationId": "get_model_component",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The component (model object) id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The published component and where its module is",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComponentView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published component with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/model/entities/{entity}/default-form": {
       "get": {
         "tags": [
@@ -75437,6 +75610,78 @@
           },
           "401": {
             "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/packages/{id}/files": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "Get a file of an installed package",
+        "description": "T3-T2: a static file an installed package carried (a custom component's\nmodule), from its newest applied install.",
+        "operationId": "get_package_file",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The package id (reverse DNS)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "description": "The file's path in the package (`gauge.js`).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file, as the package carried it"
+          },
+          "304": {
+            "description": "Unchanged since the ETag the caller holds"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No installed package carries this file",
             "content": {
               "application/json": {
                 "schema": {
@@ -81722,6 +81967,157 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/{entity}/bulk/lines": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Start a bulk operation from JSON lines",
+        "description": "The same durable bulk operation as `POST /api/v1/{entity}/bulk`, with the records sent as JSON lines (`application/x-ndjson`, one `{id?, expected_row_version?, data}` per line) and the options as query parameters. Follow it with `GET /api/v1/{entity}/bulk/{id}`, and fetch the per-row results from `GET /api/v1/{entity}/bulk/{id}/results`.",
+        "operationId": "enqueue_lines",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "operation",
+            "in": "query",
+            "description": "`create`, `update`, `upsert` or `delete`, as the JSON body's `operation`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "strict",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "batch_mode",
+            "in": "query",
+            "description": "`partial` (default) or `atomic`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apply_defaults",
+            "in": "query",
+            "description": "`false` leaves empty fields empty on create. Default true.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "quiet",
+            "in": "query",
+            "description": "`true` runs without automation; needs `records.bulk_quiet`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "One bulk record per line",
+          "content": {
+            "application/x-ndjson": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkOperationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No batch worker is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "bulk_accepted"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/{entity}/bulk/{id}": {
       "get": {
         "tags": [
@@ -81814,6 +82210,93 @@
           },
           "422": {
             "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "{entity}.read",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/{entity}/bulk/{id}/results": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A bulk operation's per-row results",
+        "description": "The result file of a bulk operation the caller started: one JSON line per record in request order, `{index, ok: {record_id, attempts}}` when it applied, `{index, problem: {code, message, detail?}}` when it did not, and `{index}` while it has not run.",
+        "operationId": "get_results",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The bulk operation",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One result per line",
+            "content": {
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such bulk operation of the caller's",
             "content": {
               "application/json": {
                 "schema": {
@@ -99169,6 +99652,74 @@
           }
         }
       },
+      "ComponentView": {
+        "type": "object",
+        "description": "A component as a page hosts it.",
+        "required": [
+          "id",
+          "name",
+          "tag",
+          "module",
+          "properties",
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "integrity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`sha256-<base64>`, the module's Subresource Integrity value."
+          },
+          "label_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "module": {
+            "type": "string",
+            "description": "`<package id>/<path>`, as the manifest names it."
+          },
+          "module_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where the module is served, when its package is installed."
+          },
+          "name": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "The manifest's properties and events, as published."
+          },
+          "tag": {
+            "type": "string",
+            "description": "The custom element's tag."
+          }
+        }
+      },
       "ComposeRequest": {
         "type": "object",
         "required": [
@@ -101881,6 +102432,20 @@
             "type": "integer",
             "format": "int64"
           },
+          "target_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Y11-T13: that customisation's key."
+          },
+          "target_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Y11-T13: the kind of the customisation the test guards."
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time"
@@ -101913,6 +102478,17 @@
           },
           "name": {
             "type": "string"
+          },
+          "target": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TestTarget",
+                "description": "Y11-T13: the customisation the test guards, if it names one."
+              }
+            ]
           }
         }
       },
@@ -101993,6 +102569,17 @@
             "type": [
               "string",
               "null"
+            ]
+          },
+          "target": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TestTarget",
+                "description": "Y11-T13: an object sets the target, `null` clears it."
+              }
             ]
           }
         }
@@ -106796,7 +107383,8 @@
           "field_type",
           "options",
           "sort_order",
-          "is_required"
+          "is_required",
+          "is_sensitive"
         ],
         "properties": {
           "display_name": {
@@ -106815,6 +107403,10 @@
           },
           "is_required": {
             "type": "boolean"
+          },
+          "is_sensitive": {
+            "type": "boolean",
+            "description": "B17-T5: the attribute holds sensitive data (`is_sensitive`), so a\nphone hides the record from screenshots and the app switcher while\nit is shown. Additive."
           },
           "name": {
             "type": "string"
@@ -107227,6 +107819,13 @@
           },
           "label": {
             "type": "string"
+          },
+          "visible_when": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "D24-T11: `any_filled` when the section is shown only while one of its\nfields has a value; absent when it is always shown."
           }
         }
       },
@@ -117641,6 +118240,20 @@
                 "row_version": {
                   "type": "integer",
                   "format": "int64"
+                },
+                "target_key": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Y11-T13: that customisation's key."
+                },
+                "target_kind": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Y11-T13: the kind of the customisation the test guards."
                 },
                 "updated_at": {
                   "type": "string",
@@ -131653,6 +132266,100 @@
           }
         }
       },
+      "PublishImpactReport": {
+        "type": "object",
+        "description": "AD8-T1: what publishing an object's open draft would change, in one\nreport: the changes against what is published, the publish checks it\nfails now, the objects that read it, the entities and flows its customer\ntests watch, the publish gates' refusals and warnings, and whether it\nchanges access.",
+        "required": [
+          "kind",
+          "id",
+          "version_no",
+          "has_draft",
+          "changes",
+          "issues",
+          "dependents",
+          "dependents_total",
+          "affected_entities",
+          "affected_flows",
+          "blocked",
+          "warnings",
+          "security_change"
+        ],
+        "properties": {
+          "affected_entities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The entities and flows a customer test touching them would see change."
+          },
+          "affected_flows": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "blocked": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Why a publish would be refused now (an eval suite, the quality gate)."
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "RFC 6902 operations from the published document to the draft's (on a\nfirst publish, one `replace` of the whole document)."
+          },
+          "dependents": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Objects that read this one (the reference graph), at most\n[`IMPACT_DEPENDENTS`]."
+          },
+          "dependents_total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many objects read it."
+          },
+          "has_draft": {
+            "type": "boolean",
+            "description": "Whether a draft is open; without one a publish answers 404."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "The publish checks the draft fails now, `{path, code, message}`;\nempty when they pass."
+          },
+          "kind": {
+            "type": "string"
+          },
+          "security_change": {
+            "type": "boolean",
+            "description": "The object decides access: a sharing rule or an agent."
+          },
+          "version_no": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The draft's version, or the newest version when nothing is open."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What a publish would warn about."
+          }
+        }
+      },
       "PublishPreview": {
         "type": "object",
         "description": "What publishing would do.",
@@ -139999,6 +140706,22 @@
             "description": "`hidden` or `disabled`."
           },
           "field": {
+            "type": "string"
+          }
+        }
+      },
+      "TestTarget": {
+        "type": "object",
+        "description": "Y11-T13: the customisation a test guards: a model object by kind and key\n(`form` / `account.main`, `extension` / `erp_sync`, `entity` /\n`account`). Kept as text: the test survives the object being renamed or\nremoved, and then reads as guarding something that is gone.",
+        "required": [
+          "kind",
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "kind": {
             "type": "string"
           }
         }
