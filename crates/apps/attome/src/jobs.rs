@@ -4085,11 +4085,6 @@ pub const STATUS_PAGE_NOTIFY: attome_jobs::JobType =
 pub const CONTRACT_COMPARE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_contract::compare::JOB, 1);
 
-/// A1-T5: one base's index rebuilt from its entities' tables (payload
-/// `attome_records::base_index::ReindexJob`). Only enqueued.
-pub const BASE_REINDEX: attome_jobs::JobType =
-    attome_jobs::JobType::new(attome_records::base_index::JOB, 1);
-
 /// D23-T10: one account's org chart drafts, written as the requester
 /// (payload `attome_sales::orgchart::drafts::DraftJob`). Only enqueued.
 pub const SALES_ORGCHART_DRAFT: attome_jobs::JobType =

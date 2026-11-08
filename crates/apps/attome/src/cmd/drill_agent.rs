@@ -311,7 +311,7 @@ fn resolve(config_path: &Path, value: &str) -> String {
         .to_string()
 }
 
-fn client(base: &str) -> Result<reqwest::Client, String> {
+fn client(base: &str) -> Result<attome_outbound::http::Outbound, String> {
     attome_outbound::http::client(
         attome_outbound::http::Purpose::public("drill_agent").with_private_urls([base]),
         |builder| builder.timeout(Duration::from_secs(30)),
@@ -469,9 +469,8 @@ pub async fn run(args: &[String]) -> u8 {
         config: config.clone(),
         config_path: args.config.clone(),
     };
-    let mut last_exit = EXIT_OK;
     loop {
-        match poll_once(&args, &api_key, &config, &key, &runner, sleep).await {
+        let exit = match poll_once(&args, &api_key, &config, &key, &runner, sleep).await {
             Ok(outcome) => {
                 println!(
                     "{} due, {} uploaded{}",
@@ -486,21 +485,21 @@ pub async fn run(args: &[String]) -> u8 {
                 for failure in &outcome.failures {
                     eprintln!("attome drill agent: {failure}");
                 }
-                last_exit = if outcome.readiness_failed {
+                if outcome.readiness_failed {
                     EXIT_NOT_READY
                 } else if outcome.failures.is_empty() {
                     EXIT_OK
                 } else {
                     EXIT_FAILED
-                };
+                }
             }
             Err(e) => {
                 eprintln!("attome drill agent: {e}");
-                last_exit = EXIT_FAILED;
+                EXIT_FAILED
             }
-        }
+        };
         if args.once {
-            return last_exit;
+            return exit;
         }
         tokio::time::sleep(POLL_INTERVAL).await;
     }

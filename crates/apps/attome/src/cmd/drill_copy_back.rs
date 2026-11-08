@@ -262,7 +262,7 @@ fn read_key(path: &Path) -> Result<String, String> {
     Ok(key)
 }
 
-fn client(base: &str) -> Result<reqwest::Client, String> {
+fn client(base: &str) -> Result<attome_outbound::http::Outbound, String> {
     attome_outbound::http::client(
         attome_outbound::http::Purpose::public("drill_copy_back").with_private_urls([base]),
         |builder| builder.timeout(Duration::from_secs(60)),
@@ -272,7 +272,7 @@ fn client(base: &str) -> Result<reqwest::Client, String> {
 
 /// `(id, row_version)` of every record live holds, paged through the API.
 async fn live_versions(
-    client: &reqwest::Client,
+    client: &attome_outbound::http::Outbound,
     base: &str,
     key: &str,
     entity: &str,
