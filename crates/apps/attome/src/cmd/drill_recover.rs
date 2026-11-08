@@ -36,7 +36,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use chrono::Utc;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -54,7 +54,7 @@ const EXIT_REFUSED: u8 = 5;
 const EXIT_FAILED: u8 = 3;
 
 /// Who allowed the recovery.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "mode", rename_all = "snake_case")]
 pub enum Approval {
     /// An AB3-T7 approval request, checked on the deployment.
@@ -171,7 +171,7 @@ pub fn parse_args(args: &[String]) -> Result<RecoverArgs, String> {
 }
 
 /// What part 1 leaves for part 2 (AB3-T4). Holds no secret.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecoverState {
     pub recovery_id: Uuid,
     pub started_at: chrono::DateTime<Utc>,
@@ -244,6 +244,10 @@ async fn database_exists(admin: &mut sqlx::PgConnection, name: &str) -> Result<b
 #[tokio::main]
 pub async fn run_cli(args: &[String]) -> u8 {
     use sqlx::Connection;
+    // AB3-T4: part 2 continues from the state part 1 wrote.
+    if args.iter().any(|a| a == "--continue") {
+        return crate::cmd::drill_recover_finish::run(args).await;
+    }
     let args = match parse_args(args) {
         Ok(args) => args,
         Err(message) => {

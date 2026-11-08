@@ -177,7 +177,7 @@ pub fn evidence_file_name(date: chrono::NaiveDate) -> String {
     format!("restore-drill-evidence-{date}.json")
 }
 
-fn check(name: &str, passed: bool, detail: impl Into<String>) -> Check {
+pub(crate) fn check(name: &str, passed: bool, detail: impl Into<String>) -> Check {
     Check {
         name: name.to_owned(),
         result: if passed {
@@ -189,7 +189,7 @@ fn check(name: &str, passed: bool, detail: impl Into<String>) -> Check {
     }
 }
 
-fn skipped(name: &str, why: &str) -> Check {
+pub(crate) fn skipped(name: &str, why: &str) -> Check {
     Check {
         name: name.to_owned(),
         result: CheckResult::Skipped,
@@ -303,7 +303,7 @@ pub fn sample_reads_check(reads: &[(String, u16)]) -> Check {
     check("sample_api_reads", passed, detail)
 }
 
-async fn run_audit_chain(binary: &Path, config: &Path) -> Result<(), String> {
+pub(crate) async fn run_audit_chain(binary: &Path, config: &Path) -> Result<(), String> {
     let output = tokio::process::Command::new(binary)
         .arg("verify-audit-chain")
         .env("CONFIG_FILE", config)
@@ -524,7 +524,7 @@ async fn search_index_restored(copy: &attome_db::DbPool) -> Check {
 }
 
 /// AB4-T5's checks on the restored copy, and its size.
-async fn copy_checks(
+pub(crate) async fn copy_checks(
     config: &attome_config::AppConfig,
     archive: &Path,
     temp: &str,

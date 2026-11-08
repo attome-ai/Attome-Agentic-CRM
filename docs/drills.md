@@ -65,6 +65,18 @@ archive, the target, the database's recovery time, the digest; no secret) into `
 v2 backs up with `pg_dump`, so the newest archive is the recovery point; there is no point-in-time
 target.
 
+`attome drill recover --continue <out dir> --key <signing key> [--api-key-file <file>] [--port 7999]`
+is part 2. The file store has no object versioning, so the files' recovery point is the manifest
+beside the archive: each file it lists is put back into the store after its SHA-256 is checked
+(never for a side copy, which does not touch the live store). The evidence lists the file rows with no
+object (`missing`) and the objects with no row (`orphans`) as counts and the first 20 keys. It then
+checks the backup's file copies, the sealed values (opened with the key ring), and the search index
+on the recovered database, boots the pinned binary on `--port` against it, checks `/health/ready` and
+the audit chain, and with `--api-key-file` reads the first entities. The result is signed `Recovery`
+evidence in the out directory, also stored on the booted deployment. A sealed value that does not
+open fails the evidence. Queued jobs are in the recovered database and resume, being idempotent,
+when the real server starts.
+
 ## The chaos faults
 
 Each fault of the catalogue (`attome_release::chaos::CATALOGUE`), what a correct deployment does

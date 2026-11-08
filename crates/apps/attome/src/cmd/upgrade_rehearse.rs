@@ -480,7 +480,7 @@ async fn rehearse(
     checks
 }
 
-async fn store_evidence(
+pub(crate) async fn store_evidence(
     base: &str,
     key: &str,
     signed: &evidence::SignedEvidence,

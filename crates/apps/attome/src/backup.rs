@@ -384,7 +384,7 @@ async fn prune_files(dir: &Path) {
 /// Puts back every file the manifest beside `archive` lists that the store
 /// is missing or holds at another size, after checking the copy's SHA-256.
 /// Returns how many files were written.
-async fn restore_files(config: &AppConfig, archive: &Path) -> Result<usize, String> {
+pub(crate) async fn restore_files(config: &AppConfig, archive: &Path) -> Result<usize, String> {
     let Some(dir) = archive.parent() else {
         return Ok(0);
     };
