@@ -1,0 +1,1359 @@
+{
+  "author": "packs",
+  "checksum": "sha256:def199f728faecef5e3dbb8136b46d3015eeb2e91a4601a110d189aa9adac0b1",
+  "closed_at": "2026-11-08T00:00:00Z",
+  "description": "Store roles (F8-T12): Store Manager, Merchandiser, Order Desk and Store Viewer, and the per-entity privileges they hold on the commerce entities (shop connections, promotions, coupons, shipping, reviews, risk holds) and the products and orders the store sells. None of them is given to anyone by this changeset, and the shop itself stays off until commerce.enabled is turned on.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f08-8000-000000000036",
+  "layer": "product",
+  "name": "sales-store-roles",
+  "opened_at": "2026-11-08T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on coupon",
+          "key": "coupon.create",
+          "name": "coupon.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "coupon.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on coupon",
+          "key": "coupon.delete",
+          "name": "coupon.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "coupon.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on coupon",
+          "key": "coupon.read",
+          "name": "coupon.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "coupon.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on coupon",
+          "key": "coupon.update",
+          "name": "coupon.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "coupon.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on coupon_redemption",
+          "key": "coupon_redemption.read",
+          "name": "coupon_redemption.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "coupon_redemption.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on order",
+          "key": "order.read",
+          "name": "order.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "order.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on order",
+          "key": "order.update",
+          "name": "order.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "order.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on order_line",
+          "key": "order_line.read",
+          "name": "order_line.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "order_line.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on product",
+          "key": "product.create",
+          "name": "product.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "product.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on product",
+          "key": "product.read",
+          "name": "product.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "product.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on product",
+          "key": "product.update",
+          "name": "product.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "product.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on product_review",
+          "key": "product_review.read",
+          "name": "product_review.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "product_review.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on product_review",
+          "key": "product_review.update",
+          "name": "product_review.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "product_review.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on promotion",
+          "key": "promotion.create",
+          "name": "promotion.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "promotion.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on promotion",
+          "key": "promotion.delete",
+          "name": "promotion.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "promotion.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on promotion",
+          "key": "promotion.read",
+          "name": "promotion.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "promotion.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on promotion",
+          "key": "promotion.update",
+          "name": "promotion.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "promotion.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on risky_order_review",
+          "key": "risky_order_review.read",
+          "name": "risky_order_review.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "risky_order_review.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on risky_order_review",
+          "key": "risky_order_review.update",
+          "name": "risky_order_review.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "risky_order_review.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on shipping_rate",
+          "key": "shipping_rate.create",
+          "name": "shipping_rate.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "shipping_rate.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on shipping_rate",
+          "key": "shipping_rate.delete",
+          "name": "shipping_rate.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "shipping_rate.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on shipping_rate",
+          "key": "shipping_rate.read",
+          "name": "shipping_rate.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "shipping_rate.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on shipping_rate",
+          "key": "shipping_rate.update",
+          "name": "shipping_rate.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "privilege": "shipping_rate.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on shipping_zone",
+          "key": "shipping_zone.create",
+          "name": "shipping_zone.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "privilege": "shipping_zone.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on shipping_zone",
+          "key": "shipping_zone.delete",
+          "name": "shipping_zone.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "privilege": "shipping_zone.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on shipping_zone",
+          "key": "shipping_zone.read",
+          "name": "shipping_zone.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "privilege": "shipping_zone.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on shipping_zone",
+          "key": "shipping_zone.update",
+          "name": "shipping_zone.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "privilege": "shipping_zone.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on shop_connection",
+          "key": "shop_connection.create",
+          "name": "shop_connection.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "privilege": "shop_connection.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on shop_connection",
+          "key": "shop_connection.read",
+          "name": "shop_connection.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "privilege": "shop_connection.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on shop_connection",
+          "key": "shop_connection.update",
+          "name": "shop_connection.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "privilege": "shop_connection.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on shop_sync_map",
+          "key": "shop_sync_map.read",
+          "name": "shop_sync_map.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "privilege": "shop_sync_map.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 1,
+          "description": "Runs the online store: connections, promotions, coupons, shipping, reviews, risk holds and the orders and products it sells.",
+          "is_customized": false,
+          "name": "Store Manager",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "privilege": "shop_connection.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "privilege": "shop_connection.create",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "privilege": "shop_connection.update",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "privilege": "shop_sync_map.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "privilege": "promotion.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "privilege": "promotion.create",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "privilege": "promotion.update",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "privilege": "promotion.delete",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "privilege": "coupon.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "privilege": "coupon.create",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "privilege": "coupon.update",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "privilege": "coupon.delete",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "privilege": "coupon_redemption.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "privilege": "shipping_zone.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "privilege": "shipping_zone.create",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "privilege": "shipping_zone.update",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "privilege": "shipping_zone.delete",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "privilege": "shipping_rate.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "privilege": "shipping_rate.create",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "privilege": "shipping_rate.update",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "privilege": "shipping_rate.delete",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "privilege": "product_review.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "privilege": "product_review.update",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "privilege": "risky_order_review.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "privilege": "risky_order_review.update",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "privilege": "product.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "privilege": "product.create",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "privilege": "product.update",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "privilege": "order.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "privilege": "order.update",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "privilege": "order_line.read",
+        "role": "Store Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 1,
+          "description": "Keeps the catalogue and its offers: products, promotions, coupons and review moderation.",
+          "is_customized": false,
+          "name": "Merchandiser",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "privilege": "product.read",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "privilege": "product.create",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "privilege": "product.update",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "privilege": "promotion.read",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "privilege": "promotion.create",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "privilege": "promotion.update",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "privilege": "coupon.read",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "privilege": "coupon.create",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "privilege": "coupon.update",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "privilege": "shipping_zone.read",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "privilege": "shipping_rate.read",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "privilege": "product_review.read",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "privilege": "product_review.update",
+        "role": "Merchandiser"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 1,
+          "description": "Works the store orders: reads and updates them, decides risk holds and reads what shapes them.",
+          "is_customized": false,
+          "name": "Order Desk",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "privilege": "order.read",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "privilege": "order.update",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "privilege": "order_line.read",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "privilege": "risky_order_review.read",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "privilege": "risky_order_review.update",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "privilege": "product_review.read",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "privilege": "shipping_zone.read",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "privilege": "shipping_rate.read",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "privilege": "coupon.read",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "privilege": "coupon_redemption.read",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "privilege": "product.read",
+        "role": "Order Desk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 1,
+          "description": "Reads the store: connections, orders, offers, shipping and reviews, and changes nothing.",
+          "is_customized": false,
+          "name": "Store Viewer",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "privilege": "shop_connection.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "privilege": "shop_sync_map.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "privilege": "promotion.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "privilege": "coupon.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "privilege": "coupon_redemption.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "privilege": "shipping_zone.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "privilege": "shipping_rate.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "privilege": "product_review.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "privilege": "risky_order_review.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "privilege": "product.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "privilege": "order.read",
+        "role": "Store Viewer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "privilege": "order_line.read",
+        "role": "Store Viewer"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 36,
+  "title": "Pack: store roles"
+}

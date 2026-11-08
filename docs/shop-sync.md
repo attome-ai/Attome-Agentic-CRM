@@ -118,3 +118,17 @@ JSON object: Salla `{"access_token"}`, Zid `{"partner_token", "manager_token"}`,
 Creating, pausing and resuming a connection is the generic `shop_connection` entity API (`status` =
 `active` or `paused`, with `If-Match`), which audits each change.
 
+## Store roles (F8-T12)
+
+The sales pack carries four roles for the people who run an online store; assign them like any role.
+
+| Role | Can |
+|---|---|
+| Store Manager | everything below, and create, change and delete promotions, coupons and shipping zones and rates; create and change shop connections and products |
+| Merchandiser | create and change products, promotions and coupons; moderate reviews; read shipping |
+| Order Desk | read and update orders; decide risk holds; read reviews, coupons and shipping |
+| Store Viewer | read the connections, orders, offers, shipping, reviews and risk holds, and change nothing |
+
+The shop itself (the portal store) stays off until `commerce.enabled` is turned on; the abandoned-cart
+journey has its own `commerce.abandoned_cart.enabled`. Both default to off.
+
