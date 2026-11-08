@@ -50,8 +50,12 @@ pub mod search_console;
 pub mod shop_sync;
 /// F8-T3: Salla, on the shop-sync platform trait.
 pub mod salla;
+/// F8-T4: Shopify, on the shop-sync platform trait.
+pub mod shopify;
 /// F8-T3: Zid, on the shop-sync platform trait.
 pub mod zid;
+/// F8-T4: WooCommerce, on the shop-sync platform trait.
+pub mod woocommerce;
 /// C6-T1: a Slack app: install, events, approvals, unfurls, `/attome search`.
 pub mod slack;
 /// J4-T1: SMS segments, senders and the provider codecs.

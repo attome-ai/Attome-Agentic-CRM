@@ -1,0 +1,68 @@
+{
+  "_source": "Built from the examples in the WooCommerce REST API reference (woocommerce.github.io/woocommerce-rest-api-docs: Orders, v3), read 2026-11-08. Not a recorded payload: replace with one once there is a test store (F8-T4). Values changed so the totals add up.",
+  "order": {
+    "id": 727,
+    "number": "727",
+    "status": "processing",
+    "currency": "SAR",
+    "date_created_gmt": "2026-08-31T14:04:00",
+    "date_modified_gmt": "2026-08-31T14:10:00",
+    "prices_include_tax": false,
+    "discount_total": "0.00",
+    "shipping_total": "25.00",
+    "shipping_tax": "3.75",
+    "total": "316.25",
+    "total_tax": "41.25",
+    "customer_id": 25,
+    "payment_method": "cod",
+    "payment_method_title": "Cash on delivery",
+    "billing": {
+      "first_name": "Mohammed",
+      "last_name": "Ahmed",
+      "address_1": "King Fahd Road 12",
+      "city": "Riyadh",
+      "country": "SA",
+      "email": "Test-Email@Example.com",
+      "phone": "+966553333333"
+    },
+    "shipping": {
+      "first_name": "Mohammed",
+      "last_name": "Ahmed",
+      "address_1": "King Fahd Road 12",
+      "address_2": "",
+      "city": "Riyadh",
+      "state": "Riyadh Province",
+      "postcode": "12211",
+      "country": "SA",
+      "phone": ""
+    },
+    "line_items": [
+      {
+        "id": 315,
+        "name": "Perfume 100ml",
+        "product_id": 93,
+        "variation_id": 0,
+        "quantity": 1,
+        "subtotal": "150.00",
+        "subtotal_tax": "22.50",
+        "total": "150.00",
+        "total_tax": "22.50",
+        "sku": "PRF-100",
+        "price": 150
+      },
+      {
+        "id": 316,
+        "name": "Incense sticks",
+        "product_id": 22,
+        "variation_id": 23,
+        "quantity": 2,
+        "subtotal": "100.00",
+        "subtotal_tax": "15.00",
+        "total": "100.00",
+        "total_tax": "15.00",
+        "sku": "",
+        "price": 50
+      }
+    ]
+  }
+}

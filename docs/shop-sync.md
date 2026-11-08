@@ -66,3 +66,27 @@ references, not recorded from a live store: no partner access exists yet. Replac
 recorded payload once there is one, and confirm the points marked as owed in each adapter's
 module notes: Zid's time zone, shipping lines and webhook signature, and the Salla product and
 delivery-address shapes.
+
+## Shopify and WooCommerce (F8-T4)
+
+`attome_integration::connector::adapters::shopify` and `::woocommerce` implement the same trait,
+through the same guarded client.
+
+| | Shopify | WooCommerce |
+|---|---|---|
+| API | `https://{shop}.myshopify.com/admin/api/2026-07` (Admin REST), the token in `X-Shopify-Access-Token`; only a `*.myshopify.com` host is accepted | `https://{store}/wp-json/wc/v3`, the consumer key and secret as Basic credentials; any store URL that is not `https` is refused |
+| Orders | `GET /orders.json?status=any&order=updated_at asc` | `GET /orders?orderby=modified&order=asc` |
+| Line prices | net or including VAT as the order's `taxes_included` says; the rate is the sum of the line's tax rates | net (`subtotal / quantity`), the rate `subtotal_tax / subtotal` |
+| Line product | the product id (the SKU or `item:<id>` for a custom line) | the variation id, else the product id |
+| Backfill cursor | orders: the last `updated_at` (inclusive); customers and products: the last id (`since_id`) | the page number; a short page is the last |
+| Times | ISO 8601 with offset | UTC (`date_created_gmt`) |
+| Cash on delivery | a cash-on-delivery gateway and not paid | payment method `cod` |
+| Webhooks | `orders/create`, `orders/updated`; `X-Shopify-Hmac-Sha256` (the `shopify` inbound preset) | `order.created`, `order.updated`; `X-WC-Webhook-Signature`, base64 HMAC-SHA256 of the body |
+| Customers, products | listed; a product is its first variant | listed |
+| Writing stock or products | not built (stock is per inventory item and location) | not built |
+
+Shopify calls the REST Admin API legacy; it is used because the resources read are the same in
+GraphQL and the platform trait is REST-shaped. Shapes come from the platforms' references (read
+2026-11-08) and the two fixtures are built from them, not recorded: replace them with recorded
+payloads once there is a development store. A full page of Shopify orders that share one
+`updated_at` ends the run (logged) rather than loop.

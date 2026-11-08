@@ -81,6 +81,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   customer's phone, paged by `updated_at`, through the guarded HTTP client; Salla customers and
   products too, and Salla webhook signatures checked. Built from the platforms' published API
   references; not yet run against a live store (`docs/shop-sync.md`).
+- Shopify and WooCommerce shop adapters (F8-T4): orders with lines, VAT, totals, cash on delivery and delivery
+  address, customers and products, through the guarded HTTP client; webhook signatures checked in constant
+  time; a WooCommerce store URL that is not `https` is refused. Built from the platforms' published API
+  references; not yet run against a live store (`docs/shop-sync.md`).
 - The extension developer guide (M17-T5, `docs/content/extensions/`): when to write code, one page per
   kind (record hook, job, webhook handler) with Rust and TypeScript examples, the host API, limits,
   testing, publishing and the compatibility promise.
