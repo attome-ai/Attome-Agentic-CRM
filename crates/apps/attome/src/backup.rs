@@ -475,6 +475,10 @@ pub fn pg_dump_args(config: &AppConfig, file: &Path) -> Vec<String> {
     vec![
         "--format=custom".into(),
         "--no-owner".into(),
+        // Y2-T13: entity tables carry row policies for the read-only role; the
+        // application roles' own policy shows every row, and without this flag
+        // pg_dump refuses a table whose policy would apply to it.
+        "--enable-row-security".into(),
         format!("--file={}", file.display()),
         format!("--host={}", db.host),
         format!("--port={}", db.port),
@@ -984,5 +988,6 @@ mod tests {
         let args = pg_dump_args(&config, Path::new("x.dump"));
         assert!(args.iter().all(|a| !a.contains("s3cret")));
         assert!(args.contains(&"--format=custom".to_owned()));
+        assert!(args.contains(&"--enable-row-security".to_owned()));
     }
 }

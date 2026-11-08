@@ -27,21 +27,126 @@ pub async fn grant_readonly_select(db: &DbPool, logicalname: &str) -> Result<(),
         )));
     }
 
-    if let Some(&(_, excluded)) = CREDENTIAL_ENTITY_EXCLUDED_COLUMNS
+    // Y2-T13: a sensitive attribute is never readable by the BI role, so an
+    // entity that has one takes the column-level grant like a credential
+    // entity does.
+    let mut excluded: Vec<String> = CREDENTIAL_ENTITY_EXCLUDED_COLUMNS
         .iter()
         .find(|(name, _)| *name == logicalname)
-    {
-        return grant_readonly_select_excluding_columns(db, logicalname, excluded).await;
-    }
+        .map(|(_, cols)| cols.iter().map(|c| (*c).to_owned()).collect())
+        .unwrap_or_default();
+    excluded.extend(sensitive_columns(db, logicalname).await?);
 
+    if !excluded.is_empty() {
+        grant_readonly_select_excluding_columns(db, logicalname, &excluded).await?;
+    } else {
+        exec_ddl_locked(
+            db,
+            &[],
+            &format!(r#"GRANT SELECT ON "{logicalname}" TO attome_readonly"#),
+        )
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, logicalname = %logicalname, "readonly SELECT grant failed during provisioning");
+            AppError::internal(e)
+        })?;
+    }
+    ensure_bi_row_policy(db, logicalname).await
+}
+
+/// Y2-T13: the physical columns of `logicalname` whose attribute is marked
+/// sensitive (`attribute_info.is_sensitive`). Empty for a table with no
+/// metadata row (a join table). Bound, never interpolated.
+async fn sensitive_columns(db: &DbPool, logicalname: &str) -> Result<Vec<String>, AppError> {
+    sqlx::query_scalar(
+        "SELECT a.logicalname FROM attribute_info a \
+           JOIN entity_info e ON e.id = a.entity_ref \
+          WHERE e.logicalname = $1 AND a.is_sensitive \
+            AND (a.is_active IS NULL OR a.is_active = true) \
+            AND a.logicalname IS NOT NULL",
+    )
+    .bind(logicalname)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Y2-T13: every entity that has a sensitive attribute, in one query, for the
+/// boot backfill.
+async fn entities_with_sensitive_columns(
+    db: &DbPool,
+) -> Result<std::collections::HashSet<String>, AppError> {
+    let rows: Vec<String> = sqlx::query_scalar(
+        "SELECT DISTINCT e.logicalname FROM attribute_info a \
+           JOIN entity_info e ON e.id = a.entity_ref \
+          WHERE a.is_sensitive AND (a.is_active IS NULL OR a.is_active = true) \
+            AND e.logicalname IS NOT NULL",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows.into_iter().collect())
+}
+
+/// The roles of the application, which keep reading and writing every row.
+const APP_ROLES: &str = "attome_runtime, attome_migrator";
+
+/// Y2-T13: the statement that gives `table` (already quoted) its row policies
+/// and turns row-level security on. The application's roles get a permissive
+/// policy for everything first, so there is no moment when they see no rows;
+/// the read-only role gets one that shows the live rows the application's own
+/// lists show (`is_active` NULL counts as live), or all rows for a table with
+/// no `is_active` column. The table's owner bypasses row security and
+/// superusers too, so the platform's own queries do not change. One `DO`
+/// block, so the boot's many tables cost one round trip each. Pure.
+pub fn bi_policy_statement(table: &str, has_is_active: bool) -> String {
+    let live = if has_is_active {
+        "is_active IS NULL OR is_active = true"
+    } else {
+        "true"
+    };
+    format!(
+        "DO $policy$ BEGIN \
+         DROP POLICY IF EXISTS app_all ON {table}; \
+         CREATE POLICY app_all ON {table} AS PERMISSIVE FOR ALL TO {APP_ROLES} USING (true) WITH CHECK (true); \
+         DROP POLICY IF EXISTS bi_read ON {table}; \
+         CREATE POLICY bi_read ON {table} AS PERMISSIVE FOR SELECT TO attome_readonly USING ({live}); \
+         ALTER TABLE {table} ENABLE ROW LEVEL SECURITY; \
+         END $policy$"
+    )
+}
+
+/// Y2-T13: row-level security for the read-only (BI) role on one table, so
+/// the database never shows it more than the application does. Skipped when
+/// the table already has it (the policies are defined once). The application
+/// roles' policy comes first and the daily `pg_dump` runs with
+/// `--enable-row-security`, so neither the application nor the backup sees
+/// fewer rows.
+async fn ensure_bi_row_policy(db: &DbPool, logicalname: &str) -> Result<(), AppError> {
+    let enabled: Option<bool> = sqlx::query_scalar(
+        "SELECT c.relrowsecurity FROM pg_catalog.pg_class c \
+           JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+          WHERE n.nspname = current_schema() AND c.relname = $1",
+    )
+    .bind(logicalname)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    if enabled != Some(false) {
+        // Already on, or no such table (the grant above has failed first).
+        return Ok(());
+    }
+    let has_is_active = existing_columns(db, logicalname)
+        .await?
+        .is_some_and(|cols| cols.columns.contains_key("is_active"));
     exec_ddl_locked(
         db,
         &[],
-        &format!(r#"GRANT SELECT ON "{logicalname}" TO attome_readonly"#),
+        &bi_policy_statement(&quote_ident(logicalname), has_is_active),
     )
     .await
     .map_err(|e| {
-        tracing::error!(error = %e, logicalname = %logicalname, "readonly SELECT grant failed during provisioning");
+        tracing::error!(error = %e, logicalname = %logicalname, "readonly row policy failed during provisioning");
         AppError::internal(e)
     })
 }
@@ -53,7 +158,7 @@ pub async fn grant_readonly_select(db: &DbPool, logicalname: &str) -> Result<(),
 async fn grant_readonly_select_excluding_columns(
     db: &DbPool,
     logicalname: &str,
-    excluded: &[&str],
+    excluded: &[String],
 ) -> Result<(), AppError> {
     let cols = existing_columns(db, logicalname).await?.ok_or_else(|| {
         AppError::internal(format!(
@@ -63,13 +168,27 @@ async fn grant_readonly_select_excluding_columns(
     let allowed: Vec<String> = cols
         .columns
         .keys()
-        .filter(|c| !excluded.contains(&c.as_str()))
+        .filter(|c| !excluded.contains(c))
         .map(|c| quote_ident(c))
         .collect();
     if allowed.is_empty() {
         return Ok(());
     }
 
+    // A column privilege cannot narrow a table-wide one: a field made
+    // sensitive after the table was granted whole is only withheld once the
+    // table-wide grant is taken back (REVOKE on the table also takes back its
+    // column grants), then the allowed columns are granted again.
+    exec_ddl_locked(
+        db,
+        &[],
+        &format!(r#"REVOKE SELECT ON "{logicalname}" FROM attome_readonly"#),
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!(error = %e, logicalname = %logicalname, "readonly SELECT revoke failed during provisioning");
+        AppError::internal(e)
+    })?;
     exec_ddl_locked(
         db,
         &[],
@@ -116,11 +235,14 @@ pub async fn backfill_readonly_grants(db: &DbPool) -> Result<(), AppError> {
     // `secret_hash`, and folding them into a whole-table GRANT would hand
     // `attome_readonly` the very columns `CREDENTIAL_ENTITY_EXCLUDED_COLUMNS`
     // exists to withhold.
+    // Y2-T13: an entity with a sensitive attribute is column-granted too.
+    let sensitive = entities_with_sensitive_columns(db).await?;
     let (credential, whole_table): (Vec<&String>, Vec<&String>) =
         logicalnames.iter().partition(|ln| {
-            CREDENTIAL_ENTITY_EXCLUDED_COLUMNS
-                .iter()
-                .any(|(name, _)| *name == ln.as_str())
+            sensitive.contains(ln.as_str())
+                || CREDENTIAL_ENTITY_EXCLUDED_COLUMNS
+                    .iter()
+                    .any(|(name, _)| *name == ln.as_str())
         });
 
     for logicalname in credential {
@@ -146,6 +268,10 @@ pub async fn backfill_readonly_grants(db: &DbPool) -> Result<(), AppError> {
 
     let batched = format!("GRANT SELECT ON {} TO attome_readonly", quoted.join(", "));
     if exec_ddl_locked(db, &[], &batched).await.is_ok() {
+        // Y2-T13: the row policies, for each table that has none yet.
+        for logicalname in &whole_table {
+            ensure_bi_row_policy(db, logicalname).await?;
+        }
         return Ok(());
     }
 
@@ -162,4 +288,26 @@ pub async fn backfill_readonly_grants(db: &DbPool) -> Result<(), AppError> {
         grant_readonly_select(db, logicalname).await?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_policy_statement_covers_the_app_roles_before_row_security_is_on() {
+        let sql = bi_policy_statement(r#""account""#, true);
+        let app = sql
+            .find("app_all ON \"account\" AS PERMISSIVE FOR ALL")
+            .unwrap();
+        let on = sql.find("ENABLE ROW LEVEL SECURITY").unwrap();
+        assert!(app < on, "the application's policy exists before RLS is on");
+        assert!(sql.contains("TO attome_runtime, attome_migrator USING (true) WITH CHECK (true)"));
+        assert!(sql.contains(
+            "FOR SELECT TO attome_readonly USING (is_active IS NULL OR is_active = true)"
+        ));
+        let join = bi_policy_statement(r#""account_contact""#, false);
+        assert!(join.contains("TO attome_readonly USING (true)"));
+        assert!(!join.contains("is_active"));
+    }
 }

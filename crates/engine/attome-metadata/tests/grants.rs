@@ -191,3 +191,107 @@ async fn boot_backfill_grants_every_whole_table_entity() {
             .ok();
     }
 }
+
+/// Y2-T13: a throwaway entity with one sensitive attribute and one inactive
+/// row. After `grant_readonly_select` the read-only role cannot read the
+/// sensitive column, reads the others, and sees only the live row (the
+/// application's own lists show the same); the application's own role still
+/// sees both rows. The table and its metadata rows are removed afterwards.
+#[tokio::test]
+async fn readonly_role_cannot_read_sensitive_column() {
+    let db = skip_if_no_db!(test_db().await);
+    let table = "y2_t13_probe";
+    let cleanup = |db: DbPool| async move {
+        sqlx::query(&format!(r#"DROP TABLE IF EXISTS "{table}""#))
+            .execute(&db)
+            .await
+            .expect("drop the probe table");
+        sqlx::query(
+            "DELETE FROM attribute_info WHERE entity_ref IN              (SELECT id FROM entity_info WHERE logicalname = $1)",
+        )
+        .bind(table)
+        .execute(&db)
+        .await
+        .expect("delete the probe attributes");
+        sqlx::query("DELETE FROM entity_info WHERE logicalname = $1")
+            .bind(table)
+            .execute(&db)
+            .await
+            .expect("delete the probe entity");
+    };
+    cleanup(db.clone()).await;
+
+    sqlx::query(&format!(
+        r#"CREATE TABLE "{table}" (id uuid PRIMARY KEY DEFAULT uuidv7(), is_active boolean, name text, secret_note text)"#
+    ))
+    .execute(&db)
+    .await
+    .expect("create the probe table");
+    let entity: uuid::Uuid = sqlx::query_scalar(
+        "INSERT INTO entity_info (logicalname, owner_layer) VALUES ($1, 'project') RETURNING id",
+    )
+    .bind(table)
+    .fetch_one(&db)
+    .await
+    .expect("register the probe entity");
+    for (column, sensitive) in [("name", false), ("secret_note", true)] {
+        sqlx::query(
+            "INSERT INTO attribute_info (logicalname, entity_ref, is_sensitive, owner_layer)              VALUES ($1, $2, $3, 'project')",
+        )
+        .bind(column)
+        .bind(entity)
+        .bind(sensitive)
+        .execute(&db)
+        .await
+        .expect("register the probe attribute");
+    }
+    sqlx::query(&format!(
+        r#"INSERT INTO "{table}" (is_active, name, secret_note) VALUES (true, 'live', 's'), (false, 'gone', 's')"#
+    ))
+    .execute(&db)
+    .await
+    .expect("insert the probe rows");
+
+    attome_metadata::provision::grant_readonly_select(&db, table)
+        .await
+        .expect("grant the read-only role");
+
+    let read_secret = can_select_column(&db, "attome_readonly", table, "secret_note").await;
+    let read_name = can_select_column(&db, "attome_readonly", table, "name").await;
+
+    let mut tx = db.begin().await.expect("begin");
+    sqlx::query("SET LOCAL ROLE attome_readonly")
+        .execute(&mut *tx)
+        .await
+        .expect("switch to the read-only role");
+    let visible: i64 = sqlx::query_scalar(&format!(r#"SELECT count(*) FROM "{table}""#))
+        .fetch_one(&mut *tx)
+        .await
+        .expect("count as the read-only role");
+    let secret = sqlx::query(&format!(r#"SELECT secret_note FROM "{table}""#))
+        .fetch_all(&mut *tx)
+        .await;
+    tx.rollback().await.expect("rollback");
+
+    let mut app = db.begin().await.expect("begin");
+    sqlx::query("SET LOCAL ROLE attome_runtime")
+        .execute(&mut *app)
+        .await
+        .expect("switch to the application role");
+    let app_sees: i64 = sqlx::query_scalar(&format!(r#"SELECT count(*) FROM "{table}""#))
+        .fetch_one(&mut *app)
+        .await
+        .expect("count as the application role");
+    app.rollback().await.expect("rollback");
+
+    cleanup(db.clone()).await;
+
+    assert!(!read_secret, "the sensitive column is not granted");
+    assert!(read_name, "the other columns are");
+    assert!(
+        secret.is_err(),
+        "selecting the sensitive column is a permission error"
+    );
+    assert_eq!(visible, 1, "the read-only role sees only the live row");
+    assert_eq!(app_sees, 2, "the application's role still sees every row");
+}

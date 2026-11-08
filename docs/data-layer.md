@@ -180,3 +180,15 @@ builder drops it, and the entity becomes `high_volume`. A row with no `created_a
 was copied. Adding or removing a field while the copy runs makes the swap refuse; cancel and start
 again. `GET` the same path shows the storage mode, the latest run and whether the old table is
 still kept.
+
+## What the read-only role sees (Y2-T13)
+
+The read-only role (`attome_readonly`, used by a BI tool or any direct SQL client) never sees more than
+the application does. Every entity table has row-level security on: the application's roles
+(`attome_runtime`, `attome_migrator`) have a policy that shows every row, and the read-only role has
+one that shows the live rows (`is_active` NULL or true). Attributes marked sensitive are not granted to
+it at all, so selecting one is a permission error, and so are the credential columns
+(`password_hash`, `secret_hash`). The table's owner and superusers bypass row security, so the platform's
+own queries are unchanged. The policies are made when the table is provisioned and by the boot backfill;
+a field made sensitive after that is withheld from the role at the next boot. The daily backup runs
+`pg_dump --enable-row-security`, so it still dumps every row.
