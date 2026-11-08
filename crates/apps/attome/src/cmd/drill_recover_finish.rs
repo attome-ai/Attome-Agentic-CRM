@@ -154,6 +154,32 @@ pub fn reconciled_check(lists: &KeyLists, written: usize) -> Check {
     )
 }
 
+/// The `erasure_replayed` check (AB3-T6). The boot applies the erasure ledger
+/// before it serves and removes the restore marker once it has; a ledger it
+/// cannot read stops the boot. So a ready server with the marker gone means
+/// every erasure in the ledger is applied again (the ledger is replayed in
+/// full, not only past the recovery point: an erasure already in the database
+/// is skipped by key). Never skipped when the ledger is unreachable. Pure.
+pub fn erasure_check(ready: bool, marker_left: bool) -> Check {
+    match (ready, marker_left) {
+        (true, false) => check(
+            "erasure_replayed",
+            true,
+            "the erasure ledger was applied before the server served",
+        ),
+        (_, true) => check(
+            "erasure_replayed",
+            false,
+            "the restore marker is still there: the erasure ledger was not applied",
+        ),
+        (false, false) => check(
+            "erasure_replayed",
+            false,
+            "the server did not become ready; the replay is not shown",
+        ),
+    }
+}
+
 /// The recovery point of the files: the archive's age when recovery started.
 /// Pure.
 pub fn recovery_point_seconds(archive_written: DateTime<Utc>, started: DateTime<Utc>) -> f64 {
@@ -385,6 +411,14 @@ pub async fn run(args: &[String]) -> u8 {
         }
     };
 
+    if state.immutable_only {
+        checks.push(check(
+            "recovery_credential_isolated",
+            state.recovery_credential_isolated,
+            "a separate credential that cannot delete (checked by part 1)",
+        ));
+    }
+
     // Step 1: files.
     let (files_check, lists, files_seconds) = reconcile_files(&config, &state, &archive).await;
     checks.push(files_check);
@@ -403,6 +437,8 @@ pub async fn run(args: &[String]) -> u8 {
         .and_then(|text| serde_json::from_str(&text).map_err(|e| format!("{config_path}: {e}")))
         .and_then(|base| drill_config(&base, &state.target_database, args.port));
     let mut app_seconds = None;
+    let mut marker_path: Option<PathBuf> = None;
+    let mut ready_ok = false;
     let mut stored = None;
     let mut child = None;
     let base_url = format!("http://127.0.0.1:{}", args.port);
@@ -420,6 +456,21 @@ pub async fn run(args: &[String]) -> u8 {
                     format!("write {}: {e}", boot_path.display()),
                 ));
             } else {
+                // AB3-T6: the boot applies the erasure ledger before it serves
+                // when this marker is in the backup folder, and a ledger that
+                // cannot be read stops the boot.
+                let marker = config
+                    .backup
+                    .resolved_dir()
+                    .join(crate::backup::RESTORE_PENDING);
+                if let Err(e) = tokio::fs::write(&marker, b"recovery").await {
+                    checks.push(check(
+                        "erasure_replayed",
+                        false,
+                        format!("cannot write {}: {e}", marker.display()),
+                    ));
+                }
+                marker_path = Some(marker);
                 let clock = Instant::now();
                 match tokio::process::Command::new(&binary)
                     .arg("serve")
@@ -433,6 +484,7 @@ pub async fn run(args: &[String]) -> u8 {
                         child = Some(c);
                         let ready = wait_ready(&base_url).await;
                         app_seconds = Some(clock.elapsed().as_secs_f64());
+                        ready_ok = ready.is_ok();
                         checks.push(match &ready {
                             Ok(()) => check("readiness", true, "the server answered ready"),
                             Err(e) => check("readiness", false, e.clone()),
@@ -459,6 +511,15 @@ pub async fn run(args: &[String]) -> u8 {
             }
         }
         Err(e) => checks.push(check("readiness", false, e)),
+    }
+
+    if let Some(marker) = marker_path {
+        let left = tokio::fs::metadata(&marker).await.is_ok();
+        if !checks.iter().any(|c| c.name == "erasure_replayed") {
+            checks.push(erasure_check(ready_ok, left));
+        }
+    } else if !checks.iter().any(|c| c.name == "erasure_replayed") {
+        checks.push(skipped("erasure_replayed", "the server was not started"));
     }
 
     let written = tokio::fs::metadata(&archive)
@@ -568,6 +629,22 @@ mod tests {
             reconciled_check(&clean, 0).result,
             evidence::CheckResult::Pass,
             "orphans are reported, not failed"
+        );
+    }
+
+    #[test]
+    fn erasure_check_needs_a_ready_server_and_no_marker() {
+        assert_eq!(
+            erasure_check(true, false).result,
+            evidence::CheckResult::Pass
+        );
+        assert_eq!(
+            erasure_check(true, true).result,
+            evidence::CheckResult::Fail
+        );
+        assert_eq!(
+            erasure_check(false, false).result,
+            evidence::CheckResult::Fail
         );
     }
 

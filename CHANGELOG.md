@@ -26,6 +26,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   into a new or side-copy database, proves the configuration's secrets resolve and the server binary's digest,
   and writes `recover-state.json` for the next step.
 - `attome drill recover --continue <dir> --key <file>` (AB3-T4): part 2 of a recovery. It puts the file manifest's files back into the store (never for a side copy), lists rows without objects and objects without rows (counts and the first 20 keys), checks the files, sealed values and search index of the recovered database, boots the pinned binary on a throwaway port, checks readiness and the audit chain, and writes signed `Recovery` evidence, stored on the booted deployment when `--api-key-file` is given.
+- `attome drill recover --immutable-only --recovery-credential-file <file>` (AB3-T5): refuses (exit 4) a recovery credential whose access key is the production storage key, that can delete (a `DeleteObject` probe under `drill-probe/` must be denied), or whose probe fails for any reason but permissions; the result is the `recovery_credential_isolated` check.
+- `attome drill recover --continue` (AB3-T6): before the booted server serves, the erasure ledger is applied again (the boot's restore marker) and the `erasure_replayed` check fails the recovery when the ledger cannot be applied.
 - `attome drill restore` also checks the restored files against the backup's copies, opens the sealed values and
   checks the restored search index, and records the copy's database size (AB4-T5).
 - `attome upgrade rehearse` (AB8-T4): an upgrade tried on a restored copy, with the schema change, the new

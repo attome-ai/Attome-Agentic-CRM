@@ -41,9 +41,9 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use crate::cmd::drill_restore::{provenance_ok, sha256_file};
-use crate::cmd::output::take_value;
+use crate::cmd::output::{take_flag, take_value};
 
-const USAGE: &str = "usage: attome drill recover --server-binary <path> --expected-digest <sha256> --out <dir> (--approval-id <uuid> --base-url <url> --api-key-file <path> | --offline-two-person <name1>,<name2>) [--archive latest|<name>] [--side-copy <database>] [--config <path>]";
+const USAGE: &str = "usage: attome drill recover --server-binary <path> --expected-digest <sha256> --out <dir> (--approval-id <uuid> --base-url <url> --api-key-file <path> | --offline-two-person <name1>,<name2>) [--archive latest|<name>] [--side-copy <database>] [--config <path>] [--immutable-only --recovery-credential-file <path>]";
 
 /// The state file part 2 continues from.
 pub const STATE_FILE: &str = "recover-state.json";
@@ -52,6 +52,8 @@ const EXIT_OK: u8 = 0;
 const EXIT_USAGE: u8 = 1;
 const EXIT_REFUSED: u8 = 5;
 const EXIT_FAILED: u8 = 3;
+/// A recovery credential that is not isolated.
+const EXIT_NOT_ISOLATED: u8 = 4;
 
 /// Who allowed the recovery.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -78,6 +80,9 @@ pub struct RecoverArgs {
     pub archive: String,
     pub side_copy: Option<String>,
     pub config: Option<String>,
+    /// AB3-T5: ransomware mode, with the credential that guards it.
+    pub immutable_only: bool,
+    pub recovery_credential: Option<PathBuf>,
 }
 
 /// Two distinct, non-empty names from `<name1>,<name2>`. Pure.
@@ -132,6 +137,15 @@ pub fn parse_args(args: &[String]) -> Result<RecoverArgs, String> {
     let archive = take_value(&mut args, "--archive")?.unwrap_or_else(|| "latest".to_owned());
     let side_copy = take_value(&mut args, "--side-copy")?;
     let config = take_value(&mut args, "--config")?;
+    let immutable_only = take_flag(&mut args, "--immutable-only");
+    let recovery_credential =
+        take_value(&mut args, "--recovery-credential-file")?.map(PathBuf::from);
+    if immutable_only && recovery_credential.is_none() {
+        return Err("--immutable-only needs --recovery-credential-file".into());
+    }
+    if !immutable_only && recovery_credential.is_some() {
+        return Err("--recovery-credential-file is for --immutable-only".into());
+    }
     if !args.is_empty() {
         return Err(format!("unexpected arguments: {}", args.join(" ")));
     }
@@ -167,6 +181,8 @@ pub fn parse_args(args: &[String]) -> Result<RecoverArgs, String> {
         archive,
         side_copy,
         config,
+        immutable_only,
+        recovery_credential,
     })
 }
 
@@ -186,6 +202,11 @@ pub struct RecoverState {
     pub server_digest: String,
     pub provenance_ok: bool,
     pub config_path: String,
+    /// AB3-T5: ransomware mode ran, and its credential passed the guard.
+    #[serde(default)]
+    pub immutable_only: bool,
+    #[serde(default)]
+    pub recovery_credential_isolated: bool,
 }
 
 async fn check_online_approval(
@@ -287,6 +308,23 @@ pub async fn run_cli(args: &[String]) -> u8 {
     };
     println!("secrets_restored pass: the configuration loads with every secret resolved");
 
+    // AB3-T5: ransomware mode, before anything is read.
+    let mut credential_isolated = false;
+    if let Some(path) = args.recovery_credential.as_ref() {
+        match crate::cmd::drill_immutable::guard(path, &config).await {
+            Ok(()) => {
+                credential_isolated = true;
+                println!(
+                    "recovery_credential_isolated pass: the credential differs from the production one and cannot delete"
+                );
+            }
+            Err(e) => {
+                eprintln!("attome drill recover: refused: {e}");
+                return EXIT_NOT_ISOLATED;
+            }
+        }
+    }
+
     // Step 5: provenance.
     let digest = match sha256_file(&args.server_binary).await {
         Ok(d) => d,
@@ -375,6 +413,8 @@ pub async fn run_cli(args: &[String]) -> u8 {
         server_digest: digest,
         provenance_ok: provenance,
         config_path,
+        immutable_only: args.immutable_only,
+        recovery_credential_isolated: credential_isolated,
     };
     let path = args.out.join(STATE_FILE);
     match serde_json::to_vec_pretty(&state)

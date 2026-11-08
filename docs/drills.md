@@ -77,6 +77,17 @@ evidence in the out directory, also stored on the booted deployment. A sealed va
 open fails the evidence. Queued jobs are in the recovered database and resume, being idempotent,
 when the real server starts.
 
+Ransomware mode: `--immutable-only --recovery-credential-file <file>` on part 1 (a JSON file with
+`endpoint`, `region`, `bucket`, `access_key`, `secret_key`) refuses to start, with exit 4, a credential
+whose access key is the production storage key, that can delete (a `DeleteObject` on a probe key under
+`drill-probe/` must be denied, and no real object is touched), or whose probe fails for a reason other
+than permissions. The evidence then carries `recovery_credential_isolated`. v2 keeps its backup copy in
+`backup.dir`, so the credential gates the run; it does not yet read files from an Object Lock bucket.
+
+Erasure survives recovery: part 2 leaves the restore marker in the backup folder before it boots the
+server, so the boot applies the erasure ledger again before it serves (a ledger it cannot read stops
+the boot), and the `erasure_replayed` check passes only when the server is ready and the marker is gone.
+
 ## The chaos faults
 
 Each fault of the catalogue (`attome_release::chaos::CATALOGUE`), what a correct deployment does
