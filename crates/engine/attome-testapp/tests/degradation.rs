@@ -13,6 +13,7 @@
 //! - The cache down: a revoked session is still refused (security fails
 //!   closed, whatever the cache capability says).
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

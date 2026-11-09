@@ -1654,16 +1654,12 @@ pub async fn insert_run(
     Ok(run)
 }
 
+/// name, description, definition, blocking, target kind and key of one test.
+type ExportRow = (String, Option<String>, Value, bool, Option<String>, Option<String>);
+
 /// Every test, active or not, in the portable form.
 pub async fn export_tests(db: &attome_db::DbPool) -> Result<CustomerTestExport, AppError> {
-    let rows: Vec<(
-        String,
-        Option<String>,
-        Value,
-        bool,
-        Option<String>,
-        Option<String>,
-    )> = sqlx::query_as(
+    let rows: Vec<ExportRow> = sqlx::query_as(
         "SELECT name, description, definition, blocking, target_kind, target_key \
                FROM customer_test ORDER BY name, id",
     )

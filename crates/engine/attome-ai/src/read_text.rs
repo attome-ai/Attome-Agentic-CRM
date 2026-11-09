@@ -23,6 +23,8 @@ use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, routing::get};
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
+// Named only inside the `#[utoipa::path]` attribute, which the compiler does not count as a use.
+#[allow(unused_imports)]
 use serde_json::json;
 use utoipa::ToSchema;
 

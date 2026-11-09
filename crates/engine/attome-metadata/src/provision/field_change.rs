@@ -1236,7 +1236,7 @@ pub async fn retype_inline_in_tx(
     .await
     .map_err(map_ddl_error)?;
     // Y2-T6: the choice check is rebuilt from the new type after commit.
-    super::choice_check::drop_choice_check_in_tx(&mut **tx, &row.entity, &row.field).await?;
+    super::choice_check::drop_choice_check_in_tx(tx, &row.entity, &row.field).await?;
     let mut nulled = 0;
     if conv.changes_values() {
         let expr = conv.expression(tx, &col).await?;
