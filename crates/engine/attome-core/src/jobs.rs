@@ -1142,7 +1142,6 @@ impl EngineJob {
             | Self::LegalMatterRelease { .. }
             | Self::DataMatchScan { .. }
             | Self::ValidateLookupForeignKey { .. }
-            | Self::SyncChoiceCheck { .. }
             | Self::SyncChoiceCheck { .. } => true,
 
             // Everything else: bounded work, latency-sensitive, or cheap.
