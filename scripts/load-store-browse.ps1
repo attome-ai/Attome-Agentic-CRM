@@ -42,14 +42,16 @@ $work = {
     for ($i = 0; $i -lt $count; $i++) {
         $watch = [System.Diagnostics.Stopwatch]::StartNew()
         $ok = $false
+        $code = 0
         try {
             $response = $http.GetAsync($url).GetAwaiter().GetResult()
             $ok = $response.IsSuccessStatusCode
+            $code = [int]$response.StatusCode
             $response.Dispose()
         }
         catch { $ok = $false }
         $watch.Stop()
-        $out.Add(@($watch.Elapsed.TotalMilliseconds, $ok))
+        $out.Add(@($watch.Elapsed.TotalMilliseconds, $ok, $code))
     }
     $http.Dispose()
     , $out
@@ -64,16 +66,19 @@ $jobs | Remove-Job -Force
 
 $latencies = New-Object 'System.Collections.Generic.List[double]'
 $failed = 0
+$codes = @{}
 foreach ($batch in $results) {
     foreach ($pair in $batch) {
         $latencies.Add([double]$pair[0])
         if (-not $pair[1]) { $failed++ }
+        $codes[[string]$pair[2]] = 1 + [int]$codes[[string]$pair[2]]
     }
 }
 if ($latencies.Count -eq 0) { throw 'no request ran' }
 $sorted = $latencies | Sort-Object
 $index = [Math]::Min($sorted.Count - 1, [int][Math]::Ceiling($sorted.Count * 0.95) - 1)
 Write-Output ([string]::Format([Globalization.CultureInfo]::InvariantCulture, 'p95_ms={0:F1}', $sorted[$index]))
+foreach ($k in ($codes.Keys | Sort-Object)) { Write-Output ('status_{0}={1}' -f $k, $codes[$k]) }
 if ($failed -gt 0) {
     Write-Output ('failed={0}' -f $failed)
     exit 1

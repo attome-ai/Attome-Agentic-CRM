@@ -423,6 +423,17 @@ impl TestApp {
     }
 
     /// The database pool.
+    /// The web portal routes (`/{keyword}/api/v1/...`) as the real server
+    /// mounts them: an audience bundle behind the same outer layers.
+    pub fn portal_router(&self) -> axum::Router {
+        let base = self.state.base.clone();
+        attome_server::ServerBuilder::new(base.clone(), (*base.config).clone())
+            .add_audience_bundle(attome_server::RouteBundle::new(attome_portal::router::app(
+                self.state.clone(),
+            )))
+            .build(|r| attome_api::apply_s2s_layer(r, base.clone()))
+    }
+
     pub fn db(&self) -> &attome_db::DbPool {
         &self.state.base.db
     }

@@ -43,7 +43,9 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use super::fulfilment::account_of;
-use super::{authenticate, budget, check_same_origin, portal_budget, portal_for};
+use super::{
+    authenticate, budget, check_same_origin, portal_browse_budget, portal_budget, portal_for,
+};
 
 /// Guest checkout starts and confirms per address and minute.
 const GUEST_IP_RPM: i32 = 10;
@@ -443,7 +445,7 @@ async fn guest_catalogue(
         return Err(AppError::NotFound);
     }
     let portal = portal_for(&state, &keyword).await?;
-    portal_budget(&state, &portal).await?;
+    portal_browse_budget(&state, &portal).await?;
     Ok(Json(
         attome_sales::guest_checkout::guest_catalogue(&state, q.search.as_deref()).await?,
     ))

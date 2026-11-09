@@ -510,6 +510,10 @@ async fn session_claims(
 const ACCOUNT_LOGIN_RPM: i32 = 10;
 const ACCOUNT_RESET_RPM: i32 = 3;
 const PORTAL_AUTH_RPM: i32 = 600;
+/// The guest catalogue, per portal (F8-T13). A browse is a cheap read, not a
+/// sign-in attempt, so it has its own budget: sharing the 600 auth budget
+/// capped a whole store at 10 browses a second.
+const PORTAL_BROWSE_RPM: i32 = 6000;
 /// Record routes, per account (G-4). The portal-wide ceiling is the portal's
 /// `records_rpm` setting.
 const ACCOUNT_RECORD_READS_RPM: i32 = 120;
@@ -535,6 +539,15 @@ async fn budget(state: &EngineState, key: String, limit: i32) -> Result<(), AppE
             retry_after_secs: None,
         })
     }
+}
+
+async fn portal_browse_budget(state: &EngineState, portal: &PortalDetail) -> Result<(), AppError> {
+    budget(
+        state,
+        format!("attome-portal:rl:browse:{}", portal.id),
+        PORTAL_BROWSE_RPM,
+    )
+    .await
 }
 
 async fn portal_budget(state: &EngineState, portal: &PortalDetail) -> Result<(), AppError> {
